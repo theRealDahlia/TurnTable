@@ -171,6 +171,10 @@ body {
   filter: brightness(1.08);
 }
 
+.chip-secondary {
+  min-width: 0;
+}
+
 .chip[data-connected='true'] .chip-action {
   color: var(--text);
   background: color-mix(in srgb, var(--text) 8%, transparent);

@@ -6,6 +6,8 @@ interface Props {
   provider: ProviderStatus
   busy: boolean
   onToggle: (provider: ProviderStatus) => void
+  /** Local files only: choose more folders while already connected. */
+  onAddFolders: (provider: ProviderStatus) => void
 }
 
 function describeQuality({ maxQuality }: ProviderStatus): string {
@@ -16,9 +18,11 @@ function describeQuality({ maxQuality }: ProviderStatus): string {
   return maxQuality.bitrateKbps ? `${codec} up to ${maxQuality.bitrateKbps} kbps` : codec
 }
 
-export function ProviderChip({ provider, busy, onToggle }: Props): React.JSX.Element {
+export function ProviderChip({ provider, busy, onToggle, onAddFolders }: Props): React.JSX.Element {
   const { name, connected } = provider
-  const action = connected ? 'Disconnect' : 'Connect'
+  const isLocal = provider.id === 'local'
+  // Local files has no account: "connecting" means choosing the folders to read.
+  const action = isLocal ? (connected ? 'Remove folders' : 'Choose folders') : connected ? 'Disconnect' : 'Connect'
 
   return (
     <li className="chip" data-connected={connected}>
@@ -30,6 +34,17 @@ export function ProviderChip({ provider, busy, onToggle }: Props): React.JSX.Ele
           {connected ? 'Connected' : 'Not connected'} · {describeQuality(provider)}
         </span>
       </div>
+      {isLocal && connected && (
+        <button
+          type="button"
+          className="chip-action chip-secondary"
+          aria-label={`Add folders to ${name}`}
+          disabled={busy}
+          onClick={() => onAddFolders(provider)}
+        >
+          Add folders
+        </button>
+      )}
       <button
         type="button"
         className="chip-action"

@@ -33,11 +33,11 @@ export function ConnectionsPage({ onChanged }: Props): React.JSX.Element {
     }
   }, [reloadCount])
 
-  const toggle = async (provider: ProviderStatus): Promise<void> => {
+  const run = async (provider: ProviderStatus, action: 'connect' | 'disconnect'): Promise<void> => {
     setError(undefined)
     setBusyId(provider.id)
     try {
-      if (provider.connected) await window.turntable.disconnectProvider(provider.id)
+      if (action === 'disconnect') await window.turntable.disconnectProvider(provider.id)
       else await window.turntable.connectProvider(provider.id)
       setReloadCount((count) => count + 1)
       onChanged?.()
@@ -47,6 +47,9 @@ export function ConnectionsPage({ onChanged }: Props): React.JSX.Element {
       setBusyId(undefined)
     }
   }
+
+  const toggle = (provider: ProviderStatus): Promise<void> => run(provider, provider.connected ? 'disconnect' : 'connect')
+  const addFolders = (provider: ProviderStatus): Promise<void> => run(provider, 'connect')
 
   const connectedCount = providers.filter((p) => p.connected).length
 
@@ -76,7 +79,13 @@ export function ConnectionsPage({ onChanged }: Props): React.JSX.Element {
       ) : (
         <ul className="chips" aria-label="Streaming services">
           {providers.map((provider) => (
-            <ProviderChip key={provider.id} provider={provider} busy={busyId === provider.id} onToggle={toggle} />
+            <ProviderChip
+              key={provider.id}
+              provider={provider}
+              busy={busyId === provider.id}
+              onToggle={toggle}
+              onAddFolders={addFolders}
+            />
           ))}
         </ul>
       )}

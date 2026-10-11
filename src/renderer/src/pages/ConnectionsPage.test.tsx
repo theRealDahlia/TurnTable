@@ -139,4 +139,39 @@ describe('ConnectionsPage', () => {
     expect((await screen.findByRole('alert')).textContent).toContain('boom')
     expect(screen.queryByText('Loading services…')).toBeNull()
   })
+
+  describe('Local files', () => {
+    const local = (connected: boolean): ProviderStatus =>
+      provider({ id: 'local', name: 'Local files', authKind: 'none', playback: 'file', maxQuality: lossless, connected })
+
+    it('asks the user to choose folders, since there is no account to connect', async () => {
+      api.listProviders.mockResolvedValue([local(false)])
+      render(<ConnectionsPage />)
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Choose folders Local files' }))
+
+      expect(api.connectProvider).toHaveBeenCalledWith('local')
+      expect(screen.queryByRole('button', { name: /Add folders/ })).toBeNull()
+    })
+
+    it('lets the user add more folders, or remove them all, once connected', async () => {
+      api.listProviders.mockResolvedValue([local(true)])
+      render(<ConnectionsPage />)
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Add folders to Local files' }))
+      expect(api.connectProvider).toHaveBeenCalledWith('local')
+      expect(api.disconnectProvider).not.toHaveBeenCalled()
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Remove folders Local files' }))
+      expect(api.disconnectProvider).toHaveBeenCalledWith('local')
+    })
+
+    it('does not offer folder choices on streaming services', async () => {
+      render(<ConnectionsPage />)
+      for (const name of ['Spotify', 'Qobuz']) {
+        const chip = (await screen.findByRole('img', { name: `${name} logo` })).closest('li')!
+        expect(within(chip).queryByRole('button', { name: /folders/i })).toBeNull()
+      }
+    })
+  })
 })
