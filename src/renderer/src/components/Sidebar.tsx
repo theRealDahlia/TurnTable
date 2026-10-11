@@ -1,6 +1,6 @@
 import { BrandMark } from './icons'
 
-export type Page = 'library' | 'connections'
+export type Page = 'library' | 'search' | 'connections'
 
 interface Props {
   page: Page
@@ -24,6 +24,16 @@ const ITEMS: { page: Page; label: string; icon: React.JSX.Element }[] = [
     icon: (
       <svg {...ICON_PROPS}>
         <path d="M4 5v14M9 5v14M14.5 6.5l4.2 12.7 1.9-.6L16.4 5.9z" />
+      </svg>
+    )
+  },
+  {
+    page: 'search',
+    label: 'Search',
+    icon: (
+      <svg {...ICON_PROPS}>
+        <circle cx="11" cy="11" r="6.5" />
+        <path d="m20 20-4.2-4.2" />
       </svg>
     )
   },

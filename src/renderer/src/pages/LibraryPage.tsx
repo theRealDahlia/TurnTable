@@ -3,39 +3,18 @@ import type { ProviderId } from '@shared/types'
 import { BrandMark, ClockIcon, SearchIcon } from '../components/icons'
 import { RefreshMenu } from '../components/RefreshMenu'
 import { TrackRow } from '../components/TrackRow'
+import { TrackSkeleton } from '../components/TrackSkeleton'
 import { filterTracks, sortTracks, type SortKey } from '../library/query'
 import type { Library } from '../library/useLibrary'
 import type { Player } from '../player/usePlayer'
 
 /** Rows rendered at a time, so a library of thousands of tracks stays responsive. */
 const PAGE_SIZE = 200
-const SKELETON_ROWS = 8
 
 interface Props {
   library: Library
   player: Player
   onOpenConnections: () => void
-}
-
-/** Placeholder rows shown while the first tracks are on their way. */
-function TrackSkeleton(): React.JSX.Element {
-  return (
-    <ul className="tracks" aria-hidden="true">
-      {Array.from({ length: SKELETON_ROWS }, (_, index) => (
-        <li className="skeleton-row" key={index}>
-          <span className="skeleton-block skeleton-art" />
-          <span className="skeleton-lines">
-            <span className="skeleton-block" style={{ width: `${55 + ((index * 17) % 30)}%` }} />
-            <span className="skeleton-block" style={{ width: `${30 + ((index * 11) % 25)}%` }} />
-          </span>
-          <span className="skeleton-block" style={{ width: '45%' }} />
-          <span className="skeleton-block" style={{ width: '60%' }} />
-          <span />
-          <span className="skeleton-block" style={{ width: '70%' }} />
-        </li>
-      ))}
-    </ul>
-  )
 }
 
 export function LibraryPage({ library, player, onOpenConnections }: Props): React.JSX.Element {

@@ -52,6 +52,14 @@ The default quota is 10,000 units a day and each page of 50 likes costs 1.
 
 **Playback.** YouTube only allows its videos to play in its own embedded player, and the video has to stay visible, so YouTube Music tracks play in a small video window above the player bar (with a link back to YouTube Music). The player bar's play, pause, seek and volume controls drive it. Drag the corner grip at the window's top-left (or use the − and + buttons, or the arrow keys on the grip) to make it smaller or larger; double-click the grip to reset. The size is 356 to 900 pixels wide, as the window allows (YouTube requires at least 200 pixels of height), and is remembered. Audio quality is whatever YouTube streams. Some videos' owners turn off embedding; those tracks show a disabled play button with an explanation. In a packaged build the player page is served from a loopback server on `127.0.0.1` (YouTube needs a real web origin), which serves only that page and its scripts.
 
+## Search
+
+The **Search** page searches every connected service at once and puts each one's results under its own tab (a chip per service; local files are searched in the library already loaded). Press Enter or Search; results are not fetched as you type, because a YouTube search costs quota. The heart on a result saves it to your library on that service (Spotify: a saved song; YouTube Music: a like) and removes it again; the Library catches up the next time you open it.
+
+- Spotify: saving needs the `user-library-modify` scope, so an older sign-in shows **Reconnect** until you sign in again. Search returns ten results a page; use *Show more* for the next ten.
+- YouTube Music: saving needs the `youtube.force-ssl` scope (see above), so reconnect once after updating. Google counts a search as one of 100 searches a day, so plan on that.
+- Results live in memory only and are never written to disk.
+
 ## Open decisions
 
 - First service to integrate (Spotify has the most accessible API)

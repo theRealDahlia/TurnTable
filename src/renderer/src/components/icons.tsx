@@ -92,3 +92,10 @@ export const ChevronDownIcon = ({ className }: IconProps): React.JSX.Element => 
     <path d="m6 9 6 6 6-6" />
   </svg>
 )
+
+/** A heart that is solid once the track is saved. */
+export const HeartIcon = ({ className, filled = false }: IconProps & { filled?: boolean }): React.JSX.Element => (
+  <svg {...STROKED} fill={filled ? 'currentColor' : 'none'} className={className}>
+    <path d="M12 20.5s-7.5-4.6-9.2-9.4C1.7 7.7 3.7 4.5 7 4.5c2 0 3.5 1.1 5 3 1.5-1.9 3-3 5-3 3.3 0 5.3 3.2 4.2 6.6-1.7 4.8-9.2 9.4-9.2 9.4Z" />
+  </svg>
+)

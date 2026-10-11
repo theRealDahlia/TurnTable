@@ -51,6 +51,76 @@ afterEach(cleanup)
 
 const nav = (): ReturnType<typeof within> => within(screen.getByRole('navigation', { name: 'Main' }))
 
+describe('App search', () => {
+  const searchable = (connected: boolean): ProviderStatus => ({ ...spotify(connected), searchable: true, savable: true })
+  const SONG = 'sp1'.padEnd(22, 'x')
+  const found = (saved: boolean) => ({
+    tracks: [{ id: SONG, providerId: 'spotify' as const, title: 'Everlong', artists: ['Foo Fighters'], durationMs: 250_000, saved }]
+  })
+
+  it('has a Search page in the sidebar, between Library and Connections', async () => {
+    api.listProviders.mockResolvedValue([searchable(true)])
+    render(<App />)
+
+    expect(nav().getAllByRole('button').map((button: HTMLElement) => button.textContent)).toEqual(['Library', 'Search', 'Connections'])
+    await userEvent.click(nav().getByRole('button', { name: 'Search' }))
+    expect(await screen.findByRole('heading', { name: 'Search' })).toBeTruthy()
+    expect(nav().getByRole('button', { name: 'Search' }).getAttribute('aria-current')).toBe('page')
+  })
+
+  it('searches, saves a result, and brings the new save into the Library on return', async () => {
+    api.listProviders.mockResolvedValue([searchable(true)])
+    api.searchTracks.mockResolvedValue(found(false))
+    api.saveTrack.mockResolvedValue(undefined)
+    render(<App />)
+    await screen.findByText('First Song')
+    expect(api.getSavedTracks).toHaveBeenCalledTimes(1)
+
+    await userEvent.click(nav().getByRole('button', { name: 'Search' }))
+    await userEvent.type(await screen.findByRole('searchbox', { name: 'Search for songs' }), 'foo fighters{Enter}')
+    expect(await screen.findByText('Everlong')).toBeTruthy()
+    expect(api.searchTracks).toHaveBeenCalledWith('spotify', 'foo fighters')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save Everlong', pressed: false }))
+    expect(await screen.findByRole('button', { name: 'Save Everlong', pressed: true })).toBeTruthy()
+    expect(api.saveTrack).toHaveBeenCalledExactlyOnceWith('spotify', SONG)
+    // Nothing is fetched while still on the Search page.
+    expect(api.getSavedTracks).toHaveBeenCalledTimes(1)
+
+    await userEvent.click(nav().getByRole('button', { name: 'Library' }))
+    await waitFor(() => expect(api.getSavedTracks).toHaveBeenCalledTimes(2))
+  })
+
+  it('does not re-read the library when nothing was saved', async () => {
+    api.listProviders.mockResolvedValue([searchable(true)])
+    render(<App />)
+    await screen.findByText('First Song')
+
+    await userEvent.click(nav().getByRole('button', { name: 'Search' }))
+    await userEvent.click(nav().getByRole('button', { name: 'Library' }))
+    await screen.findByText('First Song')
+
+    expect(api.getSavedTracks).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the results when switching pages and coming back', async () => {
+    api.listProviders.mockResolvedValue([searchable(true)])
+    api.searchTracks.mockResolvedValue(found(false))
+    render(<App />)
+    await screen.findByText('First Song')
+
+    await userEvent.click(nav().getByRole('button', { name: 'Search' }))
+    await userEvent.type(await screen.findByRole('searchbox'), 'foo{Enter}')
+    await screen.findByText('Everlong')
+    await userEvent.click(nav().getByRole('button', { name: 'Connections' }))
+    await userEvent.click(nav().getByRole('button', { name: 'Search' }))
+
+    expect(await screen.findByText('Everlong')).toBeTruthy()
+    expect((screen.getByRole('searchbox') as HTMLInputElement).value).toBe('foo')
+    expect(api.searchTracks).toHaveBeenCalledTimes(1)
+  })
+})
+
 describe('App', () => {
   it('opens on the Library and marks it as the current page', async () => {
     render(<App />)
