@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { ProviderId, ProviderStatus } from '@shared/types'
 import { ProviderChip } from '../components/ProviderChip'
-import { describeError } from '../lib/errors'
+import { describeError } from '@shared/errors'
 
 interface Props {
   /** Called after a service is connected or disconnected, so other pages can refresh. */

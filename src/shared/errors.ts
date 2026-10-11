@@ -4,9 +4,16 @@ function messageOf(error: unknown): string {
   return String(error)
 }
 
-/** Electron prefixes errors thrown in IPC handlers with transport details the user doesn't need. */
+/** Any number of "Error invoking remote method '…': " and "SomeError: " prefixes at the start of a message. */
+const TRANSPORT_PREFIX = /^(?:Error invoking remote method '[^']*':\s*|\w*Error:\s*)+/
+
+/**
+ * Electron wraps errors thrown in IPC handlers with transport details, and wraps again each time one crosses
+ * another boundary. Users only need the message at the bottom of the stack.
+ */
 export function describeError(error: unknown): string {
-  return messageOf(error).replace(/^Error invoking remote method '[^']*': (?:\w+: )?/, '')
+  const message = messageOf(error)
+  return message.replace(TRANSPORT_PREFIX, '') || message
 }
 
 /** Starting a new load aborts the previous play() request, which is expected and not a failure. */

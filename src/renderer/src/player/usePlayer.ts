@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import { isPlayable, playbackUrl } from '@shared/media'
 import type { Track } from '@shared/types'
-import { describeError, isAbortError } from '../lib/errors'
+import { describeError, isAbortError } from '@shared/errors'
 
 export type PlayerStatus = 'idle' | 'loading' | 'playing' | 'paused' | 'error'
 

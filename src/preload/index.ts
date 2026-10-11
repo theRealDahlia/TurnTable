@@ -1,11 +1,8 @@
-import { contextBridge, ipcRenderer } from 'electron'
-import { IpcChannel, type TurnTableApi } from '@shared/ipc'
+import { exposeAppApi } from './app'
+import { exposePlayerPageBridge } from './player-page'
+import { roleForPath } from './role'
 
-const api: TurnTableApi = {
-  listProviders: () => ipcRenderer.invoke(IpcChannel.listProviders),
-  connectProvider: (id) => ipcRenderer.invoke(IpcChannel.connectProvider, id),
-  disconnectProvider: (id) => ipcRenderer.invoke(IpcChannel.disconnectProvider, id),
-  getSavedTracks: (id, cursor) => ipcRenderer.invoke(IpcChannel.savedTracks, id, cursor)
-}
-
-contextBridge.exposeInMainWorld('turntable', api)
+// A sandboxed preload cannot load a second file, so one preload serves both windows and exposes only
+// what the window it landed in needs. The Spotify player page never sees the app's API, and vice versa.
+if (roleForPath(location.pathname) === 'spotify-player') exposePlayerPageBridge()
+else exposeAppApi()

@@ -50,7 +50,9 @@ describe('Spotify getSavedTracks', () => {
     const page = await provider.getSavedTracks()
 
     expect(fetchFn).toHaveBeenCalledWith('https://api.spotify.com/v1/me/tracks?limit=50&offset=0', {
-      headers: { Authorization: 'Bearer token-1' }
+      method: undefined,
+      headers: { Authorization: 'Bearer token-1' },
+      body: undefined
     })
     expect(page).toEqual({
       tracks: [
@@ -153,7 +155,7 @@ describe('Spotify getSavedTracks', () => {
     expect(page.tracks).toHaveLength(1)
     expect(session.getAccessToken).toHaveBeenNthCalledWith(1, { forceRefresh: false })
     expect(session.getAccessToken).toHaveBeenNthCalledWith(2, { forceRefresh: true })
-    expect(fetchFn.mock.calls[1]![1]).toEqual({ headers: { Authorization: 'Bearer fresh' } })
+    expect(fetchFn.mock.calls[1]![1]).toMatchObject({ headers: { Authorization: 'Bearer fresh' } })
   })
 
   it('signs the user out when a refreshed token is still rejected', async () => {

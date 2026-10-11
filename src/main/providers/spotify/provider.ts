@@ -99,7 +99,14 @@ function toTrack(savedAt: string, track: SpotifyTrack | null): Track | undefined
   }
 }
 
+/** Spotify ids are 22 base-62 characters; ids reach this code from the renderer, so check before building a URL. */
+const TRACK_ID_PATTERN = /^[A-Za-z0-9]{22}$/
+/** Device ids come back from the SDK; they are opaque, so only exclude what could alter the URL. */
+const DEVICE_ID_PATTERN = /^[A-Za-z0-9_-]{10,100}$/
+
 export interface SpotifyProvider extends MusicProvider {
+  /** Starts a track on the player-page device, via the Web API. */
+  startPlayback(deviceId: string, trackId: string): Promise<void>
   /** An access token for the Web Playback SDK, or an error asking the user to reconnect if playback was never authorized. */
   getPlaybackToken(): Promise<string>
 }
@@ -116,18 +123,21 @@ export function createSpotifyProvider(session: OAuthSession, options: SpotifyPro
   const { fetch: fetchFn = fetch, sleep = defaultSleep, random = Math.random } = options
 
   /**
-   * Calls the Web API. A 401 triggers one retry with a freshly refreshed token; a 429 waits as Spotify
-   * asks (with exponential backoff) and retries a few times before giving up.
+   * Calls the Web API and returns a successful response. A 401 triggers one retry with a freshly
+   * refreshed token; a 429 waits as Spotify asks (with exponential backoff) and retries a few times.
    */
-  async function request<T>(path: string): Promise<T> {
+  async function call(path: string, init: { method?: string; body?: unknown } = {}): Promise<Response> {
     let forceRefresh = false
     let refreshed = false
     let rateLimitRetries = 0
+    const body = init.body === undefined ? undefined : JSON.stringify(init.body)
 
     for (;;) {
       const token = await session.getAccessToken({ forceRefresh })
       forceRefresh = false
-      const response = await fetchFn(`${API_BASE}${path}`, { headers: { Authorization: `Bearer ${token}` } })
+      const headers: Record<string, string> = { Authorization: `Bearer ${token}` }
+      if (body !== undefined) headers['Content-Type'] = 'application/json'
+      const response = await fetchFn(`${API_BASE}${path}`, { method: init.method, headers, body })
 
       if (response.status === 401) {
         if (refreshed) {
@@ -151,8 +161,12 @@ export function createSpotifyProvider(session: OAuthSession, options: SpotifyPro
       }
 
       if (!response.ok) throw await toApiError(response)
-      return (await response.json()) as T
+      return response
     }
+  }
+
+  async function getJson<T>(path: string): Promise<T> {
+    return (await (await call(path)).json()) as T
   }
 
   return {
@@ -165,6 +179,15 @@ export function createSpotifyProvider(session: OAuthSession, options: SpotifyPro
       return (await session.isConnected()) && !(await session.hasScopes(PLAYBACK_SCOPES))
     },
 
+    async startPlayback(deviceId, trackId) {
+      if (!TRACK_ID_PATTERN.test(trackId)) throw new Error('That is not a valid Spotify track.')
+      if (!DEVICE_ID_PATTERN.test(deviceId)) throw new Error('Spotify player is not ready.')
+      await call(`/me/player/play?device_id=${encodeURIComponent(deviceId)}`, {
+        method: 'PUT',
+        body: { uris: [`spotify:track:${trackId}`], position_ms: 0 }
+      })
+    },
+
     async getPlaybackToken() {
       if (!(await session.hasScopes(PLAYBACK_SCOPES))) throw new PlaybackPermissionError()
       return session.getAccessToken()
@@ -172,7 +195,7 @@ export function createSpotifyProvider(session: OAuthSession, options: SpotifyPro
 
     async getSavedTracks(cursor): Promise<TrackPage> {
       const offset = parseOffsetCursor(cursor)
-      const page = await request<SavedTracksResponse>(`/me/tracks?limit=${PAGE_SIZE}&offset=${offset}`)
+      const page = await getJson<SavedTracksResponse>(`/me/tracks?limit=${PAGE_SIZE}&offset=${offset}`)
 
       const tracks = page.items.flatMap((item) => toTrack(item.added_at, item.track) ?? [])
       // Advance by what Spotify returned, and stop on an empty page so a bad `next` can't loop forever.

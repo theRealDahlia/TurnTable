@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import type { ProviderId, ProviderStatus, Track } from '@shared/types'
-import { describeError } from '../lib/errors'
+import { describeError } from '@shared/errors'
 
 export interface ProviderLibrary {
   status: 'loading' | 'ready' | 'error'

@@ -1,5 +1,5 @@
 import { join } from 'node:path'
-import { app, BrowserWindow, dialog, protocol, safeStorage, shell } from 'electron'
+import { app, BrowserWindow, components, dialog, protocol, safeStorage, session, shell } from 'electron'
 import { MEDIA_SCHEME } from '@shared/media'
 import { createMediaHandler } from './media/handler'
 import { OAuthClient } from './auth/oauth'
@@ -11,7 +11,8 @@ import { FolderStore } from './providers/local/folderStore'
 import { LocalLibrary } from './providers/local/library'
 import { readArtwork, readFileMetadata } from './providers/local/metadata'
 import { createLocalProvider } from './providers/local/provider'
-import { createSpotifyProvider } from './providers/spotify/provider'
+import { createSpotifyProvider, type SpotifyProvider } from './providers/spotify/provider'
+import { denyAllPermissions, registerSpotifyPlayback } from './spotifyPlayer/electron'
 import { createDefaultRegistry } from './providers/registry'
 
 function createWindow(): void {
@@ -48,7 +49,7 @@ protocol.registerSchemesAsPrivileged([
   { scheme: MEDIA_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } }
 ])
 
-function createRegistry(): { registry: ReturnType<typeof createDefaultRegistry>; library: LocalLibrary } {
+function createRegistry(): { registry: ReturnType<typeof createDefaultRegistry>; library: LocalLibrary; spotify: SpotifyProvider } {
   const store = new TokenStore(join(app.getPath('userData'), 'tokens.bin'), {
     isAvailable: () => safeStorage.isEncryptionAvailable(),
     encrypt: (plain) => safeStorage.encryptString(plain),
@@ -62,7 +63,7 @@ function createRegistry(): { registry: ReturnType<typeof createDefaultRegistry>;
     fetch,
     now: Date.now
   })
-  const spotify = new OAuthSession({
+  const spotifySession = new OAuthSession({
     providerId: 'spotify',
     serviceName: 'Spotify',
     config: () => spotifyOAuthConfig(import.meta.env.MAIN_VITE_SPOTIFY_CLIENT_ID),
@@ -84,11 +85,17 @@ function createRegistry(): { registry: ReturnType<typeof createDefaultRegistry>;
     }
   })
 
-  return { registry: createDefaultRegistry({ spotify: createSpotifyProvider(spotify), local }), library }
+  const spotify = createSpotifyProvider(spotifySession)
+  return { registry: createDefaultRegistry({ spotify, local }), library, spotify }
 }
 
-app.whenReady().then(() => {
-  const { registry, library } = createRegistry()
+app.whenReady().then(async () => {
+  // Widevine arrives via Chromium's component updater; Spotify playback waits on it, but the app must not.
+  await components.whenReady().catch((error: unknown) => console.warn('Widevine is not available:', error))
+  denyAllPermissions(session.defaultSession)
+
+  const { registry, library, spotify } = createRegistry()
+  registerSpotifyPlayback(spotify)
   protocol.handle(MEDIA_SCHEME, createMediaHandler({ resolve: (id) => library.resolve(id), readArtwork }))
   registerIpc(registry)
   createWindow()
