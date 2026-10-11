@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { OAuthSession } from '../src/main/auth/session'
 import { createDefaultRegistry } from '../src/main/providers/registry'
-import { spotifyOAuthConfig } from '../src/main/providers/spotify/config'
+import { SPOTIFY_REDIRECT_PORT, spotifyOAuthConfig } from '../src/main/providers/spotify/config'
 import { createSpotifyProvider } from '../src/main/providers/spotify/provider'
 
 describe('spotifyOAuthConfig', () => {
@@ -12,8 +12,13 @@ describe('spotifyOAuthConfig', () => {
       clientId: 'abc123',
       authorizeUrl: 'https://accounts.spotify.com/authorize',
       tokenUrl: 'https://accounts.spotify.com/api/token',
-      scopes: ['user-library-read']
+      scopes: ['user-library-read'],
+      loopbackPort: SPOTIFY_REDIRECT_PORT
     })
+  })
+
+  it('uses the redirect URI documented in the README', () => {
+    expect(SPOTIFY_REDIRECT_PORT).toBe(43821)
   })
 
   it.each([undefined, ''])('explains how to fix a missing client id (%j)', (clientId) => {

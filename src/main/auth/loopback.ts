@@ -73,9 +73,16 @@ export async function startLoopbackServer(options: LoopbackOptions = {}): Promis
   result.catch(() => undefined)
 
   await new Promise<void>((resolve, reject) => {
-    server.once('error', reject)
+    const onStartupError = (error: NodeJS.ErrnoException): void => {
+      reject(
+        error.code === 'EADDRINUSE'
+          ? new Error(`Port ${port} is already in use. Close whatever is using it, or quit any other TurnTable window, and try again.`)
+          : error
+      )
+    }
+    server.once('error', onStartupError)
     server.listen(port, '127.0.0.1', () => {
-      server.off('error', reject)
+      server.off('error', onStartupError)
       resolve()
     })
   })

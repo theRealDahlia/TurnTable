@@ -32,7 +32,7 @@ If the app fails to start with "Electron uninstall", run `node node_modules/elec
 ## Spotify setup
 
 1. Create an app at https://developer.spotify.com/dashboard.
-2. Add this redirect URI exactly: `http://127.0.0.1/callback`. Spotify lets a loopback address use any port, and TurnTable picks a free one at sign-in.
+2. Add this redirect URI exactly: `http://127.0.0.1:43821/callback`. Spotify's dashboard rejects a loopback URI without a port as insecure, so TurnTable always uses port 43821 for Spotify sign-in (`SPOTIFY_REDIRECT_PORT` in `src/main/providers/spotify/config.ts`). If that port is busy on your machine, change the constant and the registered URI together.
 3. Copy `.env.example` to `.env` and paste the app's client ID into `MAIN_VITE_SPOTIFY_CLIENT_ID`. No client secret is needed.
 4. Restart `npm run dev`, then click Connect on the Spotify chip.
 

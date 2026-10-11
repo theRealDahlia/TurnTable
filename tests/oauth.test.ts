@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { startLoopbackServer } from '../src/main/auth/loopback'
 import { OAuthClient, TokenRequestError, type OAuthConfig } from '../src/main/auth/oauth'
 
 const config: OAuthConfig = {
@@ -46,6 +47,22 @@ describe('OAuthClient', () => {
     expect(body.get('grant_type')).toBe('authorization_code')
     expect(body.get('code')).toBe('auth-code')
     expect(body.get('code_verifier')).toMatch(/^[A-Za-z0-9_-]{43,}$/)
+  })
+
+  it('uses the fixed loopback port when the service needs a pre-registered redirect URI', async () => {
+    const probe = await startLoopbackServer()
+    const port = Number(new URL(probe.redirectUri).port)
+    probe.close()
+
+    const browser = fakeBrowser()
+    const fetchMock = vi.fn(async () => tokenResponse({ access_token: 'at', expires_in: 100 }))
+    const client = new OAuthClient({ openUrl: browser.openUrl, fetch: fetchMock as never, now: () => 0 })
+
+    await client.authorize({ ...config, loopbackPort: port })
+
+    expect(browser.opened[0]!.searchParams.get('redirect_uri')).toBe(`http://127.0.0.1:${port}/callback`)
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
+    expect((init.body as URLSearchParams).get('redirect_uri')).toBe(`http://127.0.0.1:${port}/callback`)
   })
 
   it('rejects a callback whose state does not match', async () => {

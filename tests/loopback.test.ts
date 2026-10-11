@@ -34,7 +34,7 @@ describe('startLoopbackServer', () => {
   it('fails to start when the port is already in use', async () => {
     const first = await startLoopbackServer()
     const port = Number(new URL(first.redirectUri).port)
-    await expect(startLoopbackServer({ port })).rejects.toThrow()
+    await expect(startLoopbackServer({ port })).rejects.toThrow(`Port ${port} is already in use`)
     first.close()
   })
 })
