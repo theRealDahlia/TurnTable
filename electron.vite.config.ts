@@ -19,7 +19,11 @@ export default defineConfig({
   renderer: {
     build: {
       rollupOptions: {
-        input: { index: resolve(__dirname, 'src/renderer/index.html'), 'spotify-player': resolve(__dirname, 'src/renderer/spotify-player.html') }
+        input: {
+          index: resolve(__dirname, 'src/renderer/index.html'),
+          'spotify-player': resolve(__dirname, 'src/renderer/spotify-player.html'),
+          'youtube-player': resolve(__dirname, 'src/renderer/youtube-player.html')
+        }
       }
     },
     plugins: [react()],

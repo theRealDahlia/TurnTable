@@ -14,6 +14,7 @@ import { createLocalProvider } from './providers/local/provider'
 import { createSpotifyProvider, type SpotifyProvider } from './providers/spotify/provider'
 import { FileRateLimitStore, RateLimitGate } from './providers/spotify/rateLimit'
 import { denyAllPermissions, registerSpotifyPlayback } from './spotifyPlayer/electron'
+import { registerYouTubePlayer } from './youtubePlayer/electron'
 import { createDefaultRegistry } from './providers/registry'
 import { youtubeOAuthConfig } from './providers/youtube/config'
 import { createYouTubeProvider } from './providers/youtube/provider'
@@ -113,6 +114,8 @@ app.whenReady().then(async () => {
 
   const { registry, library, spotify } = createRegistry()
   registerSpotifyPlayback(spotify)
+  const youtubePlayer = registerYouTubePlayer()
+  app.on('will-quit', youtubePlayer.close)
   protocol.handle(MEDIA_SCHEME, createMediaHandler({ resolve: (id) => library.resolve(id), readArtwork }))
   registerIpc(registry)
   createWindow()

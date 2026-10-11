@@ -1,8 +1,9 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { IpcChannel, type TurnTableApi } from '@shared/ipc'
+import { YouTubePlayerChannel, type YouTubePlayerHostApi } from '@shared/youtubePlayer'
 import { SpotifyPlayerChannel, type SpotifyPlayerApi, type SpotifyPlayerEvent } from '@shared/spotifyPlayer'
 
-/** What the app window gets: the library API and the Spotify playback controls. */
+/** What the app window gets: the library API, the Spotify playback controls, and where YouTube's player page lives. */
 export function exposeAppApi(): void {
   const api: TurnTableApi = {
     listProviders: () => ipcRenderer.invoke(IpcChannel.listProviders),
@@ -24,6 +25,11 @@ export function exposeAppApi(): void {
     }
   }
 
+  const youtube: YouTubePlayerHostApi = {
+    getPlayerUrl: () => ipcRenderer.invoke(YouTubePlayerChannel.playerUrl)
+  }
+
   contextBridge.exposeInMainWorld('turntable', api)
   contextBridge.exposeInMainWorld('turntableSpotify', spotify)
+  contextBridge.exposeInMainWorld('turntableYouTube', youtube)
 }

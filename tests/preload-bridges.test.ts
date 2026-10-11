@@ -28,11 +28,12 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('preload role separation', () => {
-  it('gives the app window the library API and Spotify controls, and nothing from the player page', async () => {
+  it('gives the app window the library API, Spotify controls and the YouTube page lookup, and nothing from the player page', async () => {
     await loadPreloadFor('/app/out/renderer/index.html')
-    expect(Object.keys(exposed).sort()).toEqual(['turntable', 'turntableSpotify'])
+    expect(Object.keys(exposed).sort()).toEqual(['turntable', 'turntableSpotify', 'turntableYouTube'])
     expect(Object.keys(exposed.turntable as object).sort()).toEqual(['connectProvider', 'disconnectProvider', 'getSavedTracks', 'listProviders'])
     expect(Object.keys(exposed.turntableSpotify as object).sort()).toEqual(['onEvent', 'pause', 'play', 'resume', 'seek', 'setVolume'])
+    expect(Object.keys(exposed.turntableYouTube as object)).toEqual(['getPlayerUrl'])
   })
 
   it('gives the hidden Spotify page only its narrow bridge: no library, no connections, no controls', async () => {
@@ -43,7 +44,21 @@ describe('preload role separation', () => {
 
   it('falls back to the app role for any other page', async () => {
     await loadPreloadFor('/somewhere/else.html')
-    expect(Object.keys(exposed).sort()).toEqual(['turntable', 'turntableSpotify'])
+    expect(Object.keys(exposed).sort()).toEqual(['turntable', 'turntableSpotify', 'turntableYouTube'])
+  })
+})
+
+describe('YouTube player lookup', () => {
+  it('asks the main process where the player page is', async () => {
+    invoke.mockResolvedValue('http://127.0.0.1:5000/youtube-player.html')
+    await loadPreloadFor('/app/out/renderer/index.html')
+    expect(await (exposed.turntableYouTube as { getPlayerUrl(): Promise<string> }).getPlayerUrl()).toBe('http://127.0.0.1:5000/youtube-player.html')
+    expect(invoke).toHaveBeenCalledWith('youtube:player-url')
+  })
+
+  it('is not given to the Spotify player page', async () => {
+    await loadPreloadFor('/app/out/renderer/spotify-player.html')
+    expect(exposed.turntableYouTube).toBeUndefined()
   })
 })
 
