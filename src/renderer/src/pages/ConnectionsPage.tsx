@@ -1,12 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { ProviderId, ProviderStatus } from '@shared/types'
 import { ProviderChip } from '../components/ProviderChip'
-
-/** Electron prefixes errors thrown in IPC handlers with transport details the user doesn't need. */
-function describeError(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error)
-  return message.replace(/^Error invoking remote method '[^']*': (?:\w+: )?/, '')
-}
+import { describeError } from '../lib/errors'
 
 export function ConnectionsPage(): React.JSX.Element {
   const [providers, setProviders] = useState<ProviderStatus[]>([])
