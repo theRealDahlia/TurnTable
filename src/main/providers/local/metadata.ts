@@ -1,5 +1,5 @@
 import { basename, extname } from 'node:path'
-import { parseFile, type IFormat } from 'music-metadata'
+import { parseFile, selectCover, type IFormat } from 'music-metadata'
 import type { AudioQuality } from '@shared/types'
 
 export interface FileMetadata {
@@ -51,4 +51,11 @@ export const readFileMetadata: ReadMetadata = async (path) => {
     quality: describeFormat(format),
     hasArtwork: (common.picture?.length ?? 0) > 0
   }
+}
+
+/** The embedded cover image of one file, if it has one. */
+export async function readArtwork(path: string): Promise<{ data: Uint8Array; mime: string } | undefined> {
+  const { common } = await parseFile(path, { skipCovers: false })
+  const cover = selectCover(common.picture)
+  return cover ? { data: cover.data, mime: cover.format } : undefined
 }
