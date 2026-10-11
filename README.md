@@ -16,10 +16,20 @@ Connect several streaming accounts (Spotify, Apple Music, YouTube Music, Tidal, 
 
 ## Status
 
-Empty scaffold. Stack and first service integration still to be decided.
+Desktop scaffold (Electron + TypeScript + React). The window opens and lists the five services, and the OAuth/PKCE and encrypted token-storage building blocks are in place and tested. Every service is still a placeholder; none can sign in yet. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## Develop
+
+```bash
+npm install
+npm run dev      # start the app with hot reload
+npm run check    # typecheck + lint + tests
+npm run build    # production bundles into out/
+```
+
+If the app fails to start with "Electron uninstall", run `node node_modules/electron/install.js` to download the Electron binary.
 
 ## Open decisions
 
-- Platform: web app, desktop (Electron), or mobile
 - First service to integrate (Spotify has the most accessible API)
-- Where to store tokens and the cached library (local only vs. a backend)
+- Which services allow third-party playback at their top quality (see architecture notes)

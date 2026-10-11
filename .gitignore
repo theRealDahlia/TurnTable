@@ -8,3 +8,5 @@ tokens.json
 .DS_Store
 *.log
 coverage/
+out/
+*.tsbuildinfo
