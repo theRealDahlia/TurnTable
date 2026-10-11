@@ -25,7 +25,7 @@ const SPOTIFY_URI = 'spotify:track:4iV5W9uYEdYUVa79Axb7Rh'
 function setup() {
   const local = new FakeMedia()
   const spotify = new FakeMedia()
-  const router = new MediaRouter(local, spotify)
+  const router = new MediaRouter(local, { spotify })
   const heard: string[] = []
   for (const type of ['playing', 'pause', 'timeupdate', 'durationchange', 'ended', 'waiting']) router.addEventListener(type, () => heard.push(type))
   const errors: (string | undefined)[] = []
@@ -171,5 +171,70 @@ describe('MediaRouter events', () => {
     local.emit('timeupdate')
     local.emit('timeupdate')
     expect(heard).toEqual(['timeupdate', 'timeupdate'])
+  })
+})
+
+describe('MediaRouter with several streaming services', () => {
+  const YOUTUBE_SOURCE = 'youtube:abcdefghijk'
+
+  function setupThree() {
+    const local = new FakeMedia()
+    const spotify = new FakeMedia()
+    const youtube = new FakeMedia()
+    const router = new MediaRouter(local, { spotify, youtube })
+    const heard: string[] = []
+    router.addEventListener('playing', () => heard.push('playing'))
+    return { router, local, spotify, youtube, heard }
+  }
+
+  it('picks the backend by the source\'s scheme', () => {
+    const { router, local, spotify, youtube } = setupThree()
+    router.src = YOUTUBE_SOURCE
+    expect([youtube.src, spotify.src, local.src]).toEqual([YOUTUBE_SOURCE, '', ''])
+    router.src = SPOTIFY_URI
+    expect([youtube.src, spotify.src, local.src]).toEqual(['', SPOTIFY_URI, ''])
+    router.src = LOCAL_URL
+    expect(local.src).toBe(LOCAL_URL)
+  })
+
+  it('stops and clears the backend it leaves, and only that one', () => {
+    const { router, spotify, youtube } = setupThree()
+    router.src = YOUTUBE_SOURCE
+    router.src = SPOTIFY_URI
+    expect(youtube.pause).toHaveBeenCalledOnce()
+    expect(youtube.removeAttribute).toHaveBeenCalledWith('src')
+    expect(spotify.pause).not.toHaveBeenCalled()
+  })
+
+  it('treats a source with an unknown scheme, or a URL with a scheme of its own, as local', () => {
+    const { router, local, youtube } = setupThree()
+    router.src = 'soundcloud:123'
+    expect(local.src).toBe('soundcloud:123')
+    router.src = 'youtube://not-a-source'
+    expect(youtube.src).toBe('')
+    expect(local.src).toBe('youtube://not-a-source')
+  })
+
+  it('does not mistake names on the object prototype for a scheme', () => {
+    const { router, local } = setupThree()
+    router.src = 'constructor:x'
+    expect(local.src).toBe('constructor:x')
+  })
+
+  it('applies the volume to every backend and only hears the active one', () => {
+    const { router, local, spotify, youtube, heard } = setupThree()
+    router.volume = 0.4
+    expect([local.volume, spotify.volume, youtube.volume]).toEqual([0.4, 0.4, 0.4])
+    router.src = YOUTUBE_SOURCE
+    spotify.emit('playing')
+    local.emit('playing')
+    youtube.emit('playing')
+    expect(heard).toEqual(['playing'])
+  })
+
+  it('clears the source on every backend', () => {
+    const { router, local, spotify, youtube } = setupThree()
+    router.removeAttribute('src')
+    for (const backend of [local, spotify, youtube]) expect(backend.removeAttribute).toHaveBeenCalledWith('src')
   })
 })

@@ -978,6 +978,64 @@ html[data-platform='mac'] .drag-strip {
   }
 }
 
+/* ---------- YouTube video ---------- */
+/* YouTube requires its video to stay visible, so YouTube Music tracks play in this small window above the player bar. */
+.youtube-panel {
+  position: fixed;
+  right: 20px;
+  bottom: 96px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  width: min(400px, calc(100vw - 272px));
+  overflow: hidden;
+  background: #000;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+
+.youtube-panel[data-showing='false'] {
+  display: none;
+}
+
+.youtube-frame {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
+}
+
+.youtube-note {
+  display: grid;
+  place-items: center;
+  margin: 0;
+  aspect-ratio: 16 / 9;
+  padding: 16px;
+  color: #bbb;
+  font-size: 13px;
+  text-align: center;
+}
+
+.youtube-credit {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 12px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.youtube-credit a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.youtube-credit a:hover {
+  text-decoration: underline;
+}
+
 /* ---------- Player ---------- */
 .player {
   display: grid;

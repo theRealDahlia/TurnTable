@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { PlayerBar } from './components/PlayerBar'
 import { Sidebar, type Page } from './components/Sidebar'
+import { YouTubePanel } from './components/YouTubePanel'
 import { useLibrary } from './library/useLibrary'
 import { ConnectionsPage } from './pages/ConnectionsPage'
 import { LibraryPage } from './pages/LibraryPage'
@@ -27,6 +28,7 @@ export function App(): React.JSX.Element {
           <ConnectionsPage onChanged={library.refreshProvider} />
         )}
       </div>
+      <YouTubePanel track={player.track} />
       <PlayerBar player={player} />
     </div>
   )

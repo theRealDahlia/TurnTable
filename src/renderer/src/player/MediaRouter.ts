@@ -1,22 +1,29 @@
 import { MEDIA_EVENTS, type PlayerMedia } from './media'
 
-const isSpotifySource = (src: string): boolean => src.startsWith('spotify:')
+/** The scheme of a streaming source such as `spotify:track:<id>` or `youtube:<id>`; local files use a `scheme://` URL of their own. */
+const schemeOf = (src: string): string | undefined => /^([a-z]+):(?!\/)/.exec(src)?.[1]
 
 /**
- * Presents a local audio element and Spotify's player as one audio source: setting `src` picks the right
- * backend and silences the other, so the player engine can queue tracks from both without caring.
+ * Presents a local audio element and each streaming service's player as one audio source: setting `src`
+ * picks the right backend by its scheme and silences the others, so the player engine can queue tracks
+ * from all of them without caring.
  */
 export class MediaRouter extends EventTarget implements PlayerMedia {
   private active: PlayerMedia
   private level = 1
+  private readonly streams: ReadonlyMap<string, PlayerMedia>
+  private readonly backends: PlayerMedia[]
 
+  /** `sources` maps a scheme (`spotify`, `youtube`) to the backend that plays sources starting with it. */
   constructor(
     private readonly local: PlayerMedia,
-    private readonly spotify: PlayerMedia
+    sources: Readonly<Record<string, PlayerMedia>>
   ) {
     super()
     this.active = local
-    for (const backend of [local, spotify]) {
+    this.streams = new Map(Object.entries(sources))
+    this.backends = [local, ...this.streams.values()]
+    for (const backend of this.backends) {
       for (const type of MEDIA_EVENTS) {
         // Only the backend in use gets to speak, so the one we just left can't report its own shutdown.
         backend.addEventListener(type, (event) => {
@@ -30,7 +37,8 @@ export class MediaRouter extends EventTarget implements PlayerMedia {
     return this.active.src
   }
   set src(src: string) {
-    const next = isSpotifySource(src) ? this.spotify : this.local
+    const scheme = schemeOf(src)
+    const next = (scheme !== undefined && this.streams.get(scheme)) || this.local
     if (next !== this.active) {
       const previous = this.active
       this.active = next
@@ -53,8 +61,7 @@ export class MediaRouter extends EventTarget implements PlayerMedia {
   }
   set volume(volume: number) {
     this.level = volume
-    this.local.volume = volume
-    this.spotify.volume = volume
+    for (const backend of this.backends) backend.volume = volume
   }
 
   get duration(): number {
@@ -80,8 +87,7 @@ export class MediaRouter extends EventTarget implements PlayerMedia {
     this.active.load()
   }
   removeAttribute(name: 'src'): void {
-    this.local.removeAttribute(name)
-    this.spotify.removeAttribute(name)
+    for (const backend of this.backends) backend.removeAttribute(name)
   }
 
   /** An event can only be dispatched once, so pass on a copy (keeping the message of custom error events). */
