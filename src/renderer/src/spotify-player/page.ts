@@ -4,6 +4,8 @@ import { SPOTIFY_ERRORS } from '@shared/spotifyPlayer'
 /** The slice of Spotify's Web Playback SDK this page uses. */
 export interface SdkTrack {
   id: string | null
+  /** Present when Spotify swapped in a regional variant of the track that was asked for. */
+  linked_from?: { id: string | null } | null
 }
 export interface SdkState {
   paused: boolean
@@ -38,6 +40,7 @@ export function toStateEvent(state: SdkState): SpotifyPlayerEvent {
   return {
     type: 'state',
     trackId: current?.id ?? null,
+    linkedFromId: current?.linked_from?.id ?? null,
     paused: state.paused,
     positionMs: state.position,
     durationMs: state.duration ?? current?.duration_ms ?? 0,

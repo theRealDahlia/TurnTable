@@ -260,7 +260,8 @@ describe('LibraryPage', () => {
 
     it.each([
       ['an ALAC file', local(1, { quality: { codec: 'alac', lossless: true } }), /ALAC files can't be played/],
-      ['a Spotify track', track('spotify', 2), /not available yet/]
+      ['a Qobuz track (playback not built yet)', track('qobuz', 2), /not available yet/],
+      ['a Spotify track without a valid id', track('spotify', 3), /Spotify track can't be played/]
     ])('disables Play for %s and says why', async (_label, unplayable, reason) => {
       const player = makePlayer()
       render(<LibraryPage library={library([unplayable])} player={player} onOpenConnections={vi.fn()} />)
@@ -270,6 +271,20 @@ describe('LibraryPage', () => {
       expect(button.title).toMatch(reason)
       await userEvent.dblClick(rows()[0]!)
       expect(player.play).not.toHaveBeenCalled()
+    })
+
+    it('lets a Spotify track with a valid id be played, alongside local files in one queue', async () => {
+      const player = makePlayer()
+      const spotifyTrack = track('spotify', 2, { id: '4iV5W9uYEdYUVa79Axb7Rh', title: 'Spotify Song' })
+      render(<LibraryPage library={library([local(1), spotifyTrack])} player={player} onOpenConnections={vi.fn()} />)
+
+      const button = screen.getByRole('button', { name: 'Play Spotify Song' }) as HTMLButtonElement
+      expect(button.disabled).toBe(false)
+      await userEvent.click(button)
+
+      const [played, queue] = (player.play as ReturnType<typeof vi.fn>).mock.calls[0] as [Track, Track[]]
+      expect(played.id).toBe('4iV5W9uYEdYUVa79Axb7Rh')
+      expect(queue.map((t) => t.providerId).sort()).toEqual(['local', 'spotify'])
     })
 
     it('shows the audio format of each track that has one', () => {

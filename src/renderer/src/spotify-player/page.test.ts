@@ -116,7 +116,7 @@ describe('startPlayerPage', () => {
     it('reports position, duration and pause state', () => {
       const { player, events } = setup()
       player.fire('player_state_changed', state())
-      expect(events).toEqual([{ type: 'state', trackId: 'track1', paused: false, positionMs: 1500, durationMs: 200_000, ended: false }])
+      expect(events).toEqual([{ type: 'state', trackId: 'track1', linkedFromId: null, paused: false, positionMs: 1500, durationMs: 200_000, ended: false }])
     })
 
     it('ignores the null state the SDK sends when playback moves elsewhere', () => {
@@ -198,6 +198,11 @@ describe('toStateEvent', () => {
     ['no current track', state({ paused: true, position: 0, track_window: { current_track: null, previous_tracks: [{ id: 'a' }] } })]
   ])('does not treat %s as the end of a track', (_label, input) => {
     expect(toStateEvent(input)).toMatchObject({ ended: false })
+  })
+
+  it('reports the requested id when Spotify plays a regional variant of the track', () => {
+    const relinked = state({ track_window: { current_track: { id: 'variant', linked_from: { id: 'requested' } }, previous_tracks: [] } })
+    expect(toStateEvent(relinked)).toMatchObject({ trackId: 'variant', linkedFromId: 'requested' })
   })
 
   it('falls back to the track duration when the state has none', () => {

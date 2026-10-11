@@ -17,7 +17,16 @@ export type SpotifyErrorKind = 'initialization' | 'authentication' | 'account' |
 export type SpotifyPlayerEvent =
   | { type: 'ready'; deviceId: string }
   | { type: 'not-ready' }
-  | { type: 'state'; trackId: string | null; paused: boolean; positionMs: number; durationMs: number; ended: boolean }
+  | {
+      type: 'state'
+      trackId: string | null
+      /** When Spotify plays a regional variant of the requested track, the id that was requested. */
+      linkedFromId?: string | null
+      paused: boolean
+      positionMs: number
+      durationMs: number
+      ended: boolean
+    }
   | { type: 'error'; kind: SpotifyErrorKind; message: string }
 
 /** What the main process can ask the player page to do. */
@@ -74,6 +83,7 @@ export function isSpotifyPlayerEvent(value: unknown): value is SpotifyPlayerEven
     case 'state':
       return (
         (value.trackId === null || typeof value.trackId === 'string') &&
+        (value.linkedFromId === undefined || value.linkedFromId === null || typeof value.linkedFromId === 'string') &&
         typeof value.paused === 'boolean' &&
         isNonNegative(value.positionMs) &&
         isNonNegative(value.durationMs) &&

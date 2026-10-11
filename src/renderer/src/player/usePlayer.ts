@@ -2,6 +2,8 @@ import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import { isPlayable, playbackUrl } from '@shared/media'
 import type { Track } from '@shared/types'
 import { describeError, isAbortError } from '@shared/errors'
+import { createDefaultMedia } from './defaultMedia'
+import { errorMessageOf, type PlayerMedia } from './media'
 
 export type PlayerStatus = 'idle' | 'loading' | 'playing' | 'paused' | 'error'
 
@@ -64,18 +66,18 @@ export interface Player extends State {
 }
 
 export interface PlayerOptions {
-  createAudio?: () => HTMLAudioElement
+  createAudio?: () => PlayerMedia
 }
 
 /**
  * Plays tracks through one plain <audio> element. There is deliberately no Web Audio graph, EQ or
  * normalization in between, so lossless files reach the output as decoded.
  */
-export function usePlayer({ createAudio = () => new Audio() }: PlayerOptions = {}): Player {
+export function usePlayer({ createAudio = createDefaultMedia }: PlayerOptions = {}): Player {
   const [state, dispatch] = useReducer(reducer, initialState)
   // Only the first factory is used: re-creating the element on a re-render would cut off playback.
   const [audioFactory] = useState(() => createAudio)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const audioRef = useRef<PlayerMedia | null>(null)
   const queueRef = useRef<{ tracks: Track[]; index: number }>({ tracks: [], index: -1 })
   /** Identifies the load in progress, so a late failure of a superseded load is ignored. */
   const loadId = useRef(0)
@@ -115,7 +117,7 @@ export function usePlayer({ createAudio = () => new Audio() }: PlayerOptions = {
     const audio = audioFactory()
     audioRef.current = audio
 
-    const on = (type: string, listener: () => void): void => audio.addEventListener(type, listener)
+    const on = (type: string, listener: (event: Event) => void): void => audio.addEventListener(type, listener)
     on('playing', () => dispatch({ type: 'status', status: 'playing' }))
     on('waiting', () => dispatch({ type: 'status', status: 'loading' }))
     on('pause', () => {
@@ -130,8 +132,9 @@ export function usePlayer({ createAudio = () => new Audio() }: PlayerOptions = {
       if (index < tracks.length - 1) loadIndex(index + 1)
       else dispatch({ type: 'status', status: 'paused' })
     })
-    on('error', () => {
-      dispatch({ type: 'failed', error: MEDIA_ERRORS[audio.error?.code ?? 0] ?? 'Playback failed.' })
+    on('error', (event) => {
+      // Sources like Spotify explain their failures themselves; a real <audio> element only has an error code.
+      dispatch({ type: 'failed', error: errorMessageOf(event) ?? MEDIA_ERRORS[audio.error?.code ?? 0] ?? 'Playback failed.' })
     })
 
     return () => {

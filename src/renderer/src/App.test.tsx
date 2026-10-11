@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { TurnTableApi } from '@shared/ipc'
+import type { SpotifyPlayerApi, SpotifyPlayerEvent } from '@shared/spotifyPlayer'
 import type { ProviderStatus } from '@shared/types'
 import { App } from './App'
 
@@ -163,6 +164,157 @@ describe('App', () => {
       await userEvent.keyboard('a b')
       expect(mediaPlay).not.toHaveBeenCalled()
       expect((screen.getByRole('searchbox') as HTMLInputElement).value).toBe('a b')
+    })
+  })
+
+  describe('Spotify playback', () => {
+    const FIRST = '4iV5W9uYEdYUVa79Axb7Rh'
+    const SECOND = '1301WleyT98MSxVHPZCA6M'
+    const spotifyTrack = (id: string, title: string, savedAt: string) => ({
+      id,
+      providerId: 'spotify' as const,
+      title,
+      artists: ['Artist'],
+      durationMs: 200_000,
+      savedAt
+    })
+    // Newest first: Spotify One, Spotify Two, then the local file.
+    const library = {
+      spotify: [spotifyTrack(FIRST, 'Spotify One', '2026-03-01T00:00:00Z'), spotifyTrack(SECOND, 'Spotify Two', '2026-02-01T00:00:00Z')],
+      local: [{ ...localFlac, savedAt: '2026-01-01T00:00:00Z' }]
+    }
+    let listener: ((event: SpotifyPlayerEvent) => void) | undefined
+    let spotifyApi: { [K in keyof SpotifyPlayerApi]: ReturnType<typeof vi.fn> }
+
+    const emit = (event: SpotifyPlayerEvent): void => act(() => listener?.(event))
+    const playingState = (trackId: string, overrides: Partial<Extract<SpotifyPlayerEvent, { type: 'state' }>> = {}): SpotifyPlayerEvent => ({
+      type: 'state',
+      trackId,
+      linkedFromId: null,
+      paused: false,
+      positionMs: 1000,
+      durationMs: 200_000,
+      ended: false,
+      ...overrides
+    })
+
+    beforeEach(() => {
+      listener = undefined
+      spotifyApi = {
+        play: vi.fn().mockResolvedValue(undefined),
+        pause: vi.fn().mockResolvedValue(undefined),
+        resume: vi.fn().mockResolvedValue(undefined),
+        seek: vi.fn().mockResolvedValue(undefined),
+        setVolume: vi.fn().mockResolvedValue(undefined),
+        onEvent: vi.fn((cb: (event: SpotifyPlayerEvent) => void) => {
+          listener = cb
+          return () => void (listener = undefined)
+        })
+      }
+      Object.assign(window, { turntableSpotify: spotifyApi })
+      api.listProviders.mockResolvedValue([{ ...spotify(true) }, { id: 'local', name: 'Local files', authKind: 'none', playback: 'file', maxQuality: { codec: 'flac', lossless: true }, connected: true }])
+      api.getSavedTracks.mockImplementation(async (id: 'spotify' | 'local') => ({ tracks: library[id] }))
+    })
+
+    const openLibrary = async (): Promise<void> => {
+      render(<App />)
+      await screen.findByText('Spotify One')
+    }
+
+    it('plays a Spotify track from the library through the Spotify player', async () => {
+      await openLibrary()
+
+      await userEvent.click(screen.getByRole('button', { name: 'Play Spotify One' }))
+
+      expect(spotifyApi.play).toHaveBeenCalledExactlyOnceWith(FIRST)
+      const bar = within(await screen.findByRole('contentinfo', { name: 'Player' }))
+      expect(bar.getByText('Spotify One')).toBeTruthy()
+      expect(bar.getByRole('button', { name: 'Pause' })).toBeTruthy() // loading counts as about to play
+      expect(mediaPlay).not.toHaveBeenCalled() // the local audio element stays silent
+
+      emit(playingState(FIRST, { positionMs: 65_000 }))
+      expect(bar.getByText('1:05')).toBeTruthy()
+      expect(bar.getByText('3:20')).toBeTruthy()
+    })
+
+    it('pauses and resumes Spotify with Space', async () => {
+      await openLibrary()
+      await userEvent.click(screen.getByRole('button', { name: 'Play Spotify One' }))
+      await screen.findByRole('contentinfo', { name: 'Player' })
+      emit(playingState(FIRST))
+
+      await userEvent.click(document.body)
+      await userEvent.keyboard(' ')
+      expect(spotifyApi.pause).toHaveBeenCalledOnce()
+      expect(screen.getByRole('button', { name: 'Play' })).toBeTruthy()
+
+      await act(async () => void (await new Promise((resolve) => setTimeout(resolve, 750))))
+      await userEvent.keyboard(' ')
+      expect(spotifyApi.resume).toHaveBeenCalledOnce()
+    })
+
+    it('moves on to the next Spotify track when one ends, then hands over to a local file', async () => {
+      await openLibrary()
+      await userEvent.click(screen.getByRole('button', { name: 'Play Spotify One' }))
+      emit(playingState(FIRST))
+
+      emit(playingState(FIRST, { paused: true, positionMs: 0, ended: true }))
+      await vi.waitFor(() => expect(spotifyApi.play).toHaveBeenLastCalledWith(SECOND))
+      expect(within(screen.getByRole('contentinfo', { name: 'Player' })).getByText('Spotify Two')).toBeTruthy()
+
+      emit(playingState(SECOND))
+      emit(playingState(SECOND, { paused: true, positionMs: 0, ended: true }))
+      await vi.waitFor(() => expect(mediaPlay).toHaveBeenCalledOnce())
+      expect(within(screen.getByRole('contentinfo', { name: 'Player' })).getByText('Local Song')).toBeTruthy()
+      // A finished track leaves Spotify's player paused already, so there is nothing to silence or start.
+      expect(spotifyApi.play).toHaveBeenCalledTimes(2)
+      expect(spotifyApi.pause).not.toHaveBeenCalled()
+    })
+
+    it('stops Spotify when the user picks a local file mid-song', async () => {
+      await openLibrary()
+      await userEvent.click(screen.getByRole('button', { name: 'Play Spotify One' }))
+      emit(playingState(FIRST))
+
+      await userEvent.click(screen.getByRole('button', { name: 'Play Local Song' }))
+
+      expect(spotifyApi.pause).toHaveBeenCalled()
+      expect(mediaPlay).toHaveBeenCalledOnce()
+      expect(within(screen.getByRole('contentinfo', { name: 'Player' })).getByText('Local Song')).toBeTruthy()
+    })
+
+    it('ignores Spotify events while a local file is playing', async () => {
+      await openLibrary()
+      await userEvent.click(screen.getByRole('button', { name: 'Play Local Song' }))
+      await screen.findByRole('contentinfo', { name: 'Player' })
+
+      emit({ type: 'error', kind: 'account', message: 'Spotify Premium is required to play music in TurnTable.' })
+      emit(playingState(FIRST, { positionMs: 99_000 }))
+
+      expect(screen.queryByRole('alert')).toBeNull()
+    })
+
+    it.each([
+      ['a free account', 'Spotify Premium is required to play music in TurnTable.'],
+      ['a sign-in that predates playback', 'Reconnect Spotify to allow playback in TurnTable.']
+    ])('tells the user why when Spotify refuses to play (%s)', async (_label, message) => {
+      spotifyApi.play.mockRejectedValue(new Error(`Error invoking remote method 'spotify:play': Error: ${message}`))
+      await openLibrary()
+
+      await userEvent.click(screen.getByRole('button', { name: 'Play Spotify One' }))
+
+      expect((await screen.findByRole('alert')).textContent).toBe(message)
+      expect(screen.getByRole('button', { name: 'Play' })).toBeTruthy()
+    })
+
+    it('shows an error Spotify reports while a track is playing', async () => {
+      await openLibrary()
+      await userEvent.click(screen.getByRole('button', { name: 'Play Spotify One' }))
+      emit(playingState(FIRST))
+
+      emit({ type: 'error', kind: 'playback', message: 'Spotify could not play this track: Cannot load track' })
+
+      expect((await screen.findByRole('alert')).textContent).toBe('Spotify could not play this track: Cannot load track')
     })
   })
 })

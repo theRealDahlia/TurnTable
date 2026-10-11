@@ -194,11 +194,61 @@ describe('usePlayer', () => {
     })
   })
 
+  describe('Spotify tracks', () => {
+    const SPOTIFY_ID = '4iV5W9uYEdYUVa79Axb7Rh'
+    const spotifyTrack = (overrides: Partial<Track> = {}): Track => ({
+      id: SPOTIFY_ID,
+      providerId: 'spotify',
+      title: 'Spotify Song',
+      artists: ['A'],
+      durationMs: 100_000,
+      ...overrides
+    })
+
+    it('loads a Spotify track by its URI', () => {
+      const { result } = setup()
+      act(() => result.current.play(spotifyTrack()))
+      expect(audio.src).toBe(`spotify:track:${SPOTIFY_ID}`)
+      expect(result.current.status).toBe('loading')
+    })
+
+    it('queues Spotify and local tracks together, in order', () => {
+      const { result } = setup()
+      const queue = [track(1), spotifyTrack(), track(2)]
+
+      act(() => result.current.play(queue[0]!, queue))
+      act(() => result.current.next())
+      expect(audio.src).toBe(`spotify:track:${SPOTIFY_ID}`)
+      act(() => result.current.next())
+      expect(audio.src).toBe(urlOf(queue[2]!))
+    })
+
+    it('shows the explanation a source gives for its own failure, not a generic one', () => {
+      const { result } = setup()
+      act(() => result.current.play(spotifyTrack()))
+
+      act(() => void audio.dispatchEvent(new CustomEvent('error', { detail: 'Spotify Premium is required to play music in TurnTable.' })))
+
+      expect(result.current).toMatchObject({ status: 'error', error: 'Spotify Premium is required to play music in TurnTable.' })
+    })
+
+    it('shows a clean message when starting a Spotify track is refused', async () => {
+      const { result } = setup()
+      audio.playResult = () => Promise.reject(new Error("Error invoking remote method 'spotify:play': Error: Reconnect Spotify to allow playback in TurnTable."))
+
+      act(() => result.current.play(spotifyTrack()))
+      await flush()
+
+      expect(result.current).toMatchObject({ status: 'error', error: 'Reconnect Spotify to allow playback in TurnTable.' })
+    })
+  })
+
   describe('refusing and failing', () => {
     it.each([
       ['a format Chromium cannot decode', track(1, { quality: { codec: 'alac', lossless: true } })],
       ['a track with unknown format', track(2, { quality: undefined })],
-      ['a Spotify track (playback not built yet)', track(3, { providerId: 'spotify' })]
+      ['a Spotify track with a malformed id', track(3, { providerId: 'spotify', id: 'not-a-spotify-id' })],
+      ['a track from a service without playback', track(4, { providerId: 'qobuz' })]
     ])('refuses %s without touching the audio element', (_label, t) => {
       const { result } = setup()
       act(() => result.current.play(t))

@@ -9,6 +9,8 @@ describe('isSpotifyPlayerEvent', () => {
     { type: 'not-ready' },
     { type: 'state', trackId: 'abc', paused: false, positionMs: 0, durationMs: 1000, ended: false },
     { type: 'state', trackId: null, paused: true, positionMs: 12.5, durationMs: 0, ended: true },
+    { type: 'state', trackId: 'variant', linkedFromId: 'requested', paused: false, positionMs: 0, durationMs: 1, ended: false },
+    { type: 'state', trackId: 'a', linkedFromId: null, paused: false, positionMs: 0, durationMs: 1, ended: false },
     { type: 'error', kind: 'account', message: 'Premium required.' },
     { type: 'error', kind: 'playback', message: '' }
   ])('accepts %j', (event) => {
@@ -29,6 +31,7 @@ describe('isSpotifyPlayerEvent', () => {
     ['a state with NaN', { type: 'state', trackId: 'a', paused: false, positionMs: NaN, durationMs: 1, ended: false }],
     ['a state with Infinity', { type: 'state', trackId: 'a', paused: false, positionMs: 1, durationMs: Infinity, ended: false }],
     ['a state with a numeric track id', { type: 'state', trackId: 5, paused: false, positionMs: 1, durationMs: 1, ended: false }],
+    ['a state with a numeric linked id', { type: 'state', trackId: 'a', linkedFromId: 5, paused: false, positionMs: 1, durationMs: 1, ended: false }],
     ['a state missing fields', { type: 'state', trackId: 'a' }],
     ['an error with an unknown kind', { type: 'error', kind: 'fatal', message: 'x' }],
     ['an error with a non-string message', { type: 'error', kind: 'account', message: { a: 1 } }],
