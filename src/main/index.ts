@@ -1,10 +1,14 @@
 import { join } from 'node:path'
-import { app, BrowserWindow, safeStorage, shell } from 'electron'
+import { app, BrowserWindow, dialog, safeStorage, shell } from 'electron'
 import { OAuthClient } from './auth/oauth'
 import { OAuthSession } from './auth/session'
 import { TokenStore } from './auth/tokenStore'
 import { registerIpc } from './ipc/register'
 import { spotifyOAuthConfig } from './providers/spotify/config'
+import { FolderStore } from './providers/local/folderStore'
+import { LocalLibrary } from './providers/local/library'
+import { readFileMetadata } from './providers/local/metadata'
+import { createLocalProvider } from './providers/local/provider'
 import { createSpotifyProvider } from './providers/spotify/provider'
 import { createDefaultRegistry } from './providers/registry'
 
@@ -59,7 +63,21 @@ function createRegistry(): ReturnType<typeof createDefaultRegistry> {
     store,
     now: Date.now
   })
-  return createDefaultRegistry({ spotify: createSpotifyProvider(spotify) })
+
+  const folders = new FolderStore(join(app.getPath('userData'), 'local-folders.json'))
+  const library = new LocalLibrary({ folders, readMetadata: readFileMetadata })
+  const local = createLocalProvider({
+    folders,
+    library,
+    pickFolders: async () => {
+      const options = { title: 'Choose your music folders', properties: ['openDirectory' as const, 'multiSelections' as const] }
+      const parent = BrowserWindow.getFocusedWindow()
+      const { canceled, filePaths } = parent ? await dialog.showOpenDialog(parent, options) : await dialog.showOpenDialog(options)
+      return canceled ? [] : filePaths
+    }
+  })
+
+  return createDefaultRegistry({ spotify: createSpotifyProvider(spotify), local })
 }
 
 app.whenReady().then(() => {

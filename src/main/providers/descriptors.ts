@@ -8,6 +8,14 @@ export const SPOTIFY: ProviderDescriptor = {
   maxQuality: { codec: 'ogg-vorbis', lossless: false, bitrateKbps: 320 }
 }
 
+export const LOCAL: ProviderDescriptor = {
+  id: 'local',
+  name: 'Local files',
+  authKind: 'none',
+  playback: 'file',
+  maxQuality: { codec: 'flac', lossless: true, sampleRateHz: 192000, bitDepth: 24 }
+}
+
 export const PROVIDER_DESCRIPTORS: ProviderDescriptor[] = [
   SPOTIFY,
   {
@@ -31,11 +39,5 @@ export const PROVIDER_DESCRIPTORS: ProviderDescriptor[] = [
     playback: 'stream',
     maxQuality: { codec: 'flac', lossless: true, sampleRateHz: 192000, bitDepth: 24 }
   },
-  {
-    id: 'local',
-    name: 'Local files',
-    authKind: 'none',
-    playback: 'file',
-    maxQuality: { codec: 'flac', lossless: true, sampleRateHz: 192000, bitDepth: 24 }
-  }
+  LOCAL
 ]

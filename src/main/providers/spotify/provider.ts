@@ -1,5 +1,6 @@
 import type { Track, TrackPage } from '@shared/types'
 import { AuthRequiredError, type OAuthSession } from '../../auth/session'
+import { parseOffsetCursor } from '../cursor'
 import { SPOTIFY } from '../descriptors'
 import type { MusicProvider } from '../types'
 
@@ -97,13 +98,6 @@ function toTrack(savedAt: string, track: SpotifyTrack | null): Track | undefined
   }
 }
 
-/** Cursors come from the renderer, so only accept what this provider would have issued. */
-function parseCursor(cursor: string | undefined): number {
-  if (cursor === undefined) return 0
-  if (!/^\d{1,9}$/.test(cursor)) throw new Error('Invalid library cursor')
-  return Number(cursor)
-}
-
 export function createSpotifyProvider(session: OAuthSession, options: SpotifyProviderOptions = {}): MusicProvider {
   const { fetch: fetchFn = fetch, sleep = defaultSleep, random = Math.random } = options
 
@@ -154,7 +148,7 @@ export function createSpotifyProvider(session: OAuthSession, options: SpotifyPro
     disconnect: () => session.disconnect(),
 
     async getSavedTracks(cursor): Promise<TrackPage> {
-      const offset = parseCursor(cursor)
+      const offset = parseOffsetCursor(cursor)
       const page = await request<SavedTracksResponse>(`/me/tracks?limit=${PAGE_SIZE}&offset=${offset}`)
 
       const tracks = page.items.flatMap((item) => toTrack(item.added_at, item.track) ?? [])

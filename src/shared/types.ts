@@ -36,6 +36,8 @@ export interface Track {
   artworkUrl?: string
   /** Web page for the track on its own service, used to link back to it. */
   url?: string
+  /** The format of the audio itself, when known (local files). */
+  quality?: AudioQuality
   savedAt?: string
 }
 
