@@ -110,6 +110,12 @@ body {
   height: 26px;
 }
 
+.logo img {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+}
+
 .chip-text {
   display: flex;
   flex: 1;

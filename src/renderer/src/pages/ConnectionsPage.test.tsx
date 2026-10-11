@@ -52,12 +52,17 @@ describe('ConnectionsPage', () => {
     }
   })
 
-  it('renders brand-colored marks and falls back to a generic glyph without one', async () => {
+  it('renders brand marks as colored icons or image files, with a generic glyph only for local files', async () => {
     render(<ConnectionsPage />)
     await screen.findAllByRole('listitem')
 
     expect(screen.getByRole('img', { name: 'Spotify logo' }).getAttribute('fill')).toMatch(/^#[0-9A-F]{6}$/i)
-    expect(screen.getByRole('img', { name: 'Qobuz logo' }).getAttribute('fill')).toBe('none')
+
+    const qobuz = screen.getByRole('img', { name: 'Qobuz logo' })
+    expect(qobuz.tagName).toBe('IMG')
+    expect(qobuz.getAttribute('src')).toBeTruthy()
+
+    expect(screen.getByRole('img', { name: 'Local files logo' }).getAttribute('fill')).toBe('none')
   })
 
   it('describes each service by status and best quality', async () => {
