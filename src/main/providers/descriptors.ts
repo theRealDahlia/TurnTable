@@ -8,6 +8,14 @@ export const SPOTIFY: ProviderDescriptor = {
   maxQuality: { codec: 'ogg-vorbis', lossless: false, bitrateKbps: 320 }
 }
 
+export const YOUTUBE_MUSIC: ProviderDescriptor = {
+  id: 'youtubeMusic',
+  name: 'YouTube Music',
+  authKind: 'oauth-pkce',
+  playback: 'embed',
+  maxQuality: { codec: 'opus', lossless: false, bitrateKbps: 256 }
+}
+
 export const LOCAL: ProviderDescriptor = {
   id: 'local',
   name: 'Local files',
@@ -18,13 +26,7 @@ export const LOCAL: ProviderDescriptor = {
 
 export const PROVIDER_DESCRIPTORS: ProviderDescriptor[] = [
   SPOTIFY,
-  {
-    id: 'youtubeMusic',
-    name: 'YouTube Music',
-    authKind: 'oauth-pkce',
-    playback: 'embed',
-    maxQuality: { codec: 'opus', lossless: false, bitrateKbps: 256 }
-  },
+  YOUTUBE_MUSIC,
   {
     id: 'soundcloud',
     name: 'SoundCloud',

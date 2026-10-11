@@ -4,6 +4,11 @@ import { createCodeChallenge, generateCodeVerifier, generateState } from './pkce
 
 export interface OAuthConfig {
   clientId: string
+  /**
+   * Only for services that insist on one even for native apps (Google's "Desktop app" clients); it is
+   * not confidential there, and PKCE still protects the exchange. Spotify and others leave it out.
+   */
+  clientSecret?: string
   authorizeUrl: string
   tokenUrl: string
   scopes: string[]
@@ -85,7 +90,11 @@ export class OAuthClient {
     const response = await this.deps.fetch(config.tokenUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
-      body: new URLSearchParams({ ...params, client_id: config.clientId })
+      body: new URLSearchParams({
+        ...params,
+        client_id: config.clientId,
+        ...(config.clientSecret ? { client_secret: config.clientSecret } : {})
+      })
     })
     if (!response.ok) throw new TokenRequestError(response.status)
 

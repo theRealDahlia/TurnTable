@@ -15,6 +15,8 @@ import { createSpotifyProvider, type SpotifyProvider } from './providers/spotify
 import { FileRateLimitStore, RateLimitGate } from './providers/spotify/rateLimit'
 import { denyAllPermissions, registerSpotifyPlayback } from './spotifyPlayer/electron'
 import { createDefaultRegistry } from './providers/registry'
+import { youtubeOAuthConfig } from './providers/youtube/config'
+import { createYouTubeProvider } from './providers/youtube/provider'
 
 function createWindow(): void {
   const window = new BrowserWindow({
@@ -76,6 +78,14 @@ function createRegistry(): { registry: ReturnType<typeof createDefaultRegistry>;
     store,
     now: Date.now
   })
+  const youtubeSession = new OAuthSession({
+    providerId: 'youtubeMusic',
+    serviceName: 'YouTube Music',
+    config: () => youtubeOAuthConfig(import.meta.env.MAIN_VITE_YOUTUBE_CLIENT_ID, import.meta.env.MAIN_VITE_YOUTUBE_CLIENT_SECRET),
+    oauth,
+    store,
+    now: Date.now
+  })
 
   const folders = new FolderStore(join(app.getPath('userData'), 'local-folders.json'))
   const library = new LocalLibrary({ folders, readMetadata: readFileMetadata })
@@ -93,7 +103,7 @@ function createRegistry(): { registry: ReturnType<typeof createDefaultRegistry>;
   // Spotify's "wait until..." survives restarts, so reopening the app can't keep calling a service that said stop.
   const gate = new RateLimitGate({ store: new FileRateLimitStore(join(app.getPath('userData'), 'spotify-rate-limit.json')), now: Date.now })
   const spotify = createSpotifyProvider(spotifySession, { gate })
-  return { registry: createDefaultRegistry({ spotify, local }), library, spotify }
+  return { registry: createDefaultRegistry({ spotify, local, youtubeMusic: createYouTubeProvider(youtubeSession) }), library, spotify }
 }
 
 app.whenReady().then(async () => {
