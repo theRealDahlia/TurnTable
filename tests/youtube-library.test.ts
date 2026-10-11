@@ -86,7 +86,7 @@ describe('YouTube Music getSavedTracks', () => {
     expect(url.searchParams.get('maxResults')).toBe('50')
     expect(url.searchParams.get('fields')).toContain('nextPageToken')
     expect(url.searchParams.has('pageToken')).toBe(false)
-    expect(fetchFn.mock.calls[0]?.[1]).toEqual({ headers: { Authorization: 'Bearer token-1' } })
+    expect(fetchFn.mock.calls[0]?.[1]).toEqual({ method: 'GET', headers: { Authorization: 'Bearer token-1' } })
   })
 
   it('maps a video to a track', async () => {

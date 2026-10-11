@@ -2,6 +2,7 @@ import type { Track, TrackPage } from '@shared/types'
 import { AuthRequiredError, type OAuthSession } from '../../auth/session'
 import { YOUTUBE_MUSIC } from '../descriptors'
 import type { MusicProvider } from '../types'
+import { YOUTUBE_SCOPES } from './config'
 
 const API_BASE = 'https://www.googleapis.com/youtube/v3'
 /** The most `videos.list` returns in one page. */
@@ -13,6 +14,9 @@ const FIELDS = 'nextPageToken,items(id,snippet(title,channelTitle,categoryId,thu
 /** Artwork at least this wide looks sharp in the library without downloading the largest frame. */
 const PREFERRED_ARTWORK_WIDTH = 300
 const MAX_ERROR_MESSAGE_LENGTH = 200
+const MAX_QUERY_LENGTH = 200
+/** Results per search page; a bigger page costs the same quota, but most people look at the first few. */
+const SEARCH_PAGE_SIZE = 20
 
 /** Page tokens are opaque and come back from the renderer, so only accept what Google issues (URL-safe base64). */
 const PAGE_TOKEN_PATTERN = /^[A-Za-z0-9_-]{1,200}$/
@@ -52,6 +56,23 @@ export type FetchFn = typeof fetch
 
 export interface YouTubeProviderOptions {
   fetch?: FetchFn
+}
+
+interface SearchResponse {
+  items?: { id?: { videoId?: string } }[]
+  nextPageToken?: string
+}
+
+interface RatingResponse {
+  items?: { videoId?: string; rating?: string }[]
+}
+
+/** The user signed in with the older, read-only permission, which can't like videos. */
+export class RatingPermissionError extends Error {
+  constructor() {
+    super('Reconnect YouTube Music to allow saving songs in TurnTable.')
+    this.name = 'RatingPermissionError'
+  }
 }
 
 /** An ISO 8601 duration such as `PT3M45S` or `PT1H2M3S`, in milliseconds; 0 for anything else (live streams are `P0D`). */
@@ -102,6 +123,7 @@ async function toApiError(response: Response): Promise<Error> {
   try {
     const { error } = (await response.json()) as GoogleErrorBody
     const reasons = (error?.errors ?? []).map((entry) => entry.reason)
+    if (reasons.includes('videoRatingDisabled')) return new Error("The owner of this video has turned off likes, so it can't be saved.")
     if (reasons.some((reason) => typeof reason === 'string' && QUOTA_REASONS.has(reason))) {
       return new Error("YouTube's daily request allowance for TurnTable is used up. It resets at midnight Pacific time; try again then.")
     }
@@ -118,12 +140,12 @@ export function createYouTubeProvider(session: OAuthSession, options: YouTubePro
   const { fetch: fetchFn = fetch } = options
 
   /** Calls the Data API; a 401 gets one retry with a freshly refreshed token, then the user must sign in again. */
-  async function getJson<T>(path: string): Promise<T> {
+  async function request(path: string, method = 'GET'): Promise<Response> {
     let refreshed = false
     for (;;) {
       // Only the retry after a 401 forces a refresh.
       const token = await session.getAccessToken({ forceRefresh: refreshed })
-      const response = await fetchFn(`${API_BASE}${path}`, { headers: { Authorization: `Bearer ${token}` } })
+      const response = await fetchFn(`${API_BASE}${path}`, { method, headers: { Authorization: `Bearer ${token}` } })
 
       if (response.status === 401) {
         if (refreshed) {
@@ -135,8 +157,17 @@ export function createYouTubeProvider(session: OAuthSession, options: YouTubePro
         continue
       }
       if (!response.ok) throw await toApiError(response)
-      return (await response.json()) as T
+      return response
     }
+  }
+
+  const getJson = async <T>(path: string): Promise<T> => (await request(path)).json() as Promise<T>
+
+  /** Likes or un-likes a video, which is how YouTube Music "saves" a song. */
+  async function rate(videoId: string, rating: 'like' | 'none'): Promise<void> {
+    if (!VIDEO_ID_PATTERN.test(videoId)) throw new Error('That is not a valid YouTube video.')
+    if (!(await session.hasScopes(YOUTUBE_SCOPES))) throw new RatingPermissionError()
+    await request(`/videos/rate?${new URLSearchParams({ id: videoId, rating }).toString()}`, 'POST')
   }
 
   return {
@@ -144,6 +175,52 @@ export function createYouTubeProvider(session: OAuthSession, options: YouTubePro
     isConnected: () => session.isConnected(),
     connect: () => session.connect(),
     disconnect: () => session.disconnect(),
+
+    async needsReauthorization() {
+      return (await session.isConnected()) && !(await session.hasScopes(YOUTUBE_SCOPES))
+    },
+
+    async search(query, cursor): Promise<TrackPage> {
+      const text = query.trim()
+      if (!text || text.length > MAX_QUERY_LENGTH) throw new Error('Type something to search for.')
+      if (cursor !== undefined && !PAGE_TOKEN_PATTERN.test(cursor)) throw new Error('Invalid library cursor')
+
+      // Only embeddable music videos: those are the ones TurnTable can play.
+      const search = new URLSearchParams({
+        part: 'snippet',
+        type: 'video',
+        videoCategoryId: MUSIC_CATEGORY_ID,
+        videoEmbeddable: 'true',
+        q: text,
+        maxResults: String(SEARCH_PAGE_SIZE),
+        fields: 'nextPageToken,items(id(videoId))'
+      })
+      if (cursor !== undefined) search.set('pageToken', cursor)
+      const page = await getJson<SearchResponse>(`/search?${search.toString()}`)
+
+      const ids = (page.items ?? []).flatMap((item) => (item.id?.videoId && VIDEO_ID_PATTERN.test(item.id.videoId) ? [item.id.videoId] : []))
+      if (ids.length === 0) return { tracks: [], nextCursor: page.nextPageToken }
+
+      // A search only names the videos, so one request fetches their details and another says which are liked.
+      const joined = ids.join(',')
+      const details = new URLSearchParams({ part: 'snippet,contentDetails,status', id: joined, fields: FIELDS })
+      const [videos, ratings] = await Promise.all([
+        getJson<LikedVideosResponse>(`/videos?${details.toString()}`),
+        getJson<RatingResponse>(`/videos/getRating?${new URLSearchParams({ id: joined }).toString()}`)
+      ])
+
+      const liked = new Set((ratings.items ?? []).filter((entry) => entry.rating === 'like').map((entry) => entry.videoId))
+      const byId = new Map((videos.items ?? []).map((video) => [video.id, video]))
+      // The details may come back in any order, so keep the order the search ranked them in.
+      const tracks = ids.flatMap((id) => {
+        const track = toTrack(byId.get(id) ?? {})
+        return track ? [{ ...track, saved: liked.has(id) }] : []
+      })
+      return { tracks, nextCursor: page.nextPageToken }
+    },
+
+    saveTrack: (trackId) => rate(trackId, 'like'),
+    unsaveTrack: (trackId) => rate(trackId, 'none'),
 
     async getSavedTracks(cursor): Promise<TrackPage> {
       if (cursor !== undefined && !PAGE_TOKEN_PATTERN.test(cursor)) throw new Error('Invalid library cursor')

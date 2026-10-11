@@ -1,10 +1,11 @@
 import type { OAuthConfig } from '../../auth/oauth'
 
 /**
- * Read-only access to the account's YouTube data: enough to list the videos the user has liked, and nothing
- * that could change anything. YouTube Music has no API of its own; its likes are the account's YouTube likes.
+ * What listing the account's liked videos and liking or un-liking one needs. Liking is the one thing here
+ * that writes, and YouTube only offers it behind this scope (which also covers reading); the narrower
+ * read-only scope can't rate videos. YouTube Music has no API of its own; its likes are the account's YouTube likes.
  */
-export const YOUTUBE_SCOPES = ['https://www.googleapis.com/auth/youtube.readonly']
+export const YOUTUBE_SCOPES = ['https://www.googleapis.com/auth/youtube.force-ssl']
 
 /**
  * Google accepts any loopback port for a "Desktop app" client, so sign-in uses a free one (RFC 8252) and no

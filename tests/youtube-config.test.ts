@@ -14,8 +14,8 @@ describe('youtubeOAuthConfig', () => {
     expect(() => youtubeOAuthConfig('')).toThrow(/MAIN_VITE_YOUTUBE_CLIENT_ID/)
   })
 
-  it('asks only for read-only access', () => {
-    expect(YOUTUBE_SCOPES).toEqual(['https://www.googleapis.com/auth/youtube.readonly'])
+  it('asks only for the one scope that can both read and rate videos', () => {
+    expect(YOUTUBE_SCOPES).toEqual(['https://www.googleapis.com/auth/youtube.force-ssl'])
     expect(youtubeOAuthConfig('id').scopes).toEqual(YOUTUBE_SCOPES)
   })
 
