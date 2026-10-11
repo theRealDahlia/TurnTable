@@ -32,6 +32,8 @@ function makePlayer(overrides: Partial<Player> = {}): Player {
     previous: vi.fn(),
     seek: vi.fn(),
     setVolume: vi.fn(),
+    setShuffle: vi.fn(),
+    shuffle: false,
     ...overrides
   }
 }
@@ -153,5 +155,42 @@ describe('PlayerBar', () => {
       expect(icon).not.toBeNull()
       expect(icon!.getAttribute('aria-hidden')).toBe('true')
     })
+  })
+})
+
+describe('PlayerBar shuffle', () => {
+  it('has a Shuffle button, off to begin with', () => {
+    render(<PlayerBar player={makePlayer({ shuffle: false })} />)
+    const button = screen.getByRole('button', { name: 'Shuffle' })
+    expect(button.getAttribute('aria-pressed')).toBe('false')
+    expect(button.getAttribute('title')).toBe('Shuffle is off')
+  })
+
+  it('shows when shuffle is on', () => {
+    render(<PlayerBar player={makePlayer({ shuffle: true })} />)
+    const button = screen.getByRole('button', { name: 'Shuffle', pressed: true })
+    expect(button.getAttribute('title')).toBe('Shuffle is on')
+  })
+
+  it('switches shuffle on, and off again', async () => {
+    const off = makePlayer({ shuffle: false })
+    render(<PlayerBar player={off} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Shuffle' }))
+    expect(off.setShuffle).toHaveBeenCalledExactlyOnceWith(true)
+
+    cleanup()
+    const on = makePlayer({ shuffle: true })
+    render(<PlayerBar player={on} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Shuffle' }))
+    expect(on.setShuffle).toHaveBeenCalledExactlyOnceWith(false)
+  })
+
+  it('sits before the skip buttons, which stay as they were', () => {
+    render(<PlayerBar player={makePlayer({ status: 'playing' })} />)
+    const names = within(screen.getByRole('contentinfo', { name: 'Player' }))
+      .getAllByRole('button')
+      .map((button) => button.getAttribute('aria-label'))
+      .slice(0, 4)
+    expect(names).toEqual(['Shuffle', 'Previous track', 'Pause', 'Next track'])
   })
 })

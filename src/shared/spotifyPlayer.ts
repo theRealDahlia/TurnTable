@@ -13,6 +13,10 @@ export const SpotifyPlayerChannel = {
   event: 'spotify:event'
 } as const
 
+/** What a media key asks for. Play and pause are one "toggle", since the app knows better than the key what state it is in. */
+export type MediaKeyAction = 'next' | 'previous' | 'toggle'
+export const MEDIA_KEY_ACTIONS: readonly string[] = ['next', 'previous', 'toggle']
+
 export type SpotifyErrorKind = 'initialization' | 'authentication' | 'account' | 'playback' | 'permission'
 
 /** What the player reports, in plain terms the rest of the app understands. */
@@ -30,6 +34,8 @@ export type SpotifyPlayerEvent =
       ended: boolean
     }
   | { type: 'error'; kind: SpotifyErrorKind; message: string }
+  /** A keyboard media key (or Control Center button) was pressed while the hidden player held the system's media controls. */
+  | { type: 'media-key'; action: MediaKeyAction }
 
 /** What the main process can ask the player page to do. */
 export type SpotifyPlayerCommand =
@@ -93,6 +99,8 @@ export function isSpotifyPlayerEvent(value: unknown): value is SpotifyPlayerEven
       )
     case 'error':
       return typeof value.kind === 'string' && ERROR_KINDS.includes(value.kind) && typeof value.message === 'string' && value.message.length <= MAX_MESSAGE_LENGTH
+    case 'media-key':
+      return typeof value.action === 'string' && MEDIA_KEY_ACTIONS.includes(value.action)
     default:
       return false
   }

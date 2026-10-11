@@ -17,6 +17,8 @@ interface State {
   error?: string
   hasNext: boolean
   hasPrevious: boolean
+  /** Tracks are played in a random order instead of the order they are listed in. */
+  shuffle: boolean
 }
 
 type Action =
@@ -26,8 +28,9 @@ type Action =
   | { type: 'duration'; duration: number }
   | { type: 'volume'; volume: number }
   | { type: 'failed'; error: string }
+  | { type: 'shuffle'; on: boolean; hasNext: boolean; hasPrevious: boolean }
 
-const initialState: State = { status: 'idle', currentTime: 0, duration: 0, volume: 1, hasNext: false, hasPrevious: false }
+const initialState: State = { status: 'idle', currentTime: 0, duration: 0, volume: 1, hasNext: false, hasPrevious: false, shuffle: false }
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
@@ -43,6 +46,8 @@ function reducer(state: State, action: Action): State {
       return { ...state, volume: action.volume }
     case 'failed':
       return { ...state, status: 'error', error: action.error }
+    case 'shuffle':
+      return { ...state, shuffle: action.on, hasNext: action.hasNext, hasPrevious: action.hasPrevious }
   }
 }
 
@@ -64,22 +69,44 @@ export interface Player extends State {
   previous(): void
   seek(seconds: number): void
   setVolume(volume: number): void
+  /** Turns shuffle on or off. The track that is playing carries on; the rest of the queue is reordered. */
+  setShuffle(on: boolean): void
 }
 
 export interface PlayerOptions {
   createAudio?: () => PlayerMedia
+  /** Source of randomness in [0, 1) for shuffling; injectable so tests are deterministic. */
+  random?: () => number
+}
+
+const sameTrack = (a: Track, b: Track): boolean => a.providerId === b.providerId && a.id === b.id
+
+/** `tracks` in random order, with `first` (when it is among them) moved to the front, so shuffling never skips the song you are on. */
+function shuffled(tracks: Track[], first: Track | undefined, random: () => number): Track[] {
+  const rest = tracks.filter((track) => !first || !sameTrack(track, first))
+  // Fisher-Yates, so every order is equally likely.
+  for (let i = rest.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1))
+    ;[rest[i], rest[j]] = [rest[j]!, rest[i]!]
+  }
+  return first && tracks.some((track) => sameTrack(track, first)) ? [first, ...rest] : rest
 }
 
 /**
  * Plays tracks through one plain <audio> element. There is deliberately no Web Audio graph, EQ or
  * normalization in between, so lossless files reach the output as decoded.
  */
-export function usePlayer({ createAudio = createDefaultMedia }: PlayerOptions = {}): Player {
+export function usePlayer({ createAudio = createDefaultMedia, random = Math.random }: PlayerOptions = {}): Player {
   const [state, dispatch] = useReducer(reducer, initialState)
   // Only the first factory is used: re-creating the element on a re-render would cut off playback.
   const [audioFactory] = useState(() => createAudio)
   const audioRef = useRef<PlayerMedia | null>(null)
+  /** The tracks in the order they will play (shuffled, if shuffle is on) and which of them is current. */
   const queueRef = useRef<{ tracks: Track[]; index: number }>({ tracks: [], index: -1 })
+  /** The queue in the order it was listed, to go back to when shuffle is turned off. */
+  const listedRef = useRef<Track[]>([])
+  const shuffleRef = useRef(false)
+  const randomRef = useRef(random)
   /** Identifies the load in progress, so a late failure of a superseded load is ignored. */
   const loadId = useRef(0)
 
@@ -153,12 +180,29 @@ export function usePlayer({ createAudio = createDefaultMedia }: PlayerOptions = 
         return
       }
       const playable = queue.filter(isPlayable)
-      const index = playable.findIndex((t) => t.providerId === track.providerId && t.id === track.id)
-      queueRef.current = index >= 0 ? { tracks: playable, index } : { tracks: [track], index: 0 }
+      const listedIndex = playable.findIndex((t) => sameTrack(t, track))
+      const listed = listedIndex >= 0 ? playable : [track]
+      listedRef.current = listed
+      queueRef.current = shuffleRef.current
+        ? { tracks: shuffled(listed, track, randomRef.current), index: 0 }
+        : { tracks: listed, index: Math.max(0, listedIndex) }
       loadIndex(queueRef.current.index)
     },
     [loadIndex]
   )
+
+  const setShuffle = useCallback((on: boolean) => {
+    shuffleRef.current = on
+    const { tracks, index } = queueRef.current
+    const current = tracks[index]
+    if (current) {
+      const listed = listedRef.current
+      if (on) queueRef.current = { tracks: shuffled(listed, current, randomRef.current), index: 0 }
+      else queueRef.current = { tracks: listed, index: Math.max(0, listed.findIndex((t) => sameTrack(t, current))) }
+    }
+    const after = queueRef.current
+    dispatch({ type: 'shuffle', on, hasNext: after.index >= 0 && after.index < after.tracks.length - 1, hasPrevious: after.index > 0 })
+  }, [])
 
   const pause = useCallback(() => audioRef.current?.pause(), [])
 
@@ -186,5 +230,5 @@ export function usePlayer({ createAudio = createDefaultMedia }: PlayerOptions = 
     dispatch({ type: 'volume', volume: clamped })
   }, [])
 
-  return { ...state, play, toggle, pause, next, previous, seek, setVolume }
+  return { ...state, play, toggle, pause, next, previous, seek, setVolume, setShuffle }
 }

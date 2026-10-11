@@ -12,7 +12,10 @@ describe('isSpotifyPlayerEvent', () => {
     { type: 'state', trackId: 'variant', linkedFromId: 'requested', paused: false, positionMs: 0, durationMs: 1, ended: false },
     { type: 'state', trackId: 'a', linkedFromId: null, paused: false, positionMs: 0, durationMs: 1, ended: false },
     { type: 'error', kind: 'account', message: 'Premium required.' },
-    { type: 'error', kind: 'playback', message: '' }
+    { type: 'error', kind: 'playback', message: '' },
+    { type: 'media-key', action: 'next' },
+    { type: 'media-key', action: 'previous' },
+    { type: 'media-key', action: 'toggle' }
   ])('accepts %j', (event) => {
     expect(isSpotifyPlayerEvent(event)).toBe(true)
   })
@@ -24,6 +27,9 @@ describe('isSpotifyPlayerEvent', () => {
     ['an unknown type', { type: 'exec', cmd: 'rm -rf /' }],
     ['no type', { deviceId: DEVICE }],
     ['a ready event with no device', { type: 'ready' }],
+    ['a media key with no action', { type: 'media-key' }],
+    ['a media key with an unknown action', { type: 'media-key', action: 'eject' }],
+    ['a media key whose action is not text', { type: 'media-key', action: 1 }],
     ['a device id that could alter a URL', { type: 'ready', deviceId: 'abc/def?x=1&y=2' }],
     ['a too-short device id', { type: 'ready', deviceId: 'abc' }],
     ['a state with a string position', { type: 'state', trackId: 'a', paused: false, positionMs: '5', durationMs: 1, ended: false }],

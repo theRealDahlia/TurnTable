@@ -47,9 +47,15 @@ const track = (n: number, overrides: Partial<Track> = {}): Track => ({
 const urlOf = (t: Track): string => `turntable-media://audio/${t.id}`
 
 let audio: FakeAudio
-const setup = () => {
+const setup = (random?: () => number) => {
   audio = new FakeAudio()
-  return renderHook(() => usePlayer({ createAudio: () => audio as unknown as HTMLAudioElement }))
+  return renderHook(() => usePlayer({ createAudio: () => audio as unknown as HTMLAudioElement, random }))
+}
+
+/** A repeatable source of randomness: the numbers cycle through `values`. */
+const sequence = (...values: number[]): (() => number) => {
+  let i = 0
+  return () => values[i++ % values.length]!
 }
 const flush = () => act(async () => {})
 
@@ -358,5 +364,207 @@ describe('usePlayer', () => {
 
     expect(audio.paused).toBe(true)
     expect(audio.src).toBe('')
+  })
+})
+
+describe('usePlayer shuffle', () => {
+  const queue = [track(1), track(2), track(3), track(4), track(5)]
+  const playing = (result: { current: ReturnType<typeof usePlayer> }): string | undefined => result.current.track?.title
+
+  /** Plays through the whole queue with next(), returning the titles in the order they came. */
+  async function playOut(result: { current: ReturnType<typeof usePlayer> }): Promise<(string | undefined)[]> {
+    const seen = [playing(result)]
+    while (result.current.hasNext) {
+      act(() => result.current.next())
+      await flush()
+      seen.push(playing(result))
+    }
+    return seen
+  }
+
+  it('is off to begin with', () => {
+    expect(setup().result.current.shuffle).toBe(false)
+  })
+
+  it('plays in the listed order while off', async () => {
+    const { result } = setup()
+    act(() => result.current.play(queue[1]!, queue))
+    await flush()
+    expect(await playOut(result)).toEqual(['Song 2', 'Song 3', 'Song 4', 'Song 5'])
+  })
+
+  it('shuffling a queue that is playing keeps the current song and reorders the rest, all of it', async () => {
+    const { result } = setup(sequence(0.1, 0.9, 0.4, 0.7))
+    act(() => result.current.play(queue[2]!, queue))
+    await flush()
+
+    act(() => result.current.setShuffle(true))
+    expect(result.current.shuffle).toBe(true)
+    expect(playing(result)).toBe('Song 3')
+    expect(audio.src).toBe(urlOf(queue[2]!))
+
+    const order = await playOut(result)
+    expect(order[0]).toBe('Song 3')
+    // Every other song comes up exactly once, including the ones listed before the current one.
+    expect([...order].sort()).toEqual(['Song 1', 'Song 2', 'Song 3', 'Song 4', 'Song 5'])
+    expect(order).not.toEqual(['Song 3', 'Song 4', 'Song 5', 'Song 1', 'Song 2'])
+  })
+
+  it('does not interrupt the song that is playing when shuffle is switched on or off', async () => {
+    const { result } = setup()
+    act(() => result.current.play(queue[0]!, queue))
+    await flush()
+    audio.currentTime = 42
+    const loads = audio.src
+
+    act(() => result.current.setShuffle(true))
+    act(() => result.current.setShuffle(false))
+
+    expect(result.current.status).toBe('playing')
+    expect(audio.currentTime).toBe(42)
+    expect(audio.src).toBe(loads)
+  })
+
+  it('starts a shuffled queue with the song that was chosen, then plays the others in random order', async () => {
+    const { result } = setup(sequence(0.3, 0.8, 0.1))
+    act(() => result.current.setShuffle(true))
+    act(() => result.current.play(queue[3]!, queue))
+    await flush()
+
+    expect(playing(result)).toBe('Song 4')
+    expect(result.current.hasPrevious).toBe(false)
+    const order = await playOut(result)
+    expect([...order].sort()).toEqual(['Song 1', 'Song 2', 'Song 3', 'Song 4', 'Song 5'])
+  })
+
+  it('shuffles differently each time, but can be repeated with the same randomness', async () => {
+    const first = setup(sequence(0.9, 0.1, 0.6, 0.3))
+    act(() => first.result.current.setShuffle(true))
+    act(() => first.result.current.play(queue[0]!, queue))
+    await flush()
+    const a = await playOut(first.result)
+    cleanup()
+
+    const second = setup(sequence(0.9, 0.1, 0.6, 0.3))
+    act(() => second.result.current.setShuffle(true))
+    act(() => second.result.current.play(queue[0]!, queue))
+    await flush()
+    expect(await playOut(second.result)).toEqual(a)
+  })
+
+  it('goes back through what was just played with previous()', async () => {
+    const { result } = setup(sequence(0.2, 0.6, 0.9))
+    act(() => result.current.setShuffle(true))
+    act(() => result.current.play(queue[0]!, queue))
+    await flush()
+    act(() => result.current.next())
+    await flush()
+    const second = playing(result)
+    act(() => result.current.next())
+    await flush()
+    expect(result.current.hasPrevious).toBe(true)
+
+    audio.currentTime = 0
+    act(() => result.current.previous())
+    await flush()
+    expect(playing(result)).toBe(second)
+  })
+
+  it('has no next once every song has played, and stops there', async () => {
+    const { result } = setup()
+    act(() => result.current.setShuffle(true))
+    act(() => result.current.play(queue[0]!, queue))
+    await flush()
+    await playOut(result)
+
+    expect(result.current.hasNext).toBe(false)
+    act(() => audio.emit('ended'))
+    expect(result.current.status).toBe('paused')
+  })
+
+  it('moves on to a random song by itself when one ends', async () => {
+    const { result } = setup(sequence(0.5))
+    act(() => result.current.setShuffle(true))
+    act(() => result.current.play(queue[0]!, queue))
+    await flush()
+    const first = playing(result)
+
+    act(() => audio.emit('ended'))
+    await flush()
+
+    expect(playing(result)).not.toBe(first)
+    expect(result.current.status).toBe('playing')
+  })
+
+  it('goes back to the listed order, from the song that is playing, when switched off', async () => {
+    const { result } = setup(sequence(0.9, 0.1, 0.5))
+    act(() => result.current.setShuffle(true))
+    act(() => result.current.play(queue[1]!, queue))
+    await flush()
+    act(() => result.current.next())
+    await flush()
+    const current = result.current.track!
+    const listedIndex = queue.findIndex((t) => t.id === current.id)
+
+    act(() => result.current.setShuffle(false))
+    expect(result.current.shuffle).toBe(false)
+    expect(result.current.hasPrevious).toBe(listedIndex > 0)
+    expect(result.current.hasNext).toBe(listedIndex < queue.length - 1)
+    if (listedIndex < queue.length - 1) {
+      act(() => result.current.next())
+      await flush()
+      expect(playing(result)).toBe(queue[listedIndex + 1]!.title)
+    }
+  })
+
+  it('remembers the choice for the next song picked, even before anything is playing', async () => {
+    const { result } = setup(sequence(0.7, 0.2))
+    act(() => result.current.setShuffle(true))
+    expect(result.current.shuffle).toBe(true)
+    expect(result.current).toMatchObject({ hasNext: false, hasPrevious: false })
+
+    act(() => result.current.play(queue[0]!, queue))
+    await flush()
+    expect(result.current.hasNext).toBe(true)
+    expect(result.current.hasPrevious).toBe(false)
+  })
+
+  it('has nothing to skip to with a single song', async () => {
+    const { result } = setup()
+    act(() => result.current.setShuffle(true))
+    act(() => result.current.play(queue[0]!))
+    await flush()
+    expect(result.current).toMatchObject({ hasNext: false, hasPrevious: false })
+  })
+
+  it('leaves out songs that cannot be played, shuffled or not', async () => {
+    const unplayable = track(9, { quality: { codec: 'alac', lossless: true } })
+    const { result } = setup()
+    act(() => result.current.setShuffle(true))
+    act(() => result.current.play(queue[0]!, [...queue, unplayable]))
+    await flush()
+    expect(await playOut(result)).not.toContain('Song 9')
+  })
+
+  it('refuses to start a song that cannot be played, without disturbing the queue', async () => {
+    const { result } = setup()
+    act(() => result.current.play(queue[0]!, queue))
+    await flush()
+    act(() => result.current.setShuffle(true))
+
+    act(() => result.current.play(track(9, { quality: { codec: 'alac', lossless: true } })))
+
+    expect(result.current.status).toBe('error')
+    expect(result.current.shuffle).toBe(true)
+  })
+
+  it('treats the same song on different services as different songs', async () => {
+    const local = track(1)
+    const sameId = track(1, { providerId: 'spotify', id: 'x'.repeat(22) })
+    const { result } = setup()
+    act(() => result.current.setShuffle(true))
+    act(() => result.current.play(local, [local, sameId]))
+    await flush()
+    expect(result.current.hasNext).toBe(true)
   })
 })

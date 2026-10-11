@@ -6,6 +6,7 @@ import { useLibrary } from './library/useLibrary'
 import { ConnectionsPage } from './pages/ConnectionsPage'
 import { LibraryPage } from './pages/LibraryPage'
 import { SearchPage } from './pages/SearchPage'
+import { useMediaKeys } from './player/useMediaKeys'
 import { useMediaSession } from './player/useMediaSession'
 import { usePlayer } from './player/usePlayer'
 import { useSpacebarToggle } from './player/useSpacebarToggle'
@@ -21,6 +22,7 @@ export function App(): React.JSX.Element {
   const changed = useRef(new Set<ProviderId>())
   const search = useSearch({ onSaved: (id) => void changed.current.add(id) })
   useMediaSession(player)
+  useMediaKeys(player)
   useSpacebarToggle(player.toggle)
 
   const navigate = (next: Page): void => {

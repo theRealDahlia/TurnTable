@@ -55,6 +55,7 @@ export class SpotifyPlayerHost {
         }
         break
       case 'state':
+      case 'media-key':
         break
     }
     this.deps.emit(event)

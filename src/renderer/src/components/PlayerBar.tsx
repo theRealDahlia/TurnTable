@@ -1,5 +1,5 @@
 import { formatQuality } from '../lib/quality'
-import { NextIcon, NoteIcon, PauseIcon, PlayIcon, PreviousIcon, SpeakerIcon } from './icons'
+import { NextIcon, NoteIcon, PauseIcon, PlayIcon, PreviousIcon, ShuffleIcon, SpeakerIcon } from './icons'
 import { formatDuration } from '../library/query'
 import type { Player } from '../player/usePlayer'
 
@@ -36,6 +36,16 @@ export function PlayerBar({ player }: Props): React.JSX.Element | null {
 
       <div className="player-center">
         <div className="transport">
+          <button
+            type="button"
+            className="shuffle"
+            aria-label="Shuffle"
+            aria-pressed={player.shuffle}
+            title={player.shuffle ? 'Shuffle is on' : 'Shuffle is off'}
+            onClick={() => player.setShuffle(!player.shuffle)}
+          >
+            <ShuffleIcon />
+          </button>
           <button type="button" aria-label="Previous track" onClick={player.previous}>
             <PreviousIcon />
           </button>

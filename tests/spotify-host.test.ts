@@ -172,6 +172,18 @@ describe('SpotifyPlayerHost', () => {
     expect(windows[0]!.send).toHaveBeenCalledWith({ type: 'seek', positionMs: 1000 })
   })
 
+  it('passes media-key presses on to the app without disturbing the player', async () => {
+    const { host, emitted } = setup()
+    const playing = host.play('a')
+    host.handleEvent({ type: 'ready', deviceId: 'device-1' })
+    await playing
+
+    host.handleEvent({ type: 'media-key', action: 'next' })
+
+    expect(emitted).toContainEqual({ type: 'media-key', action: 'next' })
+    await host.play('b')
+  })
+
   it('ignores commands when no player is running', () => {
     const { host, windows } = setup()
     expect(() => host.send({ type: 'pause' })).not.toThrow()

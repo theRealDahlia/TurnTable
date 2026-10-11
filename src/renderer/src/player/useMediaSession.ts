@@ -26,6 +26,7 @@ export function useMediaSession(player: Player): void {
     const handlers: [MediaSessionAction, MediaSessionActionHandler | null][] = [
       ['play', toggle],
       ['pause', pause],
+      ['stop', pause],
       ['previoustrack', track ? previous : null],
       ['nexttrack', hasNext ? next : null],
       ['seekto', (details) => details.seekTime !== undefined && seek(details.seekTime)]

@@ -47,7 +47,10 @@ function setup() {
     onCommand: (listener) => void (command = listener)
   }
   const timers: { cb: () => void; ms: number; cleared: boolean }[] = []
+  const handlers = new Map<string, (() => void) | null>()
+  const mediaSession = { setActionHandler: (action: string, handler: (() => void) | null) => void handlers.set(action, handler) }
   startPlayerPage(bridge, sdk, {
+    mediaSession,
     setInterval: (cb, ms) => {
       const timer = { cb, ms, cleared: false }
       timers.push(timer)
@@ -55,8 +58,34 @@ function setup() {
     },
     clearInterval: (handle) => void ((handle as { cleared: boolean }).cleared = true)
   })
-  return { player, events, bridge, timers, send: (c: SpotifyPlayerCommand) => command(c) }
+  return { player, events, bridge, timers, handlers, send: (c: SpotifyPlayerCommand) => command(c) }
 }
+
+describe('startPlayerPage media keys', () => {
+  it.each([
+    ['nexttrack', 'next'],
+    ['previoustrack', 'previous'],
+    ['play', 'toggle'],
+    ['pause', 'toggle']
+  ])('reports the %s key to the app as "%s"', (key, action) => {
+    const { handlers, events } = setup()
+    handlers.get(key)!()
+    expect(events).toEqual([{ type: 'media-key', action }])
+  })
+
+  it('takes over those four keys and no others', () => {
+    expect([...setup().handlers.keys()].sort()).toEqual(['nexttrack', 'pause', 'play', 'previoustrack'])
+  })
+
+  it('is fine in a browser with no media session', () => {
+    const { player } = setup()
+    expect(player.connect).toHaveBeenCalledOnce()
+    const events: SpotifyPlayerEvent[] = []
+    const bridge: PlayerPageBridge = { getToken: vi.fn(), emit: (e) => events.push(e), onCommand: vi.fn() }
+    const sdk = { Player: function () { return new FakePlayer({ name: 'x', getOAuthToken: () => undefined }) } } as unknown as SpotifyNamespace
+    expect(() => startPlayerPage(bridge, sdk, { mediaSession: undefined })).not.toThrow()
+  })
+})
 
 describe('startPlayerPage', () => {
   it('creates a player named after the app and connects it', () => {

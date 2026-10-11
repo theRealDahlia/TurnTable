@@ -1390,6 +1390,27 @@ html[data-platform='mac'] .drag-strip {
   color: var(--text);
 }
 
+.transport button[aria-pressed='true'] {
+  color: var(--accent);
+}
+
+.transport .shuffle {
+  position: relative;
+}
+
+/* A dot under the icon, so "on" doesn't rely on color alone. */
+.transport .shuffle[aria-pressed='true']::after {
+  content: '';
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  background: var(--accent);
+  border-radius: 50%;
+}
+
 .transport button:disabled {
   opacity: 0.35;
   cursor: default;

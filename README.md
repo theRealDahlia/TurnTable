@@ -63,6 +63,12 @@ The **Search** page searches every connected service at once and puts each one's
 - More results load by themselves as you scroll to the end of the list (a *Show more* button appears instead if that stops working, or after two pages in a row with nothing to show, so a rare search can't use up the day's YouTube quota). Each page is another search against that quota.
 - Results live in memory only and are never written to disk.
 
+## Shuffle and media keys
+
+The shuffle button in the player bar plays the current queue in a random order: the song that is playing carries on, the rest is reordered (including songs listed before it), previous goes back through what was just played, and the queue stops once every song has played. Turning shuffle off returns to the listed order from the song that is playing.
+
+The keyboard's skip and play/pause keys drive the same controls. They reach the app through the browser's Media Session, through key events when a keyboard delivers them to the window, and, for Spotify (which plays in a hidden window), through the media keys that window receives. YouTube Music plays inside YouTube's own embedded player, which may hold the system's media keys itself; if the keys don't skip YouTube tracks on your machine, a global shortcut is the fallback, but on macOS it needs the Accessibility permission, so it isn't turned on.
+
 ## Open decisions
 
 - First service to integrate (Spotify has the most accessible API)

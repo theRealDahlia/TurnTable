@@ -256,10 +256,11 @@ describe('App', () => {
       spotify: [spotifyTrack(FIRST, 'Spotify One', '2026-03-01T00:00:00Z'), spotifyTrack(SECOND, 'Spotify Two', '2026-02-01T00:00:00Z')],
       local: [{ ...localFlac, savedAt: '2026-01-01T00:00:00Z' }]
     }
-    let listener: ((event: SpotifyPlayerEvent) => void) | undefined
+    // The player and the media-key handling both listen, as they do for real.
+    const listeners = new Set<(event: SpotifyPlayerEvent) => void>()
     let spotifyApi: { [K in keyof SpotifyPlayerApi]: ReturnType<typeof vi.fn> }
 
-    const emit = (event: SpotifyPlayerEvent): void => act(() => listener?.(event))
+    const emit = (event: SpotifyPlayerEvent): void => act(() => [...listeners].forEach((listener) => listener(event)))
     const playingState = (trackId: string, overrides: Partial<Extract<SpotifyPlayerEvent, { type: 'state' }>> = {}): SpotifyPlayerEvent => ({
       type: 'state',
       trackId,
@@ -272,7 +273,7 @@ describe('App', () => {
     })
 
     beforeEach(() => {
-      listener = undefined
+      listeners.clear()
       spotifyApi = {
         play: vi.fn().mockResolvedValue(undefined),
         pause: vi.fn().mockResolvedValue(undefined),
@@ -280,8 +281,8 @@ describe('App', () => {
         seek: vi.fn().mockResolvedValue(undefined),
         setVolume: vi.fn().mockResolvedValue(undefined),
         onEvent: vi.fn((cb: (event: SpotifyPlayerEvent) => void) => {
-          listener = cb
-          return () => void (listener = undefined)
+          listeners.add(cb)
+          return () => void listeners.delete(cb)
         })
       }
       Object.assign(window, { turntableSpotify: spotifyApi })
