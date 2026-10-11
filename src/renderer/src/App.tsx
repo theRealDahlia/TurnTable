@@ -18,6 +18,7 @@ export function App(): React.JSX.Element {
 
   return (
     <div className="app" data-playing={player.track !== undefined}>
+      <div className="drag-strip" aria-hidden="true" />
       <Sidebar page={page} onNavigate={setPage} />
       <div className="content">
         {page === 'library' ? (

@@ -1,33 +1,51 @@
+/* ---------- Design tokens ---------- */
 :root {
   color-scheme: light dark;
-  --bg: #f5f5f7;
+  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --bg: #f5f5f8;
+  --sidebar: #ececf2;
   --surface: #ffffff;
-  --surface-hover: #fafafc;
-  --text: #17171c;
-  --text-muted: #6b6b76;
-  --border: rgb(23 23 28 / 10%);
-  --accent: #6c5ce7;
+  --surface-hover: #f8f8fb;
+  --surface-sunken: #eeeef3;
+  --text: #16161d;
+  --text-muted: #666675;
+  --text-faint: #9898a6;
+  --border: rgb(22 22 40 / 8%);
+  --border-strong: rgb(22 22 40 / 15%);
+  --accent: #5b47f0;
   --accent-text: #ffffff;
-  --ok: #1fb868;
+  --accent-soft: rgb(91 71 240 / 11%);
+  --ok: #148a50;
+  --ok-soft: rgb(23 160 93 / 13%);
   --danger-bg: #fdecec;
   --danger-text: #a12727;
-  --shadow: 0 1px 2px rgb(0 0 0 / 5%), 0 8px 24px rgb(0 0 0 / 6%);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --shadow: 0 1px 2px rgb(16 16 40 / 5%), 0 6px 20px rgb(16 16 40 / 6%);
+  font-family: var(--font);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0f0f14;
-    --surface: #1a1a22;
-    --surface-hover: #20202a;
-    --text: #f2f2f6;
-    --text-muted: #9a9aa8;
-    --border: rgb(255 255 255 / 9%);
-    --accent: #8b7dff;
-    --accent-text: #0f0f14;
-    --danger-bg: #3a1c1f;
-    --danger-text: #ffb4b4;
-    --shadow: 0 1px 2px rgb(0 0 0 / 30%), 0 8px 24px rgb(0 0 0 / 35%);
+    --bg: #0c0c11;
+    --sidebar: #101016;
+    --surface: #15151c;
+    --surface-hover: #1b1b24;
+    --surface-sunken: #1d1d26;
+    --text: #f3f3f8;
+    --text-muted: #a2a2b2;
+    --text-faint: #6c6c7e;
+    --border: rgb(255 255 255 / 7%);
+    --border-strong: rgb(255 255 255 / 14%);
+    --accent: #8e80ff;
+    --accent-text: #0c0c11;
+    --accent-soft: rgb(142 128 255 / 15%);
+    --ok: #34d286;
+    --ok-soft: rgb(52 210 134 / 14%);
+    --danger-bg: #36191c;
+    --danger-text: #ffb3b3;
+    --shadow: 0 1px 2px rgb(0 0 0 / 35%), 0 8px 24px rgb(0 0 0 / 32%);
   }
 }
 
@@ -37,39 +55,59 @@
 
 body {
   margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
   background: var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
 }
 
+button {
+  font-family: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---------- Pages ---------- */
 .page {
   max-width: 760px;
   margin: 0 auto;
-  padding: 48px 24px;
+  padding: 40px 32px 56px;
 }
 
 .page-header h1 {
-  margin: 0 0 6px;
-  font-size: 2rem;
-  letter-spacing: -0.02em;
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.022em;
 }
 
 .page-header p {
-  margin: 0;
+  margin: 6px 0 0;
   color: var(--text-muted);
 }
 
 .page-header .summary {
-  margin-top: 14px;
-  font-size: 0.8125rem;
+  display: inline-flex;
+  margin-top: 16px;
+  padding: 3px 11px;
+  font-size: 12px;
   font-weight: 600;
-  color: var(--text);
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
 }
 
+/* ---------- Connections ---------- */
 .chips {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   margin: 28px 0 0;
   padding: 0;
   list-style: none;
@@ -79,40 +117,41 @@ body {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 12px 14px 12px 12px;
+  padding: 11px 14px 11px 11px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 999px;
   box-shadow: var(--shadow);
-  transition:
-    transform 0.15s ease,
-    background 0.15s ease;
+  transition: border-color 0.15s ease;
 }
 
 .chip:hover {
-  background: var(--surface-hover);
-  transform: translateY(-1px);
+  border-color: var(--border-strong);
+}
+
+.chip[data-connected='true'] {
+  border-color: color-mix(in srgb, var(--ok) 32%, var(--border));
 }
 
 .logo {
   display: grid;
   place-items: center;
   flex: none;
-  width: 48px;
-  height: 48px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--text) 6%, transparent);
+  background: var(--surface-sunken);
   color: var(--text-muted);
 }
 
 .logo svg {
-  width: 26px;
-  height: 26px;
+  width: 25px;
+  height: 25px;
 }
 
 .logo img {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border-radius: 7px;
 }
 
@@ -121,11 +160,13 @@ body {
   flex: 1;
   flex-direction: column;
   min-width: 0;
-  gap: 2px;
+  gap: 1px;
 }
 
 .chip-name {
+  font-size: 15px;
   font-weight: 650;
+  letter-spacing: -0.01em;
 }
 
 .chip-meta {
@@ -133,38 +174,49 @@ body {
   align-items: center;
   gap: 6px;
   overflow: hidden;
-  font-size: 0.8125rem;
+  font-size: 12.5px;
   color: var(--text-muted);
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
+.chip-sep {
+  color: var(--text-faint);
+}
+
 .status-dot {
   flex: none;
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--text-muted) 55%, transparent);
+  background: var(--text-faint);
 }
 
 .chip[data-connected='true'] .status-dot {
   background: var(--ok);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 25%, transparent);
+  box-shadow: 0 0 0 3px var(--ok-soft);
+}
+
+.chip[data-connected='true'] .chip-status {
+  font-weight: 600;
+  color: var(--ok);
 }
 
 .chip-action {
   flex: none;
-  min-width: 108px;
-  padding: 9px 18px;
-  font: inherit;
-  font-size: 0.875rem;
+  min-width: 104px;
+  height: 34px;
+  padding: 0 16px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--accent-text);
   background: var(--accent);
-  border: 0;
+  border: 1px solid transparent;
   border-radius: 999px;
   cursor: pointer;
-  transition: filter 0.15s ease;
+  transition:
+    filter 0.15s ease,
+    background 0.15s ease;
 }
 
 .chip-action:hover:not(:disabled) {
@@ -177,35 +229,38 @@ body {
 
 .chip[data-connected='true'] .chip-action {
   color: var(--text);
-  background: color-mix(in srgb, var(--text) 8%, transparent);
+  background: var(--surface-sunken);
+  border-color: var(--border);
+}
+
+.chip[data-connected='true'] .chip-action:hover:not(:disabled) {
+  filter: none;
+  border-color: var(--border-strong);
 }
 
 .chip-action:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: progress;
 }
 
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
+/* ---------- Shared: banners, empty text ---------- */
 .banner {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   margin-top: 20px;
-  padding: 10px 16px;
-  font-size: 0.875rem;
+  padding: 10px 14px;
+  font-size: 13px;
   color: var(--danger-text);
   background: var(--danger-bg);
-  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--danger-text) 18%, transparent);
+  border-radius: var(--radius-md);
 }
 
 .banner button {
-  font: inherit;
-  font-size: 1.25rem;
+  font-size: 13px;
+  font-weight: 600;
   line-height: 1;
   color: inherit;
   background: none;
@@ -443,10 +498,10 @@ a.track-source:hover .logo {
   }
 }
 
-/* App shell */
+/* ---------- App shell ---------- */
 .app {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
+  grid-template-columns: 232px minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr) auto;
   height: 100vh;
 }
@@ -457,41 +512,81 @@ a.track-source:hover .logo {
 }
 
 .sidebar {
-  padding: 28px 14px;
+  display: flex;
+  flex-direction: column;
+  padding: 22px 12px;
+  background: var(--sidebar);
   border-right: 1px solid var(--border);
+  /* On macOS the window has no title bar, so the sidebar's empty space is where you drag it. */
+  -webkit-app-region: drag;
+}
+
+/* Leave room for the traffic-light buttons the window draws over the sidebar. */
+html[data-platform='mac'] .sidebar {
+  padding-top: 54px;
+}
+
+.drag-strip {
+  display: none;
+}
+
+html[data-platform='mac'] .drag-strip {
+  display: block;
+  position: fixed;
+  top: 0;
+  left: 232px;
+  right: 0;
+  height: 26px;
+  z-index: 10;
+  -webkit-app-region: drag;
 }
 
 .brand {
-  padding: 0 12px 24px;
-  font-size: 1.125rem;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 10px 22px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: -0.02em;
+}
+
+.brand-mark {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  color: var(--accent);
 }
 
 .sidebar nav {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
+  -webkit-app-region: no-drag;
 }
 
 .nav-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
-  font: inherit;
-  font-weight: 600;
+  height: 36px;
+  padding: 0 10px;
+  font-size: 14px;
+  font-weight: 550;
   color: var(--text-muted);
   text-align: left;
   background: none;
   border: 0;
-  border-radius: 12px;
+  border-radius: 10px;
   cursor: pointer;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
 }
 
 .nav-item svg {
-  width: 20px;
-  height: 20px;
+  width: 19px;
+  height: 19px;
 }
 
 .nav-item:hover {
@@ -500,8 +595,8 @@ a.track-source:hover .logo {
 }
 
 .nav-item[aria-current='page'] {
-  color: var(--text);
-  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+  background: var(--accent-soft);
 }
 
 @media (max-width: 640px) {
@@ -516,12 +611,26 @@ a.track-source:hover .logo {
     border-bottom: 1px solid var(--border);
   }
 
+  html[data-platform='mac'] .sidebar {
+    padding-top: 40px;
+  }
+
+  html[data-platform='mac'] .drag-strip {
+    left: 0;
+  }
+
   .brand {
     padding-bottom: 8px;
   }
 
   .sidebar nav {
     flex-direction: row;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-item {
+    transition: none;
   }
 }
 

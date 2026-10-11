@@ -1,5 +1,5 @@
 import { join } from 'node:path'
-import { app, BrowserWindow, components, dialog, protocol, safeStorage, session, shell } from 'electron'
+import { app, BrowserWindow, components, dialog, nativeTheme, protocol, safeStorage, session, shell } from 'electron'
 import { MEDIA_SCHEME } from '@shared/media'
 import { createMediaHandler } from './media/handler'
 import { OAuthClient } from './auth/oauth'
@@ -24,6 +24,10 @@ function createWindow(): void {
     minHeight: 480,
     show: false,
     title: 'TurnTable',
+    // Matches the page background, so there is no white flash before the first paint.
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#0c0c11' : '#f5f5f8',
+    // On macOS the title bar is hidden and the traffic lights sit inside the sidebar, like a native app.
+    ...(process.platform === 'darwin' ? { titleBarStyle: 'hiddenInset' as const, trafficLightPosition: { x: 18, y: 19 } } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.cjs'),
       contextIsolation: true,

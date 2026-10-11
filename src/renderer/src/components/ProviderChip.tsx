@@ -34,7 +34,11 @@ export function ProviderChip({ provider, busy, onToggle, onAddFolders }: Props):
         <span className="chip-name">{name}</span>
         <span className="chip-meta">
           <span className="status-dot" aria-hidden="true" />
-          {reconnect ? 'Reconnect to enable playback' : connected ? 'Connected' : 'Not connected'} · {describeQuality(provider)}
+          <span className="chip-status">{reconnect ? 'Reconnect to enable playback' : connected ? 'Connected' : 'Not connected'}</span>
+          <span className="chip-sep" aria-hidden="true">
+            ·
+          </span>
+          <span className="chip-quality">{describeQuality(provider)}</span>
         </span>
       </div>
       {isLocal && connected && (

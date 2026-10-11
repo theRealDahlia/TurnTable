@@ -1,7 +1,10 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from './App'
+import { isMac } from './lib/platform'
 import './styles.css'
+
+document.documentElement.dataset.platform = isMac(navigator.userAgent) ? 'mac' : 'other'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

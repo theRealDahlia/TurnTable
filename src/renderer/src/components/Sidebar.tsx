@@ -36,10 +36,24 @@ const ITEMS: { page: Page; label: string; icon: React.JSX.Element }[] = [
   }
 ]
 
+/** A record on a turntable: the outer groove, a highlight, and the spindle. */
+function BrandMark(): React.JSX.Element {
+  return (
+    <svg className="brand-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="9.5" />
+      <path d="M12 5.2a6.8 6.8 0 0 1 6.8 6.8" opacity="0.55" />
+      <circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
 export function Sidebar({ page, onNavigate }: Props): React.JSX.Element {
   return (
     <aside className="sidebar">
-      <div className="brand">TurnTable</div>
+      <div className="brand">
+        <BrandMark />
+        <span>TurnTable</span>
+      </div>
       <nav aria-label="Main">
         {ITEMS.map((item) => (
           <button
