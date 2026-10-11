@@ -106,4 +106,40 @@ describe('OAuthClient', () => {
     const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
     expect((init.body as URLSearchParams).get('grant_type')).toBe('refresh_token')
   })
+
+  describe('token endpoint failures', () => {
+    const failWith = async (response: Response) => {
+      const client = new OAuthClient({ openUrl: async () => undefined, fetch: (async () => response) as never, now: () => 0 })
+      return (await client.refresh(config, 'rt').catch((e: unknown) => e)) as TokenRequestError
+    }
+
+    it("pass on the service's own explanation", async () => {
+      const error = await failWith(tokenResponse({ error: 'invalid_request', error_description: 'client_secret is missing.' }, 400))
+      expect(error).toBeInstanceOf(TokenRequestError)
+      expect(error.status).toBe(400)
+      expect(error.detail).toBe('client_secret is missing.')
+      expect(error.message).toBe('Token request failed with status 400: client_secret is missing.')
+    })
+
+    it('fall back to the error code when there is no description', async () => {
+      expect((await failWith(tokenResponse({ error: 'invalid_grant' }, 400))).message).toBe('Token request failed with status 400: invalid_grant')
+    })
+
+    it('clean up and cap the text', async () => {
+      const error = await failWith(tokenResponse({ error_description: `bad\u0000\n${'x'.repeat(500)}` }, 400))
+      expect(error.detail).not.toMatch(/\p{Cc}/u)
+      expect(error.detail?.length).toBeLessThanOrEqual(200)
+    })
+
+    it.each([
+      ['not JSON', new Response('<html>', { status: 502 })],
+      ['JSON without an explanation', tokenResponse({ other: 1 }, 502)],
+      ['a non-text explanation', tokenResponse({ error_description: { a: 1 } }, 502)],
+      ['an empty explanation', tokenResponse({ error_description: '  ' }, 502)]
+    ])('just report the status for %s', async (_label, response) => {
+      const error = await failWith(response)
+      expect(error.message).toBe('Token request failed with status 502')
+      expect(error.detail).toBeUndefined()
+    })
+  })
 })

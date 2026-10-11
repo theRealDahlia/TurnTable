@@ -34,9 +34,26 @@ interface TokenResponse {
 
 /** The token endpoint rejected a request. `status` lets callers tell a revoked grant (400/401) from an outage. */
 export class TokenRequestError extends Error {
-  constructor(readonly status: number) {
-    super(`Token request failed with status ${status}`)
+  constructor(
+    readonly status: number,
+    /** The service's own explanation, when it gave one (RFC 6749 `error_description`). */
+    readonly detail?: string
+  ) {
+    super(`Token request failed with status ${status}${detail ? `: ${detail}` : ''}`)
     this.name = 'TokenRequestError'
+  }
+}
+
+const MAX_DETAIL_LENGTH = 200
+
+/** The explanation in an OAuth error response, cleaned up because it ends up in front of the user. */
+async function readErrorDetail(response: Response): Promise<string | undefined> {
+  try {
+    const body = (await response.json()) as { error_description?: unknown; error?: unknown }
+    const text = [body.error_description, body.error].find((value): value is string => typeof value === 'string')
+    return text?.replace(/\p{Cc}/gu, ' ').trim().slice(0, MAX_DETAIL_LENGTH) || undefined
+  } catch {
+    return undefined
   }
 }
 
@@ -96,7 +113,7 @@ export class OAuthClient {
         ...(config.clientSecret ? { client_secret: config.clientSecret } : {})
       })
     })
-    if (!response.ok) throw new TokenRequestError(response.status)
+    if (!response.ok) throw new TokenRequestError(response.status, await readErrorDetail(response))
 
     const body = (await response.json()) as TokenResponse
     if (!body.access_token) throw new Error('Token response did not include an access token')
