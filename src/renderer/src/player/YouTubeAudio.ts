@@ -1,5 +1,6 @@
 import { YOUTUBE_VIDEO_ID, describeYouTubeError, type YouTubePlayerEvent } from '@shared/youtubePlayer'
 import { errorEvent, type PlayerMedia } from './media'
+import { createSilentKeeper, type SessionKeeper } from './sessionKeeper'
 import type { YouTubeChannel } from './YouTubeBridge'
 
 const SOURCE_PREFIX = 'youtube:'
@@ -24,6 +25,8 @@ const COMMAND_GRACE_MS = 700
 export interface YouTubeAudioOptions {
   startTimeoutMs?: number
   now?: () => number
+  /** Keeps the app's own media session alive while YouTube plays, so the keyboard's skip keys reach the app. */
+  keeper?: SessionKeeper
 }
 
 /**
@@ -53,6 +56,7 @@ export class YouTubeAudio extends EventTarget implements PlayerMedia {
   private startTimer?: ReturnType<typeof setTimeout>
   private readonly startTimeoutMs: number
   private readonly now: () => number
+  private readonly keeper: SessionKeeper
 
   constructor(
     private readonly channel: YouTubeChannel,
@@ -61,6 +65,7 @@ export class YouTubeAudio extends EventTarget implements PlayerMedia {
     super()
     this.startTimeoutMs = options.startTimeoutMs ?? START_TIMEOUT_MS
     this.now = options.now ?? Date.now
+    this.keeper = options.keeper ?? createSilentKeeper()
   }
 
   get src(): string {
@@ -104,6 +109,7 @@ export class YouTubeAudio extends EventTarget implements PlayerMedia {
     this.isPaused = false
     this.hasEnded = false
     this.pauseOnStart = false
+    this.keeper.start()
 
     if (this.started) {
       this.noteCommand(false)
@@ -126,6 +132,7 @@ export class YouTubeAudio extends EventTarget implements PlayerMedia {
     this.shownPlaying = false
     this.pauseOnStart = !this.hasPlayed
     this.noteCommand(true)
+    this.keeper.stop()
     if (this.started) this.channel.send({ type: 'pause' })
     this.emit('pause')
   }
@@ -161,6 +168,7 @@ export class YouTubeAudio extends EventTarget implements PlayerMedia {
         this.hasEnded = true
         this.isPaused = true
         this.shownPlaying = false
+        this.keeper.stop()
         this.emit('ended')
         return
       case 'playing':
@@ -175,6 +183,7 @@ export class YouTubeAudio extends EventTarget implements PlayerMedia {
           this.shownPlaying = true
           this.hasPlayed = true
           this.isPaused = false
+          this.keeper.start()
           this.emit('playing')
         }
         break
@@ -183,6 +192,7 @@ export class YouTubeAudio extends EventTarget implements PlayerMedia {
         if (this.shownPlaying) {
           this.shownPlaying = false
           this.isPaused = true
+          this.keeper.stop()
           this.emit('pause')
         }
         break
@@ -220,6 +230,7 @@ export class YouTubeAudio extends EventTarget implements PlayerMedia {
   /** Playback of this source is over (failed or never started); the next play() starts afresh. */
   private stop(): void {
     clearTimeout(this.startTimer)
+    this.keeper.stop()
     this.started = false
     this.matched = false
     this.shownPlaying = false

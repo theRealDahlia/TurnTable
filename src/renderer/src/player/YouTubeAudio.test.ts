@@ -32,13 +32,14 @@ class FakeChannel implements YouTubeChannel {
 let time = 10_000
 function setup(source: string | undefined = SRC) {
   const channel = new FakeChannel()
-  const audio = new YouTubeAudio(channel, { now: () => time, startTimeoutMs: 5_000 })
+  const keeper = { start: vi.fn(), stop: vi.fn() }
+  const audio = new YouTubeAudio(channel, { now: () => time, startTimeoutMs: 5_000, keeper })
   const heard: string[] = []
   const errors: (string | undefined)[] = []
   for (const type of ['playing', 'waiting', 'pause', 'timeupdate', 'durationchange', 'ended']) audio.addEventListener(type, () => heard.push(type))
   audio.addEventListener('error', (event) => errors.push(errorMessageOf(event)))
   if (source !== undefined) audio.src = source
-  return { audio, channel, heard, errors }
+  return { audio, channel, heard, errors, keeper }
 }
 
 beforeEach(() => {
@@ -397,5 +398,74 @@ describe('YouTubeAudio changing video', () => {
     audio.src = `youtube:${OTHER}`
     vi.advanceTimersByTime(60_000)
     expect(errors).toEqual([])
+  })
+})
+
+describe('YouTubeAudio session keeper', () => {
+  it('holds the app\'s media controls from the moment a video is asked for', async () => {
+    const { audio, keeper } = setup()
+    expect(keeper.start).not.toHaveBeenCalled()
+    await audio.play()
+    expect(keeper.start).toHaveBeenCalledOnce()
+  })
+
+  it('lets go when the user pauses, and takes hold again on resume', async () => {
+    const { audio, channel, keeper } = setup()
+    await audio.play()
+    channel.state('playing')
+    keeper.stop.mockClear()
+    audio.pause()
+    expect(keeper.stop).toHaveBeenCalledOnce()
+
+    keeper.start.mockClear()
+    time += 5_000
+    await audio.play()
+    expect(keeper.start).toHaveBeenCalledOnce()
+  })
+
+  it('follows YouTube when it is paused and resumed from the video itself', async () => {
+    const { audio, channel, keeper } = setup()
+    await audio.play()
+    channel.state('playing')
+    keeper.start.mockClear()
+    keeper.stop.mockClear()
+    time += 5_000
+
+    channel.state('paused')
+    expect(keeper.stop).toHaveBeenCalledOnce()
+    channel.state('playing')
+    expect(keeper.start).toHaveBeenCalledOnce()
+    expect(audio.paused).toBe(false)
+  })
+
+  it('lets go when the video ends, fails, times out or is replaced', async () => {
+    const ended = setup()
+    await ended.audio.play()
+    ended.channel.state('playing')
+    ended.keeper.stop.mockClear()
+    ended.channel.state('ended')
+    expect(ended.keeper.stop).toHaveBeenCalled()
+
+    const failed = setup()
+    await failed.audio.play()
+    failed.channel.emit({ type: 'error', code: 150 })
+    expect(failed.keeper.stop).toHaveBeenCalled()
+
+    const slow = setup()
+    await slow.audio.play()
+    vi.advanceTimersByTime(5_000)
+    expect(slow.keeper.stop).toHaveBeenCalled()
+
+    const replaced = setup()
+    await replaced.audio.play()
+    replaced.keeper.stop.mockClear()
+    replaced.audio.src = `youtube:${OTHER}`
+    expect(replaced.keeper.stop).toHaveBeenCalled()
+  })
+
+  it('does not start for a source that cannot be played', async () => {
+    const { audio, keeper } = setup('youtube:nope')
+    await expect(audio.play()).rejects.toThrow()
+    expect(keeper.start).not.toHaveBeenCalled()
   })
 })

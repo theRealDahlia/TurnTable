@@ -81,6 +81,10 @@ export interface PlayerOptions {
 
 const sameTrack = (a: Track, b: Track): boolean => a.providerId === b.providerId && a.id === b.id
 
+/** While shuffling there is no last song: more passes are added as they are needed. This keeps the history from growing for ever. */
+const MAX_ORDER = 2000
+const KEPT_ORDER = 1000
+
 /** `tracks` in random order, with `first` (when it is among them) moved to the front, so shuffling never skips the song you are on. */
 function shuffled(tracks: Track[], first: Track | undefined, random: () => number): Track[] {
   const rest = tracks.filter((track) => !first || !sameTrack(track, first))
@@ -110,6 +114,11 @@ export function usePlayer({ createAudio = createDefaultMedia, random = Math.rand
   /** Identifies the load in progress, so a late failure of a superseded load is ignored. */
   const loadId = useRef(0)
 
+  /** Whether there is a song after position `index`: the next one in the order, or, while shuffling, another pass. */
+  const canAdvance = useCallback((index: number): boolean => {
+    return index >= 0 && (index < queueRef.current.tracks.length - 1 || (shuffleRef.current && listedRef.current.length > 1))
+  }, [])
+
   const loadIndex = useCallback((index: number) => {
     const audio = audioRef.current
     const track = queueRef.current.tracks[index]
@@ -118,18 +127,40 @@ export function usePlayer({ createAudio = createDefaultMedia, random = Math.rand
 
     queueRef.current.index = index
     const id = ++loadId.current
-    dispatch({ type: 'started', track, hasNext: index < queueRef.current.tracks.length - 1, hasPrevious: index > 0 })
+    dispatch({ type: 'started', track, hasNext: canAdvance(index), hasPrevious: index > 0 })
     audio.src = url
     audio.play().catch((error: unknown) => {
       if (id !== loadId.current || isAbortError(error)) return
       dispatch({ type: 'failed', error: describeError(error) })
     })
-  }, [])
+  }, [canAdvance])
 
-  const next = useCallback(() => {
+  /** Moves on to the next song, if there is one. Shuffling never runs out: it starts another pass in a new order. */
+  const advance = useCallback((): boolean => {
     const { tracks, index } = queueRef.current
-    if (index < tracks.length - 1) loadIndex(index + 1)
+    if (index < tracks.length - 1) {
+      loadIndex(index + 1)
+      return true
+    }
+    if (!shuffleRef.current || listedRef.current.length < 2) return false
+
+    const pass = shuffled(listedRef.current, undefined, randomRef.current)
+    const current = tracks[index]
+    // The same song twice in a row would feel like the shuffle had stalled.
+    if (current && pass[0] && sameTrack(pass[0], current)) [pass[0], pass[1]] = [pass[1]!, pass[0]]
+    let order = [...tracks, ...pass]
+    let at = index
+    if (order.length > MAX_ORDER) {
+      const drop = order.length - KEPT_ORDER
+      order = order.slice(drop)
+      at -= drop
+    }
+    queueRef.current = { tracks: order, index: at }
+    loadIndex(at + 1)
+    return true
   }, [loadIndex])
+
+  const next = useCallback(() => void advance(), [advance])
 
   const previous = useCallback(() => {
     const audio = audioRef.current
@@ -156,9 +187,7 @@ export function usePlayer({ createAudio = createDefaultMedia, random = Math.rand
       if (Number.isFinite(audio.duration)) dispatch({ type: 'duration', duration: audio.duration })
     })
     on('ended', () => {
-      const { tracks, index } = queueRef.current
-      if (index < tracks.length - 1) loadIndex(index + 1)
-      else dispatch({ type: 'status', status: 'paused' })
+      if (!advance()) dispatch({ type: 'status', status: 'paused' })
     })
     on('error', (event) => {
       // Sources like Spotify explain their failures themselves; a real <audio> element only has an error code.
@@ -171,7 +200,7 @@ export function usePlayer({ createAudio = createDefaultMedia, random = Math.rand
       audio.load()
       audioRef.current = null
     }
-  }, [audioFactory, loadIndex])
+  }, [audioFactory, loadIndex, advance])
 
   const play = useCallback(
     (track: Track, queue: Track[] = [track]) => {
@@ -201,8 +230,8 @@ export function usePlayer({ createAudio = createDefaultMedia, random = Math.rand
       else queueRef.current = { tracks: listed, index: Math.max(0, listed.findIndex((t) => sameTrack(t, current))) }
     }
     const after = queueRef.current
-    dispatch({ type: 'shuffle', on, hasNext: after.index >= 0 && after.index < after.tracks.length - 1, hasPrevious: after.index > 0 })
-  }, [])
+    dispatch({ type: 'shuffle', on, hasNext: canAdvance(after.index), hasPrevious: after.index > 0 })
+  }, [canAdvance])
 
   const pause = useCallback(() => audioRef.current?.pause(), [])
 
