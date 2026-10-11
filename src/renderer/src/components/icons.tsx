@@ -53,12 +53,10 @@ export const ClockIcon = ({ className }: IconProps): React.JSX.Element => (
   </svg>
 )
 
-/** A record on a turntable: the outer groove, a highlight, and the spindle. */
+/** The app's mark: five rounded bars of different heights, like a sound wave. */
 export const BrandMark = ({ className }: IconProps): React.JSX.Element => (
-  <svg {...STROKED} className={className}>
-    <circle cx="12" cy="12" r="9.5" />
-    <path d="M12 5.2a6.8 6.8 0 0 1 6.8 6.8" opacity="0.55" />
-    <circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none" />
+  <svg {...STROKED} strokeWidth={2.4} className={className}>
+    <path d="M3.5 9v6M7.75 5.5v13M12 1.5v21M16.25 4v16M20.5 8v8" />
   </svg>
 )
 
