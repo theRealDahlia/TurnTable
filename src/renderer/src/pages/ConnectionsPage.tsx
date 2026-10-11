@@ -4,8 +4,8 @@ import { ProviderChip } from '../components/ProviderChip'
 import { describeError } from '@shared/errors'
 
 interface Props {
-  /** Called after a service is connected or disconnected, so other pages can refresh. */
-  onChanged?: () => void
+  /** Called after a service is connected, disconnected or reconfigured, with that service, so only its data is refreshed. */
+  onChanged?: (id: ProviderId) => void
 }
 
 export function ConnectionsPage({ onChanged }: Props): React.JSX.Element {
@@ -40,7 +40,7 @@ export function ConnectionsPage({ onChanged }: Props): React.JSX.Element {
       if (action === 'disconnect') await window.turntable.disconnectProvider(provider.id)
       else await window.turntable.connectProvider(provider.id)
       setReloadCount((count) => count + 1)
-      onChanged?.()
+      onChanged?.(provider.id)
     } catch (e) {
       setError(describeError(e))
     } finally {

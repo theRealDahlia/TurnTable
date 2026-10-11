@@ -160,3 +160,221 @@ describe('useLibrary', () => {
     errors.mockRestore()
   })
 })
+
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((res) => (resolve = res))
+  return { promise, resolve }
+}
+
+describe('useLibrary.refreshProvider', () => {
+  const bothConnected = (): ProviderStatus[] => [status('spotify', true), status('soundcloud', true)]
+  const byId = async (id: 'spotify' | 'soundcloud'): Promise<TrackPage> => page(id, [1])
+  const requestedServices = (): unknown[] => api.getSavedTracks.mock.calls.map((call) => call[0])
+
+  /** Renders the hook with both services connected and waits until everything has loaded once. */
+  async function loadedWithBoth() {
+    api.listProviders.mockResolvedValue(bothConnected())
+    api.getSavedTracks.mockImplementation(byId)
+    const hook = renderHook(() => useLibrary())
+    await waitFor(() => expect(hook.result.current.loading).toBe(false))
+    api.listProviders.mockClear()
+    api.getSavedTracks.mockClear()
+    return hook
+  }
+
+  it('reloads only the service that changed, and leaves the others as they were', async () => {
+    const { result } = await loadedWithBoth()
+    api.getSavedTracks.mockImplementation(async (id: 'spotify' | 'soundcloud') => page(id, [1, 2]))
+
+    act(() => result.current.refreshProvider('soundcloud'))
+    await waitFor(() => expect(result.current.libraries.soundcloud?.tracks).toHaveLength(2))
+
+    expect(api.listProviders).toHaveBeenCalledOnce()
+    expect(requestedServices()).toEqual(['soundcloud'])
+    expect(result.current.libraries.spotify?.tracks).toHaveLength(1)
+  })
+
+  it('loads a service that has just been connected without touching the others', async () => {
+    api.listProviders.mockResolvedValue([status('spotify', true), status('soundcloud', false)])
+    api.getSavedTracks.mockImplementation(byId)
+    const { result } = renderHook(() => useLibrary())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    api.getSavedTracks.mockClear()
+
+    api.listProviders.mockResolvedValue(bothConnected())
+    act(() => result.current.refreshProvider('soundcloud'))
+    await waitFor(() => expect(result.current.libraries.soundcloud?.status).toBe('ready'))
+
+    expect(requestedServices()).toEqual(['soundcloud'])
+    expect(result.current.providers.find((p) => p.id === 'soundcloud')?.connected).toBe(true)
+    expect(result.current.tracks.map((t) => t.id)).toEqual(['spotify-1', 'soundcloud-1'])
+  })
+
+  it('drops a service that has been disconnected, fetches nothing, and keeps the rest', async () => {
+    const { result } = await loadedWithBoth()
+
+    api.listProviders.mockResolvedValue([status('spotify', true), status('soundcloud', false)])
+    act(() => result.current.refreshProvider('soundcloud'))
+    await waitFor(() => expect(result.current.libraries.soundcloud).toBeUndefined())
+
+    expect(api.getSavedTracks).not.toHaveBeenCalled()
+    expect(result.current.tracks.map((t) => t.id)).toEqual(['spotify-1'])
+  })
+
+  it('uses the new connection status for every service, e.g. one that needs reconnecting', async () => {
+    const { result } = await loadedWithBoth()
+
+    api.listProviders.mockResolvedValue([{ ...status('spotify', true), needsReauthorization: true }, status('soundcloud', true)])
+    act(() => result.current.refreshProvider('soundcloud'))
+    await waitFor(() => expect(result.current.providers[0]?.needsReauthorization).toBe(true))
+  })
+
+  it('applies answers in the order the changes were made', async () => {
+    const { result } = await loadedWithBoth()
+    const first = deferred<ProviderStatus[]>()
+    api.listProviders.mockReturnValueOnce(first.promise).mockResolvedValueOnce(bothConnected())
+
+    act(() => {
+      result.current.refreshProvider('spotify')
+      result.current.refreshProvider('soundcloud')
+    })
+    // The second check waits for the first, so a slow answer can never overwrite a newer one.
+    await waitFor(() => expect(api.listProviders).toHaveBeenCalledTimes(1))
+    await act(async () => {})
+    expect(api.listProviders).toHaveBeenCalledTimes(1)
+
+    await act(async () => first.resolve([status('spotify', true), status('soundcloud', false)]))
+    await waitFor(() => expect(result.current.libraries.soundcloud?.status).toBe('ready'))
+
+    expect(api.listProviders).toHaveBeenCalledTimes(2)
+    expect(requestedServices()).toEqual(['spotify', 'soundcloud'])
+    expect(result.current.providers.find((p) => p.id === 'soundcloud')?.connected).toBe(true)
+  })
+
+  it('does not disturb another service that is still loading', async () => {
+    const spotifyPage = deferred<TrackPage>()
+    api.listProviders.mockResolvedValue([status('spotify', true), status('soundcloud', false)])
+    api.getSavedTracks.mockImplementation((id: string) => (id === 'spotify' ? spotifyPage.promise : Promise.resolve(page('soundcloud', [1]))))
+    const { result } = renderHook(() => useLibrary())
+    await waitFor(() => expect(result.current.libraries.spotify?.status).toBe('loading'))
+
+    api.listProviders.mockResolvedValue(bothConnected())
+    act(() => result.current.refreshProvider('soundcloud'))
+    await waitFor(() => expect(result.current.libraries.soundcloud?.status).toBe('ready'))
+    await act(async () => spotifyPage.resolve(page('spotify', [1, 2])))
+
+    expect(result.current.libraries.spotify).toMatchObject({ status: 'ready' })
+    expect(result.current.libraries.spotify?.tracks).toHaveLength(2)
+    expect(requestedServices().filter((id) => id === 'spotify')).toHaveLength(1)
+  })
+
+  it('lets a newer load of the same service replace an older one that is still in flight', async () => {
+    const { result } = await loadedWithBoth()
+    const old = deferred<TrackPage>()
+    api.getSavedTracks.mockReturnValueOnce(old.promise).mockResolvedValueOnce(page('soundcloud', [7, 8]))
+
+    act(() => result.current.refreshProvider('soundcloud'))
+    await waitFor(() => expect(api.getSavedTracks).toHaveBeenCalledTimes(1))
+    act(() => result.current.refreshProvider('soundcloud'))
+    await waitFor(() => expect(result.current.libraries.soundcloud?.status).toBe('ready'))
+    await act(async () => old.resolve(page('soundcloud', [1, 2, 3])))
+
+    expect(result.current.libraries.soundcloud?.tracks.map((t) => t.id)).toEqual(['soundcloud-7', 'soundcloud-8'])
+  })
+
+  it('ignores the late results of a service that was disconnected while it was loading', async () => {
+    const soundcloudPage = deferred<TrackPage>()
+    api.listProviders.mockResolvedValue(bothConnected())
+    api.getSavedTracks.mockImplementation((id: string) => (id === 'soundcloud' ? soundcloudPage.promise : Promise.resolve(page('spotify', [1]))))
+    const { result } = renderHook(() => useLibrary())
+    await waitFor(() => expect(result.current.libraries.soundcloud?.status).toBe('loading'))
+
+    api.listProviders.mockResolvedValue([status('spotify', true), status('soundcloud', false)])
+    act(() => result.current.refreshProvider('soundcloud'))
+    await waitFor(() => expect(result.current.libraries.soundcloud).toBeUndefined())
+    await act(async () => soundcloudPage.resolve(page('soundcloud', [1, 2, 3])))
+
+    expect(result.current.libraries.soundcloud).toBeUndefined()
+    expect(result.current.tracks.map((t) => t.id)).toEqual(['spotify-1'])
+  })
+
+  it('starts over instead, if asked before the first check of connections has finished', async () => {
+    const firstCheck = deferred<ProviderStatus[]>()
+    api.listProviders.mockReturnValueOnce(firstCheck.promise)
+    const { result } = renderHook(() => useLibrary())
+    expect(result.current.listing).toBe(true)
+
+    act(() => result.current.refreshProvider('spotify'))
+    await waitFor(() => expect(result.current.libraries.spotify?.status).toBe('ready'))
+    await act(async () => firstCheck.resolve([status('spotify', true), status('qobuz', false)]))
+
+    expect(api.listProviders).toHaveBeenCalledTimes(2)
+    expect(requestedServices()).toEqual(['spotify'])
+    expect(result.current.tracks).toHaveLength(1)
+  })
+
+  it('also starts over if the earlier check of connections had failed', async () => {
+    api.listProviders.mockRejectedValueOnce(new Error('boom'))
+    const { result } = renderHook(() => useLibrary())
+    await waitFor(() => expect(result.current.error).toBe('boom'))
+
+    act(() => result.current.refreshProvider('spotify'))
+    await waitFor(() => expect(result.current.libraries.spotify?.status).toBe('ready'))
+
+    expect(result.current.error).toBeUndefined()
+  })
+
+  it('reports a failure to check connections, but keeps everything already loaded', async () => {
+    const { result } = await loadedWithBoth()
+    api.listProviders.mockRejectedValueOnce(new Error("Error invoking remote method 'providers:list': Error: boom"))
+
+    act(() => result.current.refreshProvider('soundcloud'))
+    await waitFor(() => expect(result.current.error).toBe('boom'))
+
+    expect(result.current.tracks).toHaveLength(2)
+    expect(api.getSavedTracks).not.toHaveBeenCalled()
+  })
+
+  it('keeps working for later changes after a failed check', async () => {
+    const { result } = await loadedWithBoth()
+    api.listProviders.mockRejectedValueOnce(new Error('boom'))
+    act(() => result.current.refreshProvider('soundcloud'))
+    await waitFor(() => expect(result.current.error).toBe('boom'))
+
+    // The page offers a full reload after an error; it restores a normal state.
+    act(() => result.current.reload())
+    await waitFor(() => expect(result.current.error).toBeUndefined())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.tracks).toHaveLength(2)
+  })
+
+  it('ignores an answer that arrives after a full reload, which redoes everything anyway', async () => {
+    const { result } = await loadedWithBoth()
+    const slow = deferred<ProviderStatus[]>()
+    api.listProviders.mockReturnValueOnce(slow.promise)
+
+    act(() => result.current.refreshProvider('soundcloud'))
+    act(() => result.current.reload())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    await act(async () => slow.resolve(bothConnected()))
+
+    // Only the full reload fetched anything: one request per service, not two for soundcloud.
+    expect(requestedServices().sort()).toEqual(['soundcloud', 'spotify'])
+  })
+
+  it('ignores an answer that arrives after the page has gone away', async () => {
+    const { result, unmount } = await loadedWithBoth()
+    const slow = deferred<ProviderStatus[]>()
+    api.listProviders.mockReturnValueOnce(slow.promise)
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+
+    act(() => result.current.refreshProvider('soundcloud'))
+    unmount()
+    await act(async () => slow.resolve(bothConnected()))
+
+    expect(api.getSavedTracks).not.toHaveBeenCalled()
+    expect(errors).not.toHaveBeenCalled()
+    errors.mockRestore()
+  })
+})

@@ -40,6 +40,7 @@ function makeLibrary(overrides: Partial<Library> = {}, tracks: Track[] = []): Li
     tracks,
     loading: false,
     reload: vi.fn(),
+    refreshProvider: vi.fn(),
     retry: vi.fn(),
     ...overrides
   }

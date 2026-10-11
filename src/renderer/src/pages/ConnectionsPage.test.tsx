@@ -196,4 +196,66 @@ describe('ConnectionsPage', () => {
       expect(await screen.findByRole('button', { name: 'Disconnect Spotify' })).toBeTruthy()
     })
   })
+
+  describe('telling the app what changed', () => {
+    const connectedOnly = (...ids: ProviderStatus['id'][]): ProviderStatus[] =>
+      ALL.map((p) => ({ ...p, connected: ids.includes(p.id) }))
+
+    it('reports the service that was connected', async () => {
+      const onChanged = vi.fn()
+      render(<ConnectionsPage onChanged={onChanged} />)
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Connect Spotify' }))
+
+      await waitFor(() => expect(onChanged).toHaveBeenCalledOnce())
+      expect(onChanged).toHaveBeenCalledWith('spotify')
+    })
+
+    it('reports the service that was disconnected', async () => {
+      api.listProviders.mockResolvedValue(connectedOnly('qobuz'))
+      const onChanged = vi.fn()
+      render(<ConnectionsPage onChanged={onChanged} />)
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Disconnect Qobuz' }))
+
+      await waitFor(() => expect(onChanged).toHaveBeenCalledExactlyOnceWith('qobuz'))
+    })
+
+    it('reports a service that was reconnected for new permissions', async () => {
+      api.listProviders.mockResolvedValue(ALL.map((p) => (p.id === 'spotify' ? { ...p, connected: true, needsReauthorization: true } : p)))
+      const onChanged = vi.fn()
+      render(<ConnectionsPage onChanged={onChanged} />)
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Reconnect Spotify' }))
+
+      await waitFor(() => expect(onChanged).toHaveBeenCalledExactlyOnceWith('spotify'))
+    })
+
+    it('reports Local files when more folders are added', async () => {
+      api.listProviders.mockResolvedValue(connectedOnly('local'))
+      const onChanged = vi.fn()
+      render(<ConnectionsPage onChanged={onChanged} />)
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Add folders to Local files' }))
+
+      await waitFor(() => expect(onChanged).toHaveBeenCalledExactlyOnceWith('local'))
+    })
+
+    it('says nothing when the change did not happen', async () => {
+      api.connectProvider.mockRejectedValue(new Error('Spotify sign-in was cancelled'))
+      const onChanged = vi.fn()
+      render(<ConnectionsPage onChanged={onChanged} />)
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Connect Spotify' }))
+
+      await screen.findByRole('alert')
+      expect(onChanged).not.toHaveBeenCalled()
+    })
+
+    it('works without anyone listening', async () => {
+      render(<ConnectionsPage />)
+      await userEvent.click(await screen.findByRole('button', { name: 'Connect Spotify' }))
+      await waitFor(() => expect(api.connectProvider).toHaveBeenCalledWith('spotify'))
+    })
+  })
 })

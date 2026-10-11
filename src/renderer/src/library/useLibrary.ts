@@ -8,15 +8,18 @@ export interface ProviderLibrary {
   error?: string
 }
 
+type Libraries = Partial<Record<ProviderId, ProviderLibrary>>
+
 interface State {
   phase: 'listing' | 'ready' | 'error'
   providers: ProviderStatus[]
-  libraries: Partial<Record<ProviderId, ProviderLibrary>>
+  libraries: Libraries
   error?: string
 }
 
 type Action =
   | { type: 'listed'; providers: ProviderStatus[] }
+  | { type: 'providersUpdated'; providers: ProviderStatus[] }
   | { type: 'listFailed'; error: string }
   | { type: 'providerStarted'; id: ProviderId }
   | { type: 'pageLoaded'; id: ProviderId; tracks: Track[] }
@@ -24,6 +27,16 @@ type Action =
   | { type: 'providerFailed'; id: ProviderId; error: string }
 
 const initialState: State = { phase: 'listing', providers: [], libraries: {} }
+
+/** Keeps the libraries of services that are still connected, and drops the rest. */
+function onlyConnected(libraries: Libraries, providers: ProviderStatus[]): Libraries {
+  const kept: Libraries = {}
+  for (const { id, connected } of providers) {
+    const library = libraries[id]
+    if (connected && library) kept[id] = library
+  }
+  return kept
+}
 
 function reducer(state: State, action: Action): State {
   const update = (id: ProviderId, change: (current: ProviderLibrary) => ProviderLibrary): State => ({
@@ -34,6 +47,9 @@ function reducer(state: State, action: Action): State {
   switch (action.type) {
     case 'listed':
       return { phase: 'ready', providers: action.providers, libraries: {} }
+    case 'providersUpdated':
+      // A fresh list of what is connected, without throwing away the libraries that are already loaded.
+      return { phase: 'ready', providers: action.providers, libraries: onlyConnected(state.libraries, action.providers) }
     case 'listFailed':
       return { ...state, phase: 'error', error: action.error }
     case 'providerStarted':
@@ -53,13 +69,19 @@ export interface Library {
   /** Failed to ask which services are connected. */
   error?: string
   providers: ProviderStatus[]
-  libraries: Partial<Record<ProviderId, ProviderLibrary>>
+  libraries: Libraries
   /** Every loaded track from every connected service, in service order. */
   tracks: Track[]
   /** Still checking connections or fetching pages; false once everything has settled. */
   loading: boolean
   /** Starts over: re-checks connections and re-fetches every library. */
   reload(): void
+  /**
+   * After a service was connected, disconnected or reconfigured: re-checks connections and re-fetches only
+   * that service's library (or drops it if it is no longer connected). Other libraries are left alone,
+   * so changing one service never costs another service's API calls.
+   */
+  refreshProvider(id: ProviderId): void
   /** Re-fetches one service, e.g. after an error. */
   retry(id: ProviderId): void
 }
@@ -71,43 +93,80 @@ export interface Library {
 export function useLibrary(): Library {
   const [state, dispatch] = useReducer(reducer, initialState)
   const [reloadCount, setReloadCount] = useState(0)
-  const runCounter = useRef(0)
-  /** The run whose results are still wanted; 0 once unmounted, so a superseded run's results are dropped. */
-  const generation = useRef(0)
+  const counter = useRef(0)
+  /** Identifies the current full run; 0 once unmounted. Anything started under an older one is dropped. */
+  const epoch = useRef(0)
+  /** For each service, the load whose results are still wanted; a newer load or a disconnect ends the claim. */
+  const wanted = useRef(new Map<ProviderId, number>())
+  /** Runs connection checks for single services one after another, so answers are applied in the order asked. */
+  const refreshQueue = useRef<Promise<void>>(Promise.resolve())
 
-  const loadProvider = useCallback(async (id: ProviderId, run: number): Promise<void> => {
+  const loadProvider = useCallback(async (id: ProviderId): Promise<void> => {
+    const run = ++counter.current
+    wanted.current.set(id, run)
+    const superseded = (): boolean => wanted.current.get(id) !== run
+
     dispatch({ type: 'providerStarted', id })
     try {
       let cursor: string | undefined
       do {
         const page = await window.turntable.getSavedTracks(id, cursor)
-        if (run !== generation.current) return
+        if (superseded()) return
         dispatch({ type: 'pageLoaded', id, tracks: page.tracks })
         cursor = page.nextCursor
       } while (cursor)
       dispatch({ type: 'providerDone', id })
     } catch (e) {
-      if (run === generation.current) dispatch({ type: 'providerFailed', id, error: describeError(e) })
+      if (!superseded()) dispatch({ type: 'providerFailed', id, error: describeError(e) })
     }
   }, [])
 
   useEffect(() => {
-    const run = ++runCounter.current
-    generation.current = run
+    const claims = wanted.current
+    const run = ++counter.current
+    epoch.current = run
+    claims.clear()
+
     void (async () => {
       try {
         const providers = await window.turntable.listProviders()
-        if (run !== generation.current) return
+        if (run !== epoch.current) return
         dispatch({ type: 'listed', providers })
-        await Promise.all(providers.filter((p) => p.connected).map((p) => loadProvider(p.id, run)))
+        await Promise.all(providers.filter((p) => p.connected).map((p) => loadProvider(p.id)))
       } catch (e) {
-        if (run === generation.current) dispatch({ type: 'listFailed', error: describeError(e) })
+        if (run === epoch.current) dispatch({ type: 'listFailed', error: describeError(e) })
       }
     })()
     return () => {
-      generation.current = 0
+      epoch.current = 0
+      claims.clear()
     }
   }, [reloadCount, loadProvider])
+
+  const refreshProvider = useCallback(
+    (id: ProviderId): void => {
+      // Until the first check of connections has finished there is no list to update, so start over.
+      if (state.phase !== 'ready') {
+        setReloadCount((count) => count + 1)
+        return
+      }
+
+      const epochAtCall = epoch.current
+      refreshQueue.current = refreshQueue.current.then(async () => {
+        try {
+          const providers = await window.turntable.listProviders()
+          // A full reload (or unmount) since this was asked has already redone everything.
+          if (epochAtCall !== epoch.current) return
+          dispatch({ type: 'providersUpdated', providers })
+          if (providers.some((p) => p.id === id && p.connected)) void loadProvider(id)
+          else wanted.current.delete(id)
+        } catch (e) {
+          if (epochAtCall === epoch.current) dispatch({ type: 'listFailed', error: describeError(e) })
+        }
+      })
+    },
+    [state.phase, loadProvider]
+  )
 
   const tracks = useMemo(
     () => state.providers.flatMap((provider) => state.libraries[provider.id]?.tracks ?? []),
@@ -122,6 +181,7 @@ export function useLibrary(): Library {
     tracks,
     loading: state.phase === 'listing' || Object.values(state.libraries).some((lib) => lib.status === 'loading'),
     reload: useCallback(() => setReloadCount((count) => count + 1), []),
-    retry: useCallback((id: ProviderId) => void loadProvider(id, generation.current), [loadProvider])
+    refreshProvider,
+    retry: useCallback((id: ProviderId) => void loadProvider(id), [loadProvider])
   }
 }

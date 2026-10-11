@@ -23,7 +23,7 @@ export function App(): React.JSX.Element {
         {page === 'library' ? (
           <LibraryPage library={library} player={player} onOpenConnections={() => setPage('connections')} />
         ) : (
-          <ConnectionsPage onChanged={library.reload} />
+          <ConnectionsPage onChanged={library.refreshProvider} />
         )}
       </div>
       <PlayerBar player={player} />

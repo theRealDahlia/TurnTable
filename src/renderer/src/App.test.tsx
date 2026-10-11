@@ -317,4 +317,62 @@ describe('App', () => {
       expect((await screen.findByRole('alert')).textContent).toBe('Spotify could not play this track: Cannot load track')
     })
   })
+
+  describe('changing one service', () => {
+    const localStatus = (connected: boolean): ProviderStatus => ({
+      id: 'local',
+      name: 'Local files',
+      authKind: 'none',
+      playback: 'file',
+      maxQuality: { codec: 'flac', lossless: true },
+      connected
+    })
+    const requested = (id: string): number => api.getSavedTracks.mock.calls.filter((call) => call[0] === id).length
+
+    beforeEach(() => {
+      api.getSavedTracks.mockImplementation(async (id: 'spotify' | 'local') => ({
+        tracks: id === 'spotify' ? [{ ...localFlac, id: 'S'.repeat(22), providerId: 'spotify' as const, title: 'Spotify Song' }] : [localFlac]
+      }))
+    })
+
+    it('choosing local folders does not fetch the Spotify library again', async () => {
+      api.listProviders.mockResolvedValue([spotify(true), localStatus(false)])
+      render(<App />)
+      await screen.findByText('Spotify Song')
+      expect(requested('spotify')).toBe(1)
+
+      // Picking folders connects Local files, which is then reported as connected.
+      api.connectProvider.mockImplementation(async () => {
+        api.listProviders.mockResolvedValue([spotify(true), localStatus(true)])
+      })
+      await userEvent.click(nav().getByRole('button', { name: 'Connections' }))
+      await userEvent.click(await screen.findByRole('button', { name: 'Choose folders Local files' }))
+      await waitFor(() => expect(api.connectProvider).toHaveBeenCalledWith('local'))
+
+      await userEvent.click(nav().getByRole('button', { name: 'Library' }))
+      expect(await screen.findByText('Local Song')).toBeTruthy()
+      expect(screen.getByText('Spotify Song')).toBeTruthy()
+      expect(requested('local')).toBe(1)
+      expect(requested('spotify')).toBe(1)
+    })
+
+    it('disconnecting one service drops its tracks without fetching anything', async () => {
+      api.listProviders.mockResolvedValue([spotify(true), localStatus(true)])
+      render(<App />)
+      await screen.findByText('Local Song')
+      api.getSavedTracks.mockClear()
+
+      api.disconnectProvider.mockImplementation(async () => {
+        api.listProviders.mockResolvedValue([spotify(true), localStatus(false)])
+      })
+      await userEvent.click(nav().getByRole('button', { name: 'Connections' }))
+      await userEvent.click(await screen.findByRole('button', { name: 'Remove folders Local files' }))
+      await waitFor(() => expect(api.disconnectProvider).toHaveBeenCalledWith('local'))
+      await userEvent.click(nav().getByRole('button', { name: 'Library' }))
+
+      await waitFor(() => expect(screen.queryByText('Local Song')).toBeNull())
+      expect(screen.getByText('Spotify Song')).toBeTruthy()
+      expect(api.getSavedTracks).not.toHaveBeenCalled()
+    })
+  })
 })
