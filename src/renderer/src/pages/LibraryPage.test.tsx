@@ -39,7 +39,9 @@ function makeLibrary(overrides: Partial<Library> = {}, tracks: Track[] = []): Li
     libraries,
     tracks,
     loading: false,
+    refreshing: false,
     reload: vi.fn(),
+    refresh: vi.fn(),
     refreshProvider: vi.fn(),
     retry: vi.fn(),
     ...overrides
@@ -366,5 +368,54 @@ describe('LibraryPage', () => {
       expect(row('Song 1').getAttribute('data-current')).toBe('true')
       expect(row('Song 1').getAttribute('data-playing')).toBe('false')
     })
+  })
+})
+
+describe('refresh button', () => {
+  const button = (name: string | RegExp = 'Refresh'): HTMLElement => screen.getByRole('button', { name })
+
+  it('refreshes the library when pressed', async () => {
+    const library = makeLibrary({}, [track('spotify', 1)])
+    render(<LibraryPage library={library} player={makePlayer()} onOpenConnections={vi.fn()} />)
+
+    await userEvent.click(button())
+
+    expect(library.refresh).toHaveBeenCalledOnce()
+    expect(library.reload).not.toHaveBeenCalled()
+  })
+
+  it('is not offered when no service is connected', () => {
+    const library = makeLibrary({ providers: [provider('spotify', 'Spotify', false)], libraries: {} })
+    render(<LibraryPage library={library} player={makePlayer()} onOpenConnections={vi.fn()} />)
+    expect(screen.queryByRole('button', { name: /refresh/i })).toBeNull()
+  })
+
+  it('waits while the library is still loading, so it cannot pile up requests', () => {
+    const library = makeLibrary({ loading: true }, [track('spotify', 1)])
+    render(<LibraryPage library={library} player={makePlayer()} onOpenConnections={vi.fn()} />)
+    expect((button() as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('says it is refreshing, keeps the current tracks on screen and shows its progress', () => {
+    const library = makeLibrary({ loading: true, refreshing: true }, [track('spotify', 1), track('spotify', 2)])
+    render(<LibraryPage library={library} player={makePlayer()} onOpenConnections={vi.fn()} />)
+
+    const busy = button('Refreshing…') as HTMLButtonElement
+    expect(busy.disabled).toBe(true)
+    expect(busy.getAttribute('aria-busy')).toBe('true')
+    expect(busy.querySelector('svg')?.getAttribute('class')).toContain('spinning')
+    expect(screen.getByRole('status').textContent).toBe('Refreshing your library…')
+    expect(titles()).toEqual(['Song 2', 'Song 1'])
+    // The list is real tracks, not placeholder rows.
+    expect(document.querySelector('.skeleton-row')).toBeNull()
+  })
+
+  it('is idle and available once everything has loaded', () => {
+    const library = makeLibrary({}, [track('spotify', 1)])
+    render(<LibraryPage library={library} player={makePlayer()} onOpenConnections={vi.fn()} />)
+    const idle = button() as HTMLButtonElement
+    expect(idle.disabled).toBe(false)
+    expect(idle.getAttribute('aria-busy')).toBe('false')
+    expect(idle.querySelector('svg')?.getAttribute('class') ?? '').not.toContain('spinning')
   })
 })

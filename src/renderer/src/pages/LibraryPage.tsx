@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { ProviderId } from '@shared/types'
-import { BrandMark, ClockIcon, SearchIcon } from '../components/icons'
+import { BrandMark, ClockIcon, RefreshIcon, SearchIcon } from '../components/icons'
 import { TrackRow } from '../components/TrackRow'
 import { filterTracks, sortTracks, type SortKey } from '../library/query'
 import type { Library } from '../library/useLibrary'
@@ -64,9 +64,17 @@ export function LibraryPage({ library, player, onOpenConnections }: Props): Reac
 
   return (
     <main className="page page-wide">
-      <header className="page-header">
-        <h1>Library</h1>
-        <p>Your saved tracks from every connected service.</p>
+      <header className="page-header page-header-split">
+        <div>
+          <h1>Library</h1>
+          <p>Your saved tracks from every connected service.</p>
+        </div>
+        {connected.length > 0 && (
+          <button type="button" className="refresh-button" onClick={library.refresh} disabled={library.loading} aria-busy={library.refreshing}>
+            <RefreshIcon className={library.refreshing ? 'spinning' : undefined} />
+            {library.refreshing ? 'Refreshing…' : 'Refresh'}
+          </button>
+        )}
       </header>
 
       {library.error && (
@@ -152,9 +160,11 @@ export function LibraryPage({ library, player, onOpenConnections }: Props): Reac
               </div>
 
               <p className="summary" role="status">
-                {library.loading
-                  ? `Loading your library… ${library.tracks.length} tracks so far`
-                  : `${visible.length} ${visible.length === 1 ? 'track' : 'tracks'}${filtering ? ' found' : ''}`}
+                {library.refreshing
+                  ? 'Refreshing your library…'
+                  : library.loading
+                    ? `Loading your library… ${library.tracks.length} tracks so far`
+                    : `${visible.length} ${visible.length === 1 ? 'track' : 'tracks'}${filtering ? ' found' : ''}`}
               </p>
             </div>
 
