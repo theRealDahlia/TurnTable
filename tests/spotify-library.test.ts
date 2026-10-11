@@ -199,10 +199,39 @@ describe('Spotify getSavedTracks', () => {
     })
   })
 
-  it('reports other API failures without leaking the response body', async () => {
-    const { provider } = setup([new Response('internal detail', { status: 500 })])
-    const error = await provider.getSavedTracks().catch((e: Error) => e)
-    expect((error as Error).message).toBe('Spotify request failed with status 500')
+  describe('API errors', () => {
+    const failure = (status: number, body: unknown): Response =>
+      new Response(typeof body === 'string' ? body : JSON.stringify(body), { status })
+
+    it('shows the message Spotify returned, e.g. for a 403', async () => {
+      const { provider } = setup([failure(403, { error: { status: 403, message: 'User not registered in the Developer Dashboard' } })])
+      await expect(provider.getSavedTracks()).rejects.toThrow(
+        'Spotify: User not registered in the Developer Dashboard (status 403)'
+      )
+    })
+
+    it.each([
+      ['a non-JSON body', 'internal detail'],
+      ['an empty body', ''],
+      ['JSON of another shape', { oops: true }],
+      ['a non-string message', { error: { message: { nested: 1 } } }],
+      ['a blank message', { error: { message: '   ' } }]
+    ])('falls back to the status code for %s, without echoing the body', async (_label, body) => {
+      const { provider } = setup([failure(500, body)])
+      const error = await provider.getSavedTracks().catch((e: Error) => e)
+      expect((error as Error).message).toBe('Spotify request failed with status 500')
+    })
+
+    it('strips control characters and caps the length of the message', async () => {
+      const long = `bad\u0000\n${'x'.repeat(500)}`
+      const { provider } = setup([failure(400, { error: { status: 400, message: long } })])
+
+      const message = ((await provider.getSavedTracks().catch((e: Error) => e)) as Error).message
+
+      expect([...message].every((char) => char.codePointAt(0)! >= 32)).toBe(true)
+      expect(message.length).toBeLessThan(260)
+      expect(message).toMatch(/^Spotify: bad {2}x+ \(status 400\)$/)
+    })
   })
 
   it('asks the user to reconnect when the session is gone', async () => {

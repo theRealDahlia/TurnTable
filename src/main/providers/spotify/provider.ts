@@ -42,6 +42,23 @@ export interface SpotifyProviderOptions {
   random?: () => number
 }
 
+const MAX_ERROR_MESSAGE_LENGTH = 200
+
+/** Turns a failed response into an error carrying Spotify's own explanation (`{ error: { message } }`) when present. */
+async function toApiError(response: Response): Promise<Error> {
+  const fallback = `Spotify request failed with status ${response.status}`
+  try {
+    const body = (await response.json()) as { error?: { message?: unknown } }
+    const message = body.error?.message
+    if (typeof message !== 'string') return new Error(fallback)
+    // The text is shown to the user, so drop control characters and cap the length.
+    const clean = message.replace(/\p{Cc}/gu, ' ').trim().slice(0, MAX_ERROR_MESSAGE_LENGTH)
+    return new Error(clean ? `Spotify: ${clean} (status ${response.status})` : fallback)
+  } catch {
+    return new Error(fallback)
+  }
+}
+
 const defaultSleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
 
 /** How long to wait before retry number `attempt` (0-based): the larger of Retry-After and exponential backoff. */
@@ -118,7 +135,7 @@ export function createSpotifyProvider(session: OAuthSession, options: SpotifyPro
         continue
       }
 
-      if (!response.ok) throw new Error(`Spotify request failed with status ${response.status}`)
+      if (!response.ok) throw await toApiError(response)
       return (await response.json()) as T
     }
   }
