@@ -9,7 +9,14 @@ export interface ProviderResults {
   /** Pass to `loadMore` for the next page; absent when there are no more. */
   nextCursor?: string
   loadingMore: boolean
+  /** Pages in a row that turned up nothing to show (a service can filter a whole page away). */
+  emptyPages?: number
+  /** Automatic loading of more results has stopped, after repeated empty pages or a failure; the user can still ask. */
+  paused?: boolean
 }
+
+/** After this many pages in a row with nothing in them, stop fetching more on its own, so a rare search can't use up a day's quota. */
+export const MAX_EMPTY_PAGES = 2
 
 interface State {
   /** What was searched for last, trimmed. Empty before the first search. */
@@ -64,12 +71,17 @@ function reducer(state: State, action: Action): State {
         pending: {}
       }
     case 'loaded':
-      return change(action.id, (current) => ({
-        status: 'ready',
-        tracks: action.append ? [...current.tracks, ...action.tracks] : action.tracks,
-        nextCursor: action.nextCursor,
-        loadingMore: false
-      }))
+      return change(action.id, (current) => {
+        const emptyPages = action.tracks.length === 0 ? (action.append ? (current.emptyPages ?? 0) : 0) + 1 : 0
+        return {
+          status: 'ready',
+          tracks: action.append ? [...current.tracks, ...action.tracks] : action.tracks,
+          nextCursor: action.nextCursor,
+          loadingMore: false,
+          emptyPages,
+          paused: emptyPages >= MAX_EMPTY_PAGES
+        }
+      })
     case 'failed':
       return change(action.id, () => ({ status: 'error', tracks: [], error: action.error, loadingMore: false }))
     case 'retrying':
@@ -78,7 +90,7 @@ function reducer(state: State, action: Action): State {
       return change(action.id, (current) => ({ ...current, loadingMore: true }))
     case 'moreFailed':
       // The results already shown stay; only the attempt to get more failed.
-      return { ...change(action.id, (current) => ({ ...current, loadingMore: false })), saveError: { providerId: action.id, message: action.error } }
+      return { ...change(action.id, (current) => ({ ...current, loadingMore: false, paused: true })), saveError: { providerId: action.id, message: action.error } }
     case 'tab':
       return { ...state, tab: action.id }
     case 'saving':
@@ -111,7 +123,7 @@ export interface SearchState {
    * the page will show, including any that are answered without a search, so the chosen tab can be kept.
    */
   search(query: string, ids: ProviderId[], tabs?: ProviderId[]): void
-  /** Fetches the next page of one service's results. */
+  /** Fetches the next page of one service's results (the page does this by itself as the end of the list comes into view). */
   loadMore(id: ProviderId): void
   /** Searches one service again, e.g. after an error. */
   retry(id: ProviderId): void

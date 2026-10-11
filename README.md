@@ -56,8 +56,9 @@ The default quota is 10,000 units a day and each page of 50 likes costs 1.
 
 The **Search** page searches every connected service at once and puts each one's results under its own tab (a chip per service; local files are searched in the library already loaded). Press Enter or Search; results are not fetched as you type, because a YouTube search costs quota. The heart on a result saves it to your library on that service (Spotify: a saved song; YouTube Music: a like) and removes it again; the Library catches up the next time you open it.
 
-- Spotify: saving needs the `user-library-modify` scope, so an older sign-in shows **Reconnect** until you sign in again. Search returns ten results a page; use *Show more* for the next ten.
-- YouTube Music: saving needs the `youtube.force-ssl` scope (see above), so reconnect once after updating. YouTube Music has no search API of its own, so TurnTable searches YouTube for embeddable music and keeps only the songs YouTube Music lists (the audio tracks on each artist's "<Artist> - Topic" channel); fan uploads, live clips and other videos are left out. That means a page can show fewer results than it asked for, so use *Show more*. Google counts a search as one of 100 searches a day, so plan on that.
+- Spotify: saving needs the `user-library-modify` scope, so an older sign-in shows **Reconnect** until you sign in again. Search returns ten results a page.
+- YouTube Music: saving needs the `youtube.force-ssl` scope (see above), so reconnect once after updating. YouTube Music has no search API of its own, so TurnTable searches YouTube for embeddable music and keeps only the songs YouTube Music lists (the audio tracks on each artist's "<Artist> - Topic" channel); fan uploads, live clips and other videos are left out. That means a page can show fewer results than it asked for. Google counts a search as one of 100 searches a day, so plan on that.
+- More results load by themselves as you scroll to the end of the list (a *Show more* button appears instead if that stops working, or after two pages in a row with nothing to show, so a rare search can't use up the day's YouTube quota). Each page is another search against that quota.
 - Results live in memory only and are never written to disk.
 
 ## Open decisions

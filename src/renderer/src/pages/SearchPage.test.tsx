@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { act, cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ProviderId, ProviderStatus, Track } from '@shared/types'
 import type { Library } from '../library/useLibrary'
 import type { Player } from '../player/usePlayer'
@@ -350,5 +350,140 @@ describe('SearchPage local files', () => {
     const { search } = show(makeSearch(), makeLibrary([{ ...SPOTIFY, connected: false }, LOCAL], [track('local', 1)]))
     await userEvent.type(screen.getByRole('searchbox'), 'everlong{Enter}')
     expect(search.search).toHaveBeenCalledExactlyOnceWith('everlong', [], ['local'])
+  })
+})
+
+describe('SearchPage loading more by itself', () => {
+  /** Stands in for the browser's IntersectionObserver, so a test decides when the end of the list comes into view. */
+  class FakeObserver {
+    static all: FakeObserver[] = []
+    observed: Element[] = []
+    disconnected = false
+    constructor(
+      readonly callback: (entries: { isIntersecting: boolean }[]) => void,
+      readonly options?: { rootMargin?: string }
+    ) {
+      FakeObserver.all.push(this)
+    }
+    observe(element: Element): void {
+      this.observed.push(element)
+    }
+    disconnect(): void {
+      this.disconnected = true
+    }
+    see(isIntersecting: boolean): void {
+      this.callback([{ isIntersecting }])
+    }
+    static get live(): FakeObserver[] {
+      return FakeObserver.all.filter((o) => !o.disconnected)
+    }
+  }
+
+  beforeEach(() => {
+    FakeObserver.all = []
+    vi.stubGlobal('IntersectionObserver', FakeObserver)
+  })
+  afterEach(() => vi.unstubAllGlobals())
+
+  const withMore = (extra: Partial<ProviderResults> = {}, tracks = [track('spotify', 1)], tab: ProviderId = 'spotify') =>
+    makeSearch({ query: 'e', tab, results: { spotify: ready(tracks, { nextCursor: '10', ...extra }), youtubeMusic: ready([track('youtubeMusic', 1)], { nextCursor: 'yt-2' }) } })
+
+  it('watches the end of the list instead of showing a Show more button', () => {
+    show(withMore())
+    expect(screen.queryByRole('button', { name: /Show more/ })).toBeNull()
+    expect(FakeObserver.live).toHaveLength(1)
+    expect(FakeObserver.live[0]?.observed[0]).toBe(document.querySelector('.search-sentinel'))
+    expect(FakeObserver.live[0]?.options?.rootMargin).toBe('400px')
+  })
+
+  it('asks for the next page when the end comes into view, and not before', () => {
+    const search = withMore()
+    show(search)
+
+    act(() => FakeObserver.live[0]!.see(false))
+    expect(search.loadMore).not.toHaveBeenCalled()
+    act(() => FakeObserver.live[0]!.see(true))
+    expect(search.loadMore).toHaveBeenCalledExactlyOnceWith('spotify')
+  })
+
+  it('keeps going while the end is still in view after a page arrives, so a short list fills the screen', () => {
+    const search = withMore()
+    const view = render(<SearchPage library={makeLibrary()} player={makePlayer()} search={search} onOpenConnections={vi.fn()} />)
+    act(() => FakeObserver.live[0]!.see(true))
+    expect(search.loadMore).toHaveBeenCalledTimes(1)
+    const first = FakeObserver.live[0]!
+
+    // A page arrives: more tracks and a new cursor.
+    const next = withMore({ nextCursor: '20' }, [track('spotify', 1), track('spotify', 2)])
+    view.rerender(<SearchPage library={makeLibrary()} player={makePlayer()} search={{ ...next, loadMore: search.loadMore }} onOpenConnections={vi.fn()} />)
+
+    expect(first.disconnected).toBe(true)
+    expect(FakeObserver.live).toHaveLength(1)
+    act(() => FakeObserver.live[0]!.see(true))
+    expect(search.loadMore).toHaveBeenCalledTimes(2)
+  })
+
+  it('stops watching when there are no more results', () => {
+    const view = render(<SearchPage library={makeLibrary()} player={makePlayer()} search={withMore()} onOpenConnections={vi.fn()} />)
+    expect(FakeObserver.live).toHaveLength(1)
+    view.rerender(<SearchPage library={makeLibrary()} player={makePlayer()} search={withMore({ nextCursor: undefined })} onOpenConnections={vi.fn()} />)
+    expect(FakeObserver.live).toHaveLength(0)
+    expect(document.querySelector('.search-sentinel')).toBeNull()
+  })
+
+  it('stops watching when it leaves', () => {
+    const view = render(<SearchPage library={makeLibrary()} player={makePlayer()} search={withMore()} onOpenConnections={vi.fn()} />)
+    view.unmount()
+    expect(FakeObserver.live).toHaveLength(0)
+  })
+
+  it('follows the tab that is showing', () => {
+    const view = render(<SearchPage library={makeLibrary()} player={makePlayer()} search={withMore()} onOpenConnections={vi.fn()} />)
+    const spotify = FakeObserver.live[0]!
+    const search = { ...withMore(), tab: 'youtubeMusic' as const }
+    view.rerender(<SearchPage library={makeLibrary()} player={makePlayer()} search={search} onOpenConnections={vi.fn()} />)
+
+    expect(spotify.disconnected).toBe(true)
+    act(() => FakeObserver.live[0]!.see(true))
+    expect(search.loadMore).toHaveBeenCalledExactlyOnceWith('youtubeMusic')
+  })
+
+  it('says it is loading while a page is on its way', () => {
+    show(withMore({ loadingMore: true }))
+    expect(screen.getByText('Loading more…')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /Show more|Loading…/ })).toBeNull()
+  })
+
+  it('does not say it is loading when it is not', () => {
+    show(withMore())
+    expect(screen.queryByText('Loading more…')).toBeNull()
+  })
+
+  it('falls back to the button once automatic loading has paused', async () => {
+    const search = withMore({ paused: true })
+    show(search)
+    expect(FakeObserver.live).toHaveLength(0)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Show more' }))
+    expect(search.loadMore).toHaveBeenCalledExactlyOnceWith('spotify')
+  })
+
+  it('looks further instead of saying nothing was found, while a page with no songs still has more behind it', () => {
+    show(withMore({}, []))
+    expect(screen.getByText('Looking for more…')).toBeTruthy()
+    expect(screen.queryByText(/No Spotify results/)).toBeNull()
+    expect(FakeObserver.live).toHaveLength(1)
+  })
+
+  it('says nothing was found once it has stopped looking', () => {
+    show(withMore({ paused: true }, []))
+    expect(screen.getByText('No Spotify results for “e”.')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Show more' })).toBeTruthy()
+    expect(screen.queryByText('Looking for more…')).toBeNull()
+  })
+
+  it('does not watch the local files tab, which has everything already', () => {
+    show(withMore({}, [track('spotify', 1)], 'local'), makeLibrary([SPOTIFY, YOUTUBE, LOCAL]))
+    expect(FakeObserver.live).toHaveLength(0)
   })
 })

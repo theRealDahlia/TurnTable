@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ProviderId, ProviderStatus, Track } from '@shared/types'
 import { BrandMark, ClockIcon, SearchIcon } from '../components/icons'
 import { ProviderLogo } from '../components/ProviderLogo'
@@ -15,6 +15,9 @@ interface Props {
   search: SearchState
   onOpenConnections: () => void
 }
+
+/** How far before the end of the list the next page is fetched, so it is usually there before the user arrives. */
+const PREFETCH_DISTANCE = '400px'
 
 /** Local files are searched in the library the app already has, so there is nothing to wait for. */
 const LOCAL: ProviderId = 'local'
@@ -54,6 +57,24 @@ export function SearchPage({ library, player, search, onOpenConnections }: Props
   }
 
   const results = active ? resultsFor(active.id) : undefined
+
+  // More results load by themselves as the end of the list nears the screen, unless that has been paused
+  // (repeated empty pages, or a failure), in which case a button takes over.
+  const canWatch = typeof IntersectionObserver !== 'undefined'
+  const autoLoad = canWatch && results?.nextCursor !== undefined && !results.paused
+  const sentinel = useRef<HTMLDivElement>(null)
+  const activeId = active?.id
+  const { loadMore } = search
+  const tracksShown = results?.tracks.length
+  const cursor = results?.nextCursor
+  useEffect(() => {
+    const end = sentinel.current
+    if (!autoLoad || !end || !activeId) return
+    // A fresh observer reports the end's position at once, so a list too short to scroll keeps filling up.
+    const observer = new IntersectionObserver((entries) => entries.some((entry) => entry.isIntersecting) && loadMore(activeId), { rootMargin: PREFETCH_DISTANCE })
+    observer.observe(end)
+    return () => observer.disconnect()
+  }, [autoLoad, activeId, loadMore, tracksShown, cursor])
   const rowsFor = (tracks: Track[], provider: ProviderStatus): React.JSX.Element => (
     <ul className="tracks" aria-label={`${provider.name} results`}>
       {tracks.map((track) => {
@@ -174,7 +195,13 @@ export function SearchPage({ library, player, search, onOpenConnections }: Props
 
             {results?.status === 'loading' && <TrackSkeleton withSave={active.savable === true} />}
 
-            {results?.status === 'ready' && results.tracks.length === 0 && (
+            {results?.status === 'ready' && results.tracks.length === 0 && autoLoad && (
+              <p className="search-loading" role="status">
+                Looking for more…
+              </p>
+            )}
+
+            {results?.status === 'ready' && results.tracks.length === 0 && !autoLoad && (
               <section className="empty-state compact">
                 <SearchIcon className="empty-icon" />
                 <p>
@@ -200,7 +227,15 @@ export function SearchPage({ library, player, search, onOpenConnections }: Props
               </>
             )}
 
-            {results?.nextCursor && (
+            {autoLoad && <div ref={sentinel} className="search-sentinel" aria-hidden="true" />}
+
+            {results?.loadingMore && (
+              <p className="search-loading" role="status">
+                Loading more…
+              </p>
+            )}
+
+            {results?.nextCursor && !autoLoad && (
               <button type="button" className="show-more" disabled={results.loadingMore} onClick={() => search.loadMore(active.id)}>
                 {results.loadingMore ? 'Loading…' : 'Show more'}
               </button>

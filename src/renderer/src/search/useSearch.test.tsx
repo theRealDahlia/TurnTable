@@ -3,7 +3,7 @@ import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { TurnTableApi } from '@shared/ipc'
 import type { ProviderId, Track, TrackPage } from '@shared/types'
-import { trackKey, useSearch } from './useSearch'
+import { MAX_EMPTY_PAGES, trackKey, useSearch } from './useSearch'
 
 const track = (providerId: ProviderId, n: number, saved = false): Track => ({
   id: `${providerId}-${n}`,
@@ -380,5 +380,78 @@ describe('useSearch saving', () => {
     await act(async () => slow.reject(new Error('late failure')))
 
     expect(result.current.saveError).toBeUndefined()
+  })
+})
+
+describe('useSearch pausing automatic loading', () => {
+  const empty = (next?: string): TrackPage => ({ tracks: [], nextCursor: next })
+
+  async function started(first: TrackPage) {
+    api.searchTracks.mockResolvedValueOnce(first)
+    const hook = renderHook(() => useSearch())
+    act(() => hook.result.current.search('foo', ['spotify']))
+    await waitFor(() => expect(hook.result.current.results.spotify?.status).toBe('ready'))
+    return hook
+  }
+  const more = async (hook: Awaited<ReturnType<typeof started>>, response: TrackPage | Error) => {
+    if (response instanceof Error) api.searchTracks.mockRejectedValueOnce(response)
+    else api.searchTracks.mockResolvedValueOnce(response)
+    const before = hook.result.current.results.spotify?.nextCursor
+    act(() => hook.result.current.loadMore('spotify'))
+    await waitFor(() => expect(hook.result.current.results.spotify?.loadingMore).toBe(false))
+    return before
+  }
+
+  it('keeps loading on its own while pages have songs', async () => {
+    const hook = await started(page('spotify', [1], 'c2'))
+    await more(hook, page('spotify', [2], 'c3'))
+    expect(hook.result.current.results.spotify).toMatchObject({ emptyPages: 0, paused: false })
+  })
+
+  it(`pauses after ${MAX_EMPTY_PAGES} empty pages in a row, counting the first page`, async () => {
+    const hook = await started(empty('c2'))
+    expect(hook.result.current.results.spotify).toMatchObject({ emptyPages: 1, paused: false })
+    await more(hook, empty('c3'))
+    expect(hook.result.current.results.spotify).toMatchObject({ emptyPages: 2, paused: true, nextCursor: 'c3' })
+  })
+
+  it('does not count empty pages that are not in a row', async () => {
+    const hook = await started(page('spotify', [1], 'c2'))
+    await more(hook, empty('c3'))
+    await more(hook, page('spotify', [2], 'c4'))
+    await more(hook, empty('c5'))
+    expect(hook.result.current.results.spotify).toMatchObject({ emptyPages: 1, paused: false })
+  })
+
+  it('pauses when fetching more fails, and keeps what was found', async () => {
+    const hook = await started(page('spotify', [1], 'c2'))
+    await more(hook, new Error('limited'))
+    expect(hook.result.current.results.spotify).toMatchObject({ paused: true, nextCursor: 'c2' })
+    expect(idsOf(hook.result.current.results.spotify?.tracks)).toEqual(['spotify-1'])
+  })
+
+  it('resumes once the user asks for more and it finds something', async () => {
+    const hook = await started(empty('c2'))
+    await more(hook, empty('c3'))
+    expect(hook.result.current.results.spotify?.paused).toBe(true)
+
+    await more(hook, page('spotify', [5], 'c4'))
+    expect(hook.result.current.results.spotify).toMatchObject({ paused: false, emptyPages: 0 })
+  })
+
+  it('stays paused if the user asks and it is empty again', async () => {
+    const hook = await started(empty('c2'))
+    await more(hook, empty('c3'))
+    await more(hook, empty('c4'))
+    expect(hook.result.current.results.spotify).toMatchObject({ paused: true, emptyPages: 3 })
+  })
+
+  it('starts afresh with the next search', async () => {
+    const hook = await started(empty('c2'))
+    await more(hook, empty('c3'))
+    api.searchTracks.mockResolvedValueOnce(page('spotify', [1], 'n2'))
+    act(() => hook.result.current.search('other', ['spotify']))
+    await waitFor(() => expect(hook.result.current.results.spotify?.status).toBe('ready'))
+    expect(hook.result.current.results.spotify).toMatchObject({ paused: false, emptyPages: 0 })
   })
 })
