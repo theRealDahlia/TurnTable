@@ -374,14 +374,40 @@ describe('LibraryPage', () => {
 describe('refresh button', () => {
   const button = (name: string | RegExp = 'Refresh'): HTMLElement => screen.getByRole('button', { name })
 
-  it('refreshes the library when pressed', async () => {
+
+  it('opens a menu with Refresh all and one choice per connected service', async () => {
+    const library = makeLibrary({}, [track('spotify', 1)])
+    render(<LibraryPage library={library} player={makePlayer()} onOpenConnections={vi.fn()} />)
+    expect(screen.queryByRole('menu')).toBeNull()
+
+    await userEvent.click(button())
+
+    const items = within(screen.getByRole('menu', { name: 'Refresh' })).getAllByRole('menuitem')
+    // SoundCloud is not connected, so it is not offered.
+    expect(items.map((item) => item.textContent)).toEqual(['Refresh all', 'Refresh Spotify', 'Refresh Qobuz'])
+    expect(library.refresh).not.toHaveBeenCalled()
+  })
+
+  it('refreshes every service from Refresh all', async () => {
     const library = makeLibrary({}, [track('spotify', 1)])
     render(<LibraryPage library={library} player={makePlayer()} onOpenConnections={vi.fn()} />)
 
     await userEvent.click(button())
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Refresh all' }))
 
-    expect(library.refresh).toHaveBeenCalledOnce()
+    expect(library.refresh).toHaveBeenCalledExactlyOnceWith()
     expect(library.reload).not.toHaveBeenCalled()
+    expect(screen.queryByRole('menu')).toBeNull()
+  })
+
+  it('refreshes just the chosen service', async () => {
+    const library = makeLibrary({}, [track('spotify', 1)])
+    render(<LibraryPage library={library} player={makePlayer()} onOpenConnections={vi.fn()} />)
+
+    await userEvent.click(button())
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Refresh Qobuz' }))
+
+    expect(library.refresh).toHaveBeenCalledExactlyOnceWith('qobuz')
   })
 
   it('is not offered when no service is connected', () => {

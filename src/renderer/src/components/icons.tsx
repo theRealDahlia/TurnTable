@@ -86,3 +86,9 @@ export const RefreshIcon = ({ className }: IconProps): React.JSX.Element => (
     <path d="M8 16H3v5" />
   </svg>
 )
+
+export const ChevronDownIcon = ({ className }: IconProps): React.JSX.Element => (
+  <svg {...STROKED} className={className}>
+    <path d="m6 9 6 6 6-6" />
+  </svg>
+)

@@ -87,10 +87,11 @@ export interface Library {
   /** Starts over: re-checks connections and re-fetches every library. */
   reload(): void
   /**
-   * Re-checks connections and re-reads every connected service, e.g. after saving a song elsewhere. The lists
-   * on screen stay as they are until each new one is complete, and stay if it fails.
+   * Re-checks connections and re-reads every connected service (or only `id`'s, leaving the others alone), e.g.
+   * after saving a song elsewhere. The lists on screen stay as they are until each new one is complete, and
+   * stay if it fails.
    */
-  refresh(): void
+  refresh(id?: ProviderId): void
   /**
    * After a service was connected, disconnected or reconfigured: re-checks connections and re-fetches only
    * that service's library (or drops it if it is no longer connected). Other libraries are left alone,
@@ -193,11 +194,11 @@ export function useLibrary(): Library {
   )
 
   const refresh = useCallback(
-    (): void =>
+    (only?: ProviderId): void =>
       recheck((providers) => {
         for (const { id, connected } of providers) {
-          if (connected) void loadProvider(id, true)
-          else wanted.current.delete(id)
+          if (!connected) wanted.current.delete(id)
+          else if (only === undefined || only === id) void loadProvider(id, true)
         }
       }),
     [recheck, loadProvider]

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { ProviderId } from '@shared/types'
-import { BrandMark, ClockIcon, RefreshIcon, SearchIcon } from '../components/icons'
+import { BrandMark, ClockIcon, SearchIcon } from '../components/icons'
+import { RefreshMenu } from '../components/RefreshMenu'
 import { TrackRow } from '../components/TrackRow'
 import { filterTracks, sortTracks, type SortKey } from '../library/query'
 import type { Library } from '../library/useLibrary'
@@ -70,10 +71,12 @@ export function LibraryPage({ library, player, onOpenConnections }: Props): Reac
           <p>Your saved tracks from every connected service.</p>
         </div>
         {connected.length > 0 && (
-          <button type="button" className="refresh-button" onClick={library.refresh} disabled={library.loading} aria-busy={library.refreshing}>
-            <RefreshIcon className={library.refreshing ? 'spinning' : undefined} />
-            {library.refreshing ? 'Refreshing…' : 'Refresh'}
-          </button>
+          <RefreshMenu
+            providers={connected}
+            busy={library.loading}
+            refreshing={library.refreshing}
+            onRefresh={(id) => (id ? library.refresh(id) : library.refresh())}
+          />
         )}
       </header>
 
