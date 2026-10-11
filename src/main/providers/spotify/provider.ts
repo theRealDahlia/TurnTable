@@ -8,6 +8,11 @@ const API_BASE = 'https://api.spotify.com/v1'
 const PAGE_SIZE = 50
 /** Artwork at least this wide looks sharp in the library without downloading the 640px original. */
 const PREFERRED_ARTWORK_WIDTH = 300
+/** Rate-limit handling: wait at least Retry-After, backing off exponentially if Spotify keeps refusing. */
+const MAX_RATE_LIMIT_RETRIES = 3
+const BASE_BACKOFF_MS = 1000
+/** Longer waits than this are reported to the user instead of silently stalling the library. */
+const MAX_WAIT_MS = 30_000
 
 interface SpotifyImage {
   url: string
@@ -29,6 +34,23 @@ interface SavedTracksResponse {
 }
 
 export type FetchFn = typeof fetch
+
+export interface SpotifyProviderOptions {
+  fetch?: FetchFn
+  sleep?: (ms: number) => Promise<void>
+  /** Source of jitter in [0, 1); injectable so tests are deterministic. */
+  random?: () => number
+}
+
+const defaultSleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
+
+/** How long to wait before retry number `attempt` (0-based): the larger of Retry-After and exponential backoff. */
+function rateLimitDelay(response: Response, attempt: number, random: () => number): number {
+  const header = Number(response.headers.get('Retry-After'))
+  const retryAfterMs = Number.isFinite(header) && header > 0 ? header * 1000 : 0
+  const backoffMs = BASE_BACKOFF_MS * 2 ** attempt + random() * 250
+  return Math.max(retryAfterMs, backoffMs)
+}
 
 /** The smallest image that is still sharp enough, else the largest available. */
 function pickArtwork(images: SpotifyImage[] = []): string | undefined {
@@ -58,25 +80,47 @@ function parseCursor(cursor: string | undefined): number {
   return Number(cursor)
 }
 
-export function createSpotifyProvider(session: OAuthSession, fetchFn: FetchFn = fetch): MusicProvider {
-  /** Calls the Web API, retrying once with a freshly refreshed token if Spotify rejects the current one. */
+export function createSpotifyProvider(session: OAuthSession, options: SpotifyProviderOptions = {}): MusicProvider {
+  const { fetch: fetchFn = fetch, sleep = defaultSleep, random = Math.random } = options
+
+  /**
+   * Calls the Web API. A 401 triggers one retry with a freshly refreshed token; a 429 waits as Spotify
+   * asks (with exponential backoff) and retries a few times before giving up.
+   */
   async function request<T>(path: string): Promise<T> {
-    for (const forceRefresh of [false, true]) {
+    let forceRefresh = false
+    let refreshed = false
+    let rateLimitRetries = 0
+
+    for (;;) {
       const token = await session.getAccessToken({ forceRefresh })
+      forceRefresh = false
       const response = await fetchFn(`${API_BASE}${path}`, { headers: { Authorization: `Bearer ${token}` } })
 
-      if (response.status === 401) continue
-      if (response.status === 429) {
-        const wait = response.headers.get('Retry-After')
-        throw new Error(`Spotify is rate limiting requests${wait ? `. Try again in ${wait}s` : ''}.`)
+      if (response.status === 401) {
+        if (refreshed) {
+          // A just-refreshed token was still rejected, so the grant is no longer valid.
+          await session.disconnect()
+          throw new AuthRequiredError(SPOTIFY.name)
+        }
+        refreshed = true
+        forceRefresh = true
+        continue
       }
+
+      if (response.status === 429) {
+        const delay = rateLimitDelay(response, rateLimitRetries, random)
+        if (rateLimitRetries >= MAX_RATE_LIMIT_RETRIES || delay > MAX_WAIT_MS) {
+          throw new Error(`Spotify is rate limiting requests. Try again in ${Math.ceil(delay / 1000)}s.`)
+        }
+        rateLimitRetries++
+        await sleep(delay)
+        continue
+      }
+
       if (!response.ok) throw new Error(`Spotify request failed with status ${response.status}`)
       return (await response.json()) as T
     }
-
-    // A just-refreshed token was still rejected, so the grant is no longer valid.
-    await session.disconnect()
-    throw new AuthRequiredError(SPOTIFY.name)
   }
 
   return {

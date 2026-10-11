@@ -24,7 +24,7 @@ const item = (id: string | null, overrides = {}) => ({
   }
 })
 
-function setup(responses: Response[]) {
+function setup(responses: Response[], random = () => 0) {
   const session = {
     getAccessToken: vi.fn().mockResolvedValue('token-1'),
     disconnect: vi.fn().mockResolvedValue(undefined),
@@ -33,8 +33,13 @@ function setup(responses: Response[]) {
   }
   const fetchFn = vi.fn()
   for (const response of responses) fetchFn.mockResolvedValueOnce(response)
-  const provider = createSpotifyProvider(session as unknown as OAuthSession, fetchFn as unknown as typeof fetch)
-  return { session, fetchFn, provider }
+  const sleep = vi.fn().mockResolvedValue(undefined)
+  const provider = createSpotifyProvider(session as unknown as OAuthSession, {
+    fetch: fetchFn as unknown as typeof fetch,
+    sleep,
+    random
+  })
+  return { session, fetchFn, sleep, provider }
 }
 
 describe('Spotify getSavedTracks', () => {
@@ -141,9 +146,57 @@ describe('Spotify getSavedTracks', () => {
     expect(session.disconnect).toHaveBeenCalledOnce()
   })
 
-  it('reports rate limiting with the wait time', async () => {
-    const { provider } = setup([new Response(null, { status: 429, headers: { 'Retry-After': '7' } })])
-    await expect(provider.getSavedTracks()).rejects.toThrow('Try again in 7s')
+  describe('rate limiting (429)', () => {
+    const limited = (retryAfter?: string): Response =>
+      new Response(null, { status: 429, headers: retryAfter ? { 'Retry-After': retryAfter } : {} })
+
+    it('waits for Retry-After, then retries and succeeds', async () => {
+      const { provider, sleep, fetchFn } = setup([limited('7'), json({ items: [item('abc')], next: null })])
+
+      const page = await provider.getSavedTracks()
+
+      expect(page.tracks).toHaveLength(1)
+      expect(sleep).toHaveBeenCalledExactlyOnceWith(7000)
+      expect(fetchFn).toHaveBeenCalledTimes(2)
+    })
+
+    it('never retries immediately, even when Retry-After is missing, zero or malformed', async () => {
+      for (const header of [undefined, '0', 'soon', '-3']) {
+        const { provider, sleep } = setup([limited(header), json({ items: [], next: null })])
+        await provider.getSavedTracks()
+        expect(sleep).toHaveBeenCalledOnce()
+        expect(sleep.mock.calls[0]![0]).toBeGreaterThanOrEqual(1000)
+      }
+    })
+
+    it('backs off exponentially when Spotify keeps refusing, then gives up', async () => {
+      const { provider, sleep, fetchFn } = setup([limited(), limited(), limited(), limited()])
+
+      await expect(provider.getSavedTracks()).rejects.toThrow('rate limiting')
+
+      expect(sleep.mock.calls.map((call) => call[0])).toEqual([1000, 2000, 4000])
+      expect(fetchFn).toHaveBeenCalledTimes(4)
+    })
+
+    it('adds jitter to the backoff', async () => {
+      const { provider, sleep } = setup([limited(), json({ items: [], next: null })], () => 0.5)
+      await provider.getSavedTracks()
+      expect(sleep).toHaveBeenCalledWith(1125)
+    })
+
+    it('lets a long Retry-After win over a short backoff', async () => {
+      const { provider, sleep } = setup([limited('20'), limited('3'), json({ items: [], next: null })])
+      await provider.getSavedTracks()
+      expect(sleep.mock.calls.map((call) => call[0])).toEqual([20_000, 3000])
+    })
+
+    it('reports instead of waiting when asked to wait unreasonably long', async () => {
+      const { provider, sleep, fetchFn } = setup([limited('3600')])
+
+      await expect(provider.getSavedTracks()).rejects.toThrow('Try again in 3600s')
+      expect(sleep).not.toHaveBeenCalled()
+      expect(fetchFn).toHaveBeenCalledOnce()
+    })
   })
 
   it('reports other API failures without leaking the response body', async () => {
