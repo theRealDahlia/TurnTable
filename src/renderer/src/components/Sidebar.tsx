@@ -5,6 +5,8 @@ export type Page = 'library' | 'search' | 'connections'
 interface Props {
   page: Page
   onNavigate: (page: Page) => void
+  /** Shown at the bottom of the sidebar, e.g. the YouTube video. */
+  children?: React.ReactNode
 }
 
 const ICON_PROPS = {
@@ -48,7 +50,7 @@ const ITEMS: { page: Page; label: string; icon: React.JSX.Element }[] = [
   }
 ]
 
-export function Sidebar({ page, onNavigate }: Props): React.JSX.Element {
+export function Sidebar({ page, onNavigate, children }: Props): React.JSX.Element {
   return (
     <aside className="sidebar">
       <div className="brand">
@@ -69,6 +71,7 @@ export function Sidebar({ page, onNavigate }: Props): React.JSX.Element {
           </button>
         ))}
       </nav>
+      {children}
     </aside>
   )
 }

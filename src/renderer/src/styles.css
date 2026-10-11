@@ -1109,6 +1109,7 @@ a.track-source:hover .logo {
   padding: 22px 12px;
   background: var(--sidebar);
   border-right: 1px solid var(--border);
+  overflow-y: auto;
   /* On macOS the window has no title bar, so the sidebar's empty space is where you drag it. */
   -webkit-app-region: drag;
 }
@@ -1229,78 +1230,32 @@ html[data-platform='mac'] .drag-strip {
 }
 
 /* ---------- YouTube video ---------- */
-/* YouTube requires its video to stay visible, so YouTube Music tracks play in this small window above the player bar. */
+/* YouTube requires its video to stay visible and at least 200 by 200 pixels, so YouTube Music tracks play in this square at the bottom of the sidebar. */
 .youtube-panel {
-  position: fixed;
-  right: 20px;
-  bottom: 96px;
-  z-index: 20;
   display: flex;
+  flex: none;
   flex-direction: column;
+  margin-top: auto;
   overflow: hidden;
   background: #000;
   border: 1px solid var(--border-strong);
   border-radius: 12px;
   box-shadow: var(--shadow);
-}
-
-/* The window floats over the list, so leave room to scroll the last rows out from under it. */
-.app[data-video='true'] .content {
-  padding-bottom: var(--video-reserve, 290px);
+  /* The sidebar is a window-dragging area, which would swallow clicks meant for the video. */
+  -webkit-app-region: no-drag;
 }
 
 .youtube-panel[data-showing='false'] {
   display: none;
 }
 
-/* The corner grip: drag it up or left to enlarge the window, which grows from its bottom-right corner. */
-.youtube-resize {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 1;
-  width: 26px;
-  height: 26px;
-  cursor: nwse-resize;
-  touch-action: none;
-  opacity: 0.55;
-  transition: opacity 0.12s ease;
-  border-top-left-radius: 11px;
-  background: linear-gradient(135deg, rgb(0 0 0 / 70%) 0 50%, transparent 50%);
-}
-
-.youtube-resize::after {
-  content: '';
-  position: absolute;
-  top: 5px;
-  left: 5px;
-  width: 9px;
-  height: 9px;
-  border-top: 2px solid #fff;
-  border-left: 2px solid #fff;
-  border-top-left-radius: 3px;
-}
-
-.youtube-panel:hover .youtube-resize,
-.youtube-resize:focus-visible,
-.youtube-panel[data-resizing='true'] .youtube-resize {
-  opacity: 1;
-}
-
-.youtube-resize:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
-}
-
-/* While dragging, the video must not swallow the pointer, or the drag would stall whenever it crossed it. */
-.youtube-panel[data-resizing='true'] .youtube-frame {
-  pointer-events: none;
-}
-
 .youtube-frame {
   display: block;
   width: 100%;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 1;
+  /* YouTube's minimum for an embedded player; the panel clips rather than shrink the video below it. */
+  min-width: 200px;
+  min-height: 200px;
   border: 0;
 }
 
@@ -1308,7 +1263,7 @@ html[data-platform='mac'] .drag-strip {
   display: grid;
   place-items: center;
   margin: 0;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 1;
   padding: 16px;
   color: #bbb;
   font-size: 13px;
@@ -1317,42 +1272,12 @@ html[data-platform='mac'] .drag-strip {
 
 .youtube-credit {
   display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 7px 12px;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 12px 8px;
   background: var(--surface);
   color: var(--text-muted);
   font-size: 12px;
-}
-
-.youtube-credit-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.youtube-credit button {
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  background: var(--surface-hover);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 15px;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.youtube-credit button:hover:not(:disabled) {
-  border-color: var(--border-strong);
-}
-
-.youtube-credit button:disabled {
-  opacity: 0.4;
-  cursor: default;
 }
 
 .youtube-credit a {
