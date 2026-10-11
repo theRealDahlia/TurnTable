@@ -72,7 +72,7 @@ describe('ConnectionsPage', () => {
     expect(within(qobuz).getByText(/Not connected/)).toBeTruthy()
     expect(within(qobuz).getByText(/FLAC up to 24-bit \/ 192 kHz/)).toBeTruthy()
     const spotify = screen.getByRole('img', { name: 'Spotify logo' }).closest('li')!
-    expect(within(spotify).getByText(/OGG-VORBIS up to 320 kbps/)).toBeTruthy()
+    expect(within(spotify).getByText(/Ogg Vorbis up to 320 kbps/)).toBeTruthy()
     expect(screen.getByText('0 of 5 connected')).toBeTruthy()
   })
 

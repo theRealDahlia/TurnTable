@@ -15,9 +15,24 @@ const spotify = (connected: boolean): ProviderStatus => ({
   connected
 })
 
+// jsdom doesn't implement media playback, so stand in for the element's methods.
+const mediaPlay = vi.spyOn(HTMLMediaElement.prototype, 'play')
+vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => undefined)
+vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(() => undefined)
+
+const localFlac = {
+  id: 'a'.repeat(24),
+  providerId: 'local' as const,
+  title: 'Local Song',
+  artists: ['Someone'],
+  durationMs: 60_000,
+  quality: { codec: 'flac', lossless: true, bitDepth: 16, sampleRateHz: 44100 }
+}
+
 let api: { [K in keyof TurnTableApi]: ReturnType<typeof vi.fn> }
 
 beforeEach(() => {
+  mediaPlay.mockReset().mockResolvedValue(undefined)
   api = {
     listProviders: vi.fn().mockResolvedValue([spotify(false)]),
     connectProvider: vi.fn().mockResolvedValue(undefined),
@@ -88,5 +103,66 @@ describe('App', () => {
 
     expect(screen.getByText('First Song')).toBeTruthy()
     expect(api.getSavedTracks).toHaveBeenCalledTimes(1)
+  })
+
+  describe('playback', () => {
+    const localProvider = (): ProviderStatus => ({
+      id: 'local',
+      name: 'Local files',
+      authKind: 'none',
+      playback: 'file',
+      maxQuality: { codec: 'flac', lossless: true },
+      connected: true
+    })
+    const openLibraryWithLocalTrack = async (): Promise<void> => {
+      api.listProviders.mockResolvedValue([localProvider()])
+      api.getSavedTracks.mockResolvedValue({ tracks: [localFlac] })
+      render(<App />)
+      await screen.findByText('Local Song')
+    }
+
+    it('has no player bar until something is played', async () => {
+      await openLibraryWithLocalTrack()
+      expect(screen.queryByRole('contentinfo', { name: 'Player' })).toBeNull()
+    })
+
+    it('plays a track and shows the player bar with its format', async () => {
+      await openLibraryWithLocalTrack()
+
+      await userEvent.click(screen.getByRole('button', { name: 'Play Local Song' }))
+
+      const bar = within(await screen.findByRole('contentinfo', { name: 'Player' }))
+      expect(bar.getByText('Local Song')).toBeTruthy()
+      expect(bar.getByText('FLAC · 16-bit / 44.1 kHz')).toBeTruthy()
+      expect(mediaPlay).toHaveBeenCalledOnce()
+    })
+
+    it('keeps playing when the user switches to Connections and back', async () => {
+      await openLibraryWithLocalTrack()
+      await userEvent.click(screen.getByRole('button', { name: 'Play Local Song' }))
+      await screen.findByRole('contentinfo', { name: 'Player' })
+
+      await userEvent.click(nav().getByRole('button', { name: 'Connections' }))
+      expect(await screen.findByRole('heading', { name: 'Connections' })).toBeTruthy()
+      expect(screen.getByRole('contentinfo', { name: 'Player' })).toBeTruthy()
+    })
+
+    it('toggles playback with Space, but not while typing in the search box', async () => {
+      await openLibraryWithLocalTrack()
+      await userEvent.click(screen.getByRole('button', { name: 'Play Local Song' }))
+      await screen.findByRole('contentinfo', { name: 'Player' })
+      mediaPlay.mockClear()
+
+      // The element is "paused" in jsdom, so a toggle resumes it.
+      await userEvent.click(document.body)
+      await userEvent.keyboard(' ')
+      expect(mediaPlay).toHaveBeenCalledOnce()
+
+      mediaPlay.mockClear()
+      await userEvent.click(screen.getByRole('searchbox'))
+      await userEvent.keyboard('a b')
+      expect(mediaPlay).not.toHaveBeenCalled()
+      expect((screen.getByRole('searchbox') as HTMLInputElement).value).toBe('a b')
+    })
   })
 })

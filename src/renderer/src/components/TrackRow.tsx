@@ -1,25 +1,49 @@
+import { isPlayable, unplayableReason } from '@shared/media'
 import type { ProviderStatus, Track } from '@shared/types'
+import { formatQuality } from '../lib/quality'
 import { formatDuration } from '../library/query'
 import { ProviderLogo } from './ProviderLogo'
 
 interface Props {
   track: Track
   provider: ProviderStatus
+  /** This row's track is the one loaded in the player. */
+  current: boolean
+  /** The player is actually producing sound (or about to). */
+  playing: boolean
+  onPlay: (track: Track) => void
 }
 
-export function TrackRow({ track, provider }: Props): React.JSX.Element {
+export function TrackRow({ track, provider, current, playing, onPlay }: Props): React.JSX.Element {
+  const playable = isPlayable(track)
+  const action = current && playing ? 'Pause' : 'Play'
+  const quality = formatQuality(track.quality)
+
   return (
-    <li className="track">
-      {track.artworkUrl ? (
-        <img className="track-art" src={track.artworkUrl} alt="" loading="lazy" />
-      ) : (
-        <span className="track-art track-art-empty" aria-hidden="true" />
-      )}
+    <li className="track" data-current={current} onDoubleClick={() => playable && onPlay(track)}>
+      <div className="track-art-wrap">
+        {track.artworkUrl ? (
+          <img className="track-art" src={track.artworkUrl} alt="" loading="lazy" />
+        ) : (
+          <span className="track-art track-art-empty" aria-hidden="true" />
+        )}
+        <button
+          type="button"
+          className="track-play"
+          aria-label={`${action} ${track.title}`}
+          title={playable ? undefined : unplayableReason(track)}
+          disabled={!playable}
+          onClick={() => onPlay(track)}
+        >
+          {action === 'Pause' ? '❚❚' : '▶'}
+        </button>
+      </div>
       <div className="track-main">
         <span className="track-title">{track.title}</span>
         <span className="track-artists">{track.artists.join(', ')}</span>
       </div>
       <span className="track-album">{track.album}</span>
+      <span className="track-format">{quality}</span>
       {track.url ? (
         <a
           className="track-source"

@@ -3,16 +3,18 @@ import type { ProviderId } from '@shared/types'
 import { TrackRow } from '../components/TrackRow'
 import { filterTracks, sortTracks, type SortKey } from '../library/query'
 import type { Library } from '../library/useLibrary'
+import type { Player } from '../player/usePlayer'
 
 /** Rows rendered at a time, so a library of thousands of tracks stays responsive. */
 const PAGE_SIZE = 200
 
 interface Props {
   library: Library
+  player: Player
   onOpenConnections: () => void
 }
 
-export function LibraryPage({ library, onOpenConnections }: Props): React.JSX.Element {
+export function LibraryPage({ library, player, onOpenConnections }: Props): React.JSX.Element {
   const [query, setQuery] = useState('')
   const [providerId, setProviderId] = useState<ProviderId>()
   const [sort, setSort] = useState<SortKey>('recent')
@@ -133,7 +135,18 @@ export function LibraryPage({ library, onOpenConnections }: Props): React.JSX.El
           <ul className="tracks" aria-label="Saved tracks">
             {visible.slice(0, limit).map((track) => {
               const provider = providersById.get(track.providerId)
-              return provider && <TrackRow key={`${track.providerId}:${track.id}`} track={track} provider={provider} />
+              if (!provider) return null
+              const current = player.track?.providerId === track.providerId && player.track.id === track.id
+              return (
+                <TrackRow
+                  key={`${track.providerId}:${track.id}`}
+                  track={track}
+                  provider={provider}
+                  current={current}
+                  playing={player.status === 'playing' || player.status === 'loading'}
+                  onPlay={(picked) => (current ? player.toggle() : player.play(picked, visible))}
+                />
+              )
             })}
           </ul>
 

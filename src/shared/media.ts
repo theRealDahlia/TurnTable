@@ -22,3 +22,11 @@ export function playbackUrl(track: Pick<Track, 'id' | 'providerId' | 'quality'>)
 }
 
 export const isPlayable = (track: Pick<Track, 'id' | 'providerId' | 'quality'>): boolean => playbackUrl(track) !== undefined
+
+/** Why a track has no Play button, for the tooltip. */
+export function unplayableReason(track: Pick<Track, 'providerId' | 'quality'>): string {
+  if (track.providerId === 'local') {
+    return track.quality ? `${track.quality.codec.toUpperCase()} files can't be played in TurnTable yet` : "This file can't be played"
+  }
+  return 'Playback for this service is not available yet'
+}

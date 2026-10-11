@@ -1,4 +1,5 @@
 import type { ProviderStatus } from '@shared/types'
+import { codecName } from '../lib/quality'
 import { ProviderLogo } from './ProviderLogo'
 
 interface Props {
@@ -8,7 +9,7 @@ interface Props {
 }
 
 function describeQuality({ maxQuality }: ProviderStatus): string {
-  const codec = maxQuality.codec.toUpperCase()
+  const codec = codecName(maxQuality.codec)
   if (maxQuality.lossless && maxQuality.bitDepth && maxQuality.sampleRateHz) {
     return `${codec} up to ${maxQuality.bitDepth}-bit / ${maxQuality.sampleRateHz / 1000} kHz`
   }
