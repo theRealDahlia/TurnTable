@@ -26,7 +26,15 @@ describe('playbackUrl', () => {
     expect(playbackUrl({ id: LOCAL_ID, providerId: 'local', quality: { codec: 'flac', lossless: true } })).toBe(`turntable-media://audio/${LOCAL_ID}`)
   })
 
+  it('plays a YouTube Music track through its video id', () => {
+    expect(playbackUrl({ id: 'abcdefghijk', providerId: 'youtubeMusic', quality: undefined })).toBe('youtube:abcdefghijk')
+  })
+
   it.each([
+    ['a YouTube track with a malformed id', { id: 'short', providerId: 'youtubeMusic' as const, quality: undefined }],
+    ['a YouTube id that could alter a URL', { id: 'abc/def?ghi', providerId: 'youtubeMusic' as const, quality: undefined }],
+    ['a YouTube video that cannot be embedded', { id: 'abcdefghijk', providerId: 'youtubeMusic' as const, quality: undefined, playable: false }],
+    ['a Spotify track the service marked unplayable', { id: SPOTIFY_ID, providerId: 'spotify' as const, quality: undefined, playable: false }],
     ['a Spotify track with a malformed id', { id: 'spotify-1', providerId: 'spotify' as const, quality: undefined }],
     ['a Spotify id that could alter a URI', { id: `${SPOTIFY_ID.slice(0, 18)}:../`, providerId: 'spotify' as const, quality: undefined }],
     ['an ALAC file', { id: LOCAL_ID, providerId: 'local' as const, quality: { codec: 'alac', lossless: true } }],
@@ -44,5 +52,6 @@ describe('unplayableReason', () => {
     expect(unplayableReason({ providerId: 'local', quality: undefined })).toMatch(/can't be played/)
     expect(unplayableReason({ providerId: 'spotify', quality: undefined })).toMatch(/Spotify track can't be played/)
     expect(unplayableReason({ providerId: 'qobuz', quality: undefined })).toMatch(/not available yet/)
+    expect(unplayableReason({ providerId: 'youtubeMusic', quality: undefined, playable: false })).toMatch(/owner .* outside YouTube/)
   })
 })

@@ -50,6 +50,8 @@ YouTube Music has no API of its own, so TurnTable uses the official YouTube Data
 
 The default quota is 10,000 units a day and each page of 50 likes costs 1.
 
+**Playback.** YouTube only allows its videos to play in its own embedded player, and the video has to stay visible, so YouTube Music tracks play in a small video window above the player bar (with a link back to YouTube Music). The player bar's play, pause, seek and volume controls drive it. Audio quality is whatever YouTube streams. Some videos' owners turn off embedding; those tracks show a disabled play button with an explanation. In a packaged build the player page is served from a loopback server on `127.0.0.1` (YouTube needs a real web origin), which serves only that page and its scripts.
+
 ## Open decisions
 
 - First service to integrate (Spotify has the most accessible API)

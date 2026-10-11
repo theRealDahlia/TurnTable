@@ -40,6 +40,8 @@ export interface Track {
   url?: string
   /** The format of the audio itself, when known (local files). */
   quality?: AudioQuality
+  /** False when the service says this track can't be played in TurnTable (for example, its owner turned off embedding). */
+  playable?: boolean
   savedAt?: string
 }
 

@@ -18,7 +18,7 @@ export function App(): React.JSX.Element {
   useSpacebarToggle(player.toggle)
 
   return (
-    <div className="app" data-playing={player.track !== undefined}>
+    <div className="app" data-playing={player.track !== undefined} data-video={player.track?.providerId === 'youtubeMusic'}>
       <div className="drag-strip" aria-hidden="true" />
       <Sidebar page={page} onNavigate={setPage} />
       <div className="content">

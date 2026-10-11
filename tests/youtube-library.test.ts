@@ -82,7 +82,7 @@ describe('YouTube Music getSavedTracks', () => {
     const url = requestedUrl(fetchFn)
     expect(`${url.origin}${url.pathname}`).toBe('https://www.googleapis.com/youtube/v3/videos')
     expect(url.searchParams.get('myRating')).toBe('like')
-    expect(url.searchParams.get('part')).toBe('snippet,contentDetails')
+    expect(url.searchParams.get('part')).toBe('snippet,contentDetails,status')
     expect(url.searchParams.get('maxResults')).toBe('50')
     expect(url.searchParams.get('fields')).toContain('nextPageToken')
     expect(url.searchParams.has('pageToken')).toBe(false)
@@ -106,6 +106,17 @@ describe('YouTube Music getSavedTracks', () => {
       ],
       nextCursor: 'CDIQAA'
     })
+  })
+
+  it("marks a video its owner doesn't allow to be embedded as unplayable, and leaves the rest alone", async () => {
+    const { provider } = setup([
+      json({ items: [video(ID_A, { status: { embeddable: false } }), video(ID_B, { status: { embeddable: true } }), video('nostatusabc')] })
+    ])
+
+    const { tracks } = await provider.getSavedTracks()
+
+    expect(tracks.map((track) => [track.id, track.playable])).toEqual([[ID_A, false], [ID_B, undefined], ['nostatusabc', undefined]])
+    expect(tracks[1]).not.toHaveProperty('playable')
   })
 
   it("follows Google's page token and stops when there is none", async () => {

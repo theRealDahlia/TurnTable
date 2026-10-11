@@ -9,7 +9,7 @@ const PAGE_SIZE = 50
 /** YouTube's category for music; the account's likes also include talks, gameplay and so on. */
 const MUSIC_CATEGORY_ID = '10'
 /** Only the fields the library shows, so each page stays small. */
-const FIELDS = 'nextPageToken,items(id,snippet(title,channelTitle,categoryId,thumbnails),contentDetails(duration))'
+const FIELDS = 'nextPageToken,items(id,snippet(title,channelTitle,categoryId,thumbnails),contentDetails(duration),status(embeddable))'
 /** Artwork at least this wide looks sharp in the library without downloading the largest frame. */
 const PREFERRED_ARTWORK_WIDTH = 300
 const MAX_ERROR_MESSAGE_LENGTH = 200
@@ -36,6 +36,7 @@ interface YouTubeVideo {
     thumbnails?: Record<string, Thumbnail | undefined>
   }
   contentDetails?: { duration?: string }
+  status?: { embeddable?: boolean }
 }
 
 interface LikedVideosResponse {
@@ -88,7 +89,9 @@ function toTrack(video: YouTubeVideo): Track | undefined {
     artists: artistFromChannel(snippet.channelTitle),
     durationMs,
     artworkUrl: pickArtwork(snippet.thumbnails),
-    url: `https://music.youtube.com/watch?v=${id}`
+    url: `https://music.youtube.com/watch?v=${id}`,
+    // Owners can switch off embedding, and TurnTable can only play YouTube through the embedded player.
+    ...(video.status?.embeddable === false ? { playable: false } : {})
     // YouTube does not say when a video was liked, so there is no save date.
   }
 }
@@ -144,7 +147,7 @@ export function createYouTubeProvider(session: OAuthSession, options: YouTubePro
 
     async getSavedTracks(cursor): Promise<TrackPage> {
       if (cursor !== undefined && !PAGE_TOKEN_PATTERN.test(cursor)) throw new Error('Invalid library cursor')
-      const query = new URLSearchParams({ part: 'snippet,contentDetails', myRating: 'like', maxResults: String(PAGE_SIZE), fields: FIELDS })
+      const query = new URLSearchParams({ part: 'snippet,contentDetails,status', myRating: 'like', maxResults: String(PAGE_SIZE), fields: FIELDS })
       if (cursor !== undefined) query.set('pageToken', cursor)
 
       const page = await getJson<LikedVideosResponse>(`/videos?${query.toString()}`)

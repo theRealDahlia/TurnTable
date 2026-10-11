@@ -995,6 +995,11 @@ html[data-platform='mac'] .drag-strip {
   box-shadow: var(--shadow);
 }
 
+/* The window floats over the list, so leave room to scroll the last rows out from under it. */
+.app[data-video='true'] .content {
+  padding-bottom: 290px;
+}
+
 .youtube-panel[data-showing='false'] {
   display: none;
 }

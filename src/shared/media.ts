@@ -1,4 +1,5 @@
 import type { Track } from './types'
+import { YOUTUBE_VIDEO_ID } from './youtubePlayer'
 
 /** Custom scheme the main process serves local audio and artwork on; the renderer never sees file paths. */
 export const MEDIA_SCHEME = 'turntable-media'
@@ -26,17 +27,23 @@ export function spotifyTrackIdFromUri(uri: string): string | undefined {
   return SPOTIFY_TRACK_ID.test(id) ? id : undefined
 }
 
+type PlayableFacts = Pick<Track, 'id' | 'providerId' | 'quality' | 'playable'>
+
 /** What the player should load for a track, or undefined if TurnTable can't play it (yet). */
-export function playbackUrl(track: Pick<Track, 'id' | 'providerId' | 'quality'>): string | undefined {
+export function playbackUrl(track: PlayableFacts): string | undefined {
+  if (track.playable === false) return undefined
   if (track.providerId === 'spotify') return SPOTIFY_TRACK_ID.test(track.id) ? `${SPOTIFY_URI_PREFIX}${track.id}` : undefined
+  if (track.providerId === 'youtubeMusic') return YOUTUBE_VIDEO_ID.test(track.id) ? `youtube:${track.id}` : undefined
   if (track.providerId !== 'local') return undefined
   return track.quality && PLAYABLE_LOCAL_CODECS.has(track.quality.codec) ? mediaUrl('audio', track.id) : undefined
 }
 
-export const isPlayable = (track: Pick<Track, 'id' | 'providerId' | 'quality'>): boolean => playbackUrl(track) !== undefined
+export const isPlayable = (track: PlayableFacts): boolean => playbackUrl(track) !== undefined
 
 /** Why a track has no Play button, for the tooltip. */
-export function unplayableReason(track: Pick<Track, 'providerId' | 'quality'>): string {
+export function unplayableReason(track: Pick<Track, 'providerId' | 'quality' | 'playable'>): string {
+  if (track.providerId === 'youtubeMusic') return "The owner of this video doesn't allow it to be played outside YouTube"
+
   if (track.providerId === 'local') {
     return track.quality ? `${track.quality.codec.toUpperCase()} files can't be played in TurnTable yet` : "This file can't be played"
   }
