@@ -38,6 +38,18 @@ If the app fails to start with "Electron uninstall", run `node node_modules/elec
 
 Spotify apps in development mode only work for accounts you add under User Management in the dashboard.
 
+## YouTube Music setup
+
+YouTube Music has no API of its own, so TurnTable uses the official YouTube Data API with your Google account and reads the videos you have liked (your YouTube Music thumbs-ups are the same likes). Only videos in YouTube's Music category are shown, in the order YouTube returns them (most recently liked first). YouTube does not report when a video was liked, so these tracks have no save date.
+
+1. In the [Google Cloud console](https://console.cloud.google.com/) create a project and enable **YouTube Data API v3**.
+2. Under APIs & Services, configure the OAuth consent screen (External), add the scope `https://www.googleapis.com/auth/youtube.readonly`, and add your own Google account as a **test user**. While the app is in *Testing*, Google expires its sign-in after 7 days, so you will need to reconnect weekly.
+3. Create an OAuth client of type **Desktop app**. Any loopback port is accepted, so no redirect URI needs registering.
+4. Put the client ID in `.env` as `MAIN_VITE_YOUTUBE_CLIENT_ID`. Google also issues a client secret for Desktop clients and its token endpoint may require it; if sign-in fails with "client_secret is missing", set `MAIN_VITE_YOUTUBE_CLIENT_SECRET` too. For installed apps it is not confidential.
+5. Restart `npm run dev`, then click Connect on the YouTube Music chip.
+
+The default quota is 10,000 units a day and each page of 50 likes costs 1.
+
 ## Open decisions
 
 - First service to integrate (Spotify has the most accessible API)
