@@ -295,10 +295,10 @@ describe('SearchPage results', () => {
       query: 'e',
       tab: 'spotify',
       results: { spotify: ready([track('spotify', 1)]), youtubeMusic: ready([track('youtubeMusic', 1)]) },
-      saveError: { providerId: 'spotify', message: 'Reconnect Spotify to allow saving songs in TurnTable.' }
+      saveError: { providerId: 'spotify', message: 'Reconnect Spotify to allow saving songs in Muze.' }
     })
     show(search)
-    expect(screen.getByRole('alert').textContent).toBe('Reconnect Spotify to allow saving songs in TurnTable.')
+    expect(screen.getByRole('alert').textContent).toBe('Reconnect Spotify to allow saving songs in Muze.')
 
     cleanup()
     show({ ...search, tab: 'youtubeMusic' })

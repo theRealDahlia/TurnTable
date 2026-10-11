@@ -59,9 +59,9 @@ function setup() {
 }
 
 describe('startPlayerPage', () => {
-  it('creates a player named TurnTable and connects it', () => {
+  it('creates a player named after the app and connects it', () => {
     const { player } = setup()
-    expect(player.options.name).toBe('TurnTable')
+    expect(player.options.name).toBe('Muze')
     expect(player.connect).toHaveBeenCalledOnce()
   })
 
@@ -75,14 +75,14 @@ describe('startPlayerPage', () => {
 
   it('reports a permission error, and gives the SDK no token, when none can be provided', async () => {
     const { player, bridge, events } = setup()
-    vi.mocked(bridge.getToken).mockRejectedValue(new Error('Reconnect Spotify to allow playback in TurnTable.'))
+    vi.mocked(bridge.getToken).mockRejectedValue(new Error('Reconnect Spotify to allow playback in Muze.'))
     const callback = vi.fn()
 
     player.options.getOAuthToken(callback)
     await vi.waitFor(() => expect(events).toHaveLength(1))
 
     expect(callback).not.toHaveBeenCalled()
-    expect(events[0]).toEqual({ type: 'error', kind: 'permission', message: 'Reconnect Spotify to allow playback in TurnTable.' })
+    expect(events[0]).toEqual({ type: 'error', kind: 'permission', message: 'Reconnect Spotify to allow playback in Muze.' })
   })
 
   it('reports readiness and loss of the device', () => {

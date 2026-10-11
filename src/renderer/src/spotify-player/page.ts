@@ -1,5 +1,6 @@
 import type { PlayerPageBridge, SpotifyPlayerEvent } from '@shared/spotifyPlayer'
 import { SPOTIFY_ERRORS } from '@shared/spotifyPlayer'
+import { APP_NAME } from '@shared/app'
 
 /** The slice of Spotify's Web Playback SDK this page uses. */
 export interface SdkTrack {
@@ -53,7 +54,7 @@ export function startPlayerPage(bridge: PlayerPageBridge, sdk: SpotifyNamespace,
   const { pollMs = 500, setInterval: startTimer = (cb, ms) => window.setInterval(cb, ms), clearInterval: stopTimer = (h) => window.clearInterval(h as number) } = options
 
   const player = new sdk.Player({
-    name: 'TurnTable',
+    name: APP_NAME,
     volume: 1,
     getOAuthToken: (callback) => {
       bridge.getToken().then(callback, (error: unknown) => {

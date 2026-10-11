@@ -1,4 +1,4 @@
-# TurnTable — development rules
+# Muze (repo: TurnTable) — development rules
 
 ## Test and fix after every change
 

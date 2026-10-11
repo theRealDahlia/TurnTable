@@ -75,8 +75,8 @@ describe('player page bridge', () => {
   })
 
   it('turns a wrapped IPC failure into a message the user can read', async () => {
-    invoke.mockRejectedValue(new Error("Error invoking remote method 'spotify-player:get-token': PlaybackPermissionError: Reconnect Spotify to allow playback in TurnTable."))
-    await expect((await bridge()).getToken()).rejects.toThrow(/^Reconnect Spotify to allow playback in TurnTable\.$/)
+    invoke.mockRejectedValue(new Error("Error invoking remote method 'spotify-player:get-token': PlaybackPermissionError: Reconnect Spotify to allow playback in Muze."))
+    await expect((await bridge()).getToken()).rejects.toThrow(/^Reconnect Spotify to allow playback in Muze\.$/)
   })
 
   it('reports events on the page-only channel, and delivers commands to the page', async () => {

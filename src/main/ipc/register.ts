@@ -3,6 +3,7 @@ import { IpcChannel, type TurnTableApi } from '@shared/ipc'
 import type { ProviderId, TrackPage } from '@shared/types'
 import type { ProviderRegistry } from '../providers/registry'
 import { shareInFlight } from './singleFlight'
+import { APP_NAME } from '@shared/app'
 
 const MAX_QUERY_LENGTH = 200
 const MAX_TRACK_ID_LENGTH = 100
@@ -29,7 +30,7 @@ function checkCursor(cursor: unknown): string | undefined {
 
 /** A service that can't do something says so plainly, instead of failing with a TypeError. */
 function unsupported(name: string, what: string): Error {
-  return new Error(`${name} doesn't support ${what} in TurnTable yet.`)
+  return new Error(`${name} doesn't support ${what} in ${APP_NAME} yet.`)
 }
 
 /** The renderer-facing API, free of Electron so it can be tested directly. */

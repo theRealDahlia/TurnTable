@@ -53,7 +53,7 @@ describe('RateLimitedError', () => {
   it('explains what happened and when to try again, and carries the deadline', () => {
     const now = at(10, 0)
     const error = new RateLimitedError(now + 12 * MINUTE, now)
-    expect(error.message).toBe("Spotify has temporarily limited TurnTable's access (rate limit). Try again in about 12 minutes.")
+    expect(error.message).toBe("Spotify has temporarily limited Muze's access (rate limit). Try again in about 12 minutes.")
     expect(error.until).toBe(now + 12 * MINUTE)
     expect(error.name).toBe('RateLimitedError')
   })

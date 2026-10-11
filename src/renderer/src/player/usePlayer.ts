@@ -4,6 +4,7 @@ import type { Track } from '@shared/types'
 import { describeError, isAbortError } from '@shared/errors'
 import { createDefaultMedia } from './defaultMedia'
 import { errorMessageOf, type PlayerMedia } from './media'
+import { APP_NAME } from '@shared/app'
 
 export type PlayerStatus = 'idle' | 'loading' | 'playing' | 'paused' | 'error'
 
@@ -148,7 +149,7 @@ export function usePlayer({ createAudio = createDefaultMedia }: PlayerOptions = 
   const play = useCallback(
     (track: Track, queue: Track[] = [track]) => {
       if (!isPlayable(track)) {
-        dispatch({ type: 'failed', error: `${track.title} can't be played in TurnTable yet.` })
+        dispatch({ type: 'failed', error: `${track.title} can't be played in ${APP_NAME} yet.` })
         return
       }
       const playable = queue.filter(isPlayable)

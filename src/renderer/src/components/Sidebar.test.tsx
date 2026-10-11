@@ -7,6 +7,11 @@ import { Sidebar } from './Sidebar'
 afterEach(cleanup)
 
 describe('Sidebar', () => {
+  it('shows the app\'s name at the top', () => {
+    const { container } = render(<Sidebar page="library" onNavigate={vi.fn()} />)
+    expect(container.querySelector('.brand')?.textContent).toBe('Muze')
+  })
+
   it('lists Library, Search and Connections in that order, marking the current page', () => {
     render(<Sidebar page="search" onNavigate={vi.fn()} />)
     const nav = within(screen.getByRole('navigation', { name: 'Main' }))

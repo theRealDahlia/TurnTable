@@ -3,6 +3,7 @@ import { AuthRequiredError, type OAuthSession } from '../../auth/session'
 import { YOUTUBE_MUSIC } from '../descriptors'
 import type { MusicProvider } from '../types'
 import { YOUTUBE_SCOPES } from './config'
+import { APP_NAME } from '@shared/app'
 
 const API_BASE = 'https://www.googleapis.com/youtube/v3'
 /** The most `videos.list` returns in one page. */
@@ -73,7 +74,7 @@ interface RatingResponse {
 /** The user signed in with the older, read-only permission, which can't like videos. */
 export class RatingPermissionError extends Error {
   constructor() {
-    super('Reconnect YouTube Music to allow saving songs in TurnTable.')
+    super(`Reconnect YouTube Music to allow saving songs in ${APP_NAME}.`)
     this.name = 'RatingPermissionError'
   }
 }
@@ -125,7 +126,7 @@ function toTrack(video: YouTubeVideo): Track | undefined {
     durationMs,
     artworkUrl: pickArtwork(snippet.thumbnails),
     url: `https://music.youtube.com/watch?v=${id}`,
-    // Owners can switch off embedding, and TurnTable can only play YouTube through the embedded player.
+    // Owners can switch off embedding, and the app can only play YouTube through the embedded player.
     ...(video.status?.embeddable === false ? { playable: false } : {})
     // YouTube does not say when a video was liked, so there is no save date.
   }
@@ -139,7 +140,7 @@ async function toApiError(response: Response): Promise<Error> {
     const reasons = (error?.errors ?? []).map((entry) => entry.reason)
     if (reasons.includes('videoRatingDisabled')) return new Error("The owner of this video has turned off likes, so it can't be saved.")
     if (reasons.some((reason) => typeof reason === 'string' && QUOTA_REASONS.has(reason))) {
-      return new Error("YouTube's daily request allowance for TurnTable is used up. It resets at midnight Pacific time; try again then.")
+      return new Error(`YouTube's daily request allowance for ${APP_NAME} is used up. It resets at midnight Pacific time; try again then.`)
     }
     if (typeof error?.message !== 'string') return new Error(fallback)
     // The text is shown to the user, so drop control characters and cap the length.
@@ -199,7 +200,7 @@ export function createYouTubeProvider(session: OAuthSession, options: YouTubePro
       if (!text || text.length > MAX_QUERY_LENGTH) throw new Error('Type something to search for.')
       if (cursor !== undefined && !PAGE_TOKEN_PATTERN.test(cursor)) throw new Error('Invalid library cursor')
 
-      // Only embeddable music: those are the ones TurnTable can play.
+      // Only embeddable music: those are the ones the app can play.
       const search = new URLSearchParams({
         part: 'snippet',
         type: 'video',

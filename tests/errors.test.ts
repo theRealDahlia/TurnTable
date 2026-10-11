@@ -9,9 +9,9 @@ describe('describeError', () => {
     [
       'IPC errors wrapped twice across two boundaries',
       new Error(
-        "Error invoking remote method 'spotify:play': Error: Error invoking remote method 'spotify-player:get-token': PlaybackPermissionError: Reconnect Spotify to allow playback in TurnTable."
+        "Error invoking remote method 'spotify:play': Error: Error invoking remote method 'spotify-player:get-token': PlaybackPermissionError: Reconnect Spotify to allow playback in Muze."
       ),
-      'Reconnect Spotify to allow playback in TurnTable.'
+      'Reconnect Spotify to allow playback in Muze.'
     ],
     ['a thrown string', 'just text', 'just text'],
     ['an object with a message', { message: 'from an object' }, 'from an object']

@@ -83,7 +83,7 @@ describe('SpotifyPlayerHost', () => {
     ['account', SPOTIFY_ERRORS.premium],
     ['initialization', SPOTIFY_ERRORS.initialization],
     ['authentication', SPOTIFY_ERRORS.authentication],
-    ['permission', 'Reconnect Spotify to allow playback in TurnTable.']
+    ['permission', 'Reconnect Spotify to allow playback in Muze.']
   ] as const)('fails a pending play with the %s message and shuts the player down', async (kind, message) => {
     const { host, windows, startPlayback } = setup()
     const playing = host.play('a')

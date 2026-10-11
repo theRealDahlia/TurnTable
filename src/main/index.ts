@@ -18,6 +18,7 @@ import { registerYouTubePlayer } from './youtubePlayer/electron'
 import { createDefaultRegistry } from './providers/registry'
 import { youtubeOAuthConfig } from './providers/youtube/config'
 import { createYouTubeProvider } from './providers/youtube/provider'
+import { APP_NAME } from '@shared/app'
 
 function createWindow(): void {
   const window = new BrowserWindow({
@@ -26,7 +27,7 @@ function createWindow(): void {
     minWidth: 720,
     minHeight: 480,
     show: false,
-    title: 'TurnTable',
+    title: APP_NAME,
     // Matches the page background, so there is no white flash before the first paint.
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#0c0c11' : '#f5f5f8',
     // On macOS the title bar is hidden and the traffic lights sit inside the sidebar, like a native app.

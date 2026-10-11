@@ -227,19 +227,19 @@ describe('usePlayer', () => {
       const { result } = setup()
       act(() => result.current.play(spotifyTrack()))
 
-      act(() => void audio.dispatchEvent(new CustomEvent('error', { detail: 'Spotify Premium is required to play music in TurnTable.' })))
+      act(() => void audio.dispatchEvent(new CustomEvent('error', { detail: 'Spotify Premium is required to play music in Muze.' })))
 
-      expect(result.current).toMatchObject({ status: 'error', error: 'Spotify Premium is required to play music in TurnTable.' })
+      expect(result.current).toMatchObject({ status: 'error', error: 'Spotify Premium is required to play music in Muze.' })
     })
 
     it('shows a clean message when starting a Spotify track is refused', async () => {
       const { result } = setup()
-      audio.playResult = () => Promise.reject(new Error("Error invoking remote method 'spotify:play': Error: Reconnect Spotify to allow playback in TurnTable."))
+      audio.playResult = () => Promise.reject(new Error("Error invoking remote method 'spotify:play': Error: Reconnect Spotify to allow playback in Muze."))
 
       act(() => result.current.play(spotifyTrack()))
       await flush()
 
-      expect(result.current).toMatchObject({ status: 'error', error: 'Reconnect Spotify to allow playback in TurnTable.' })
+      expect(result.current).toMatchObject({ status: 'error', error: 'Reconnect Spotify to allow playback in Muze.' })
     })
   })
 

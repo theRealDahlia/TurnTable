@@ -1,5 +1,6 @@
 import type { Track } from './types'
 import { YOUTUBE_VIDEO_ID } from './youtubePlayer'
+import { APP_NAME } from './app'
 
 /** Custom scheme the main process serves local audio and artwork on; the renderer never sees file paths. */
 export const MEDIA_SCHEME = 'turntable-media'
@@ -29,7 +30,7 @@ export function spotifyTrackIdFromUri(uri: string): string | undefined {
 
 type PlayableFacts = Pick<Track, 'id' | 'providerId' | 'quality' | 'playable'>
 
-/** What the player should load for a track, or undefined if TurnTable can't play it (yet). */
+/** What the player should load for a track, or undefined if the app can't play it (yet). */
 export function playbackUrl(track: PlayableFacts): string | undefined {
   if (track.playable === false) return undefined
   if (track.providerId === 'spotify') return SPOTIFY_TRACK_ID.test(track.id) ? `${SPOTIFY_URI_PREFIX}${track.id}` : undefined
@@ -45,7 +46,7 @@ export function unplayableReason(track: Pick<Track, 'providerId' | 'quality' | '
   if (track.providerId === 'youtubeMusic') return "The owner of this video doesn't allow it to be played outside YouTube"
 
   if (track.providerId === 'local') {
-    return track.quality ? `${track.quality.codec.toUpperCase()} files can't be played in TurnTable yet` : "This file can't be played"
+    return track.quality ? `${track.quality.codec.toUpperCase()} files can't be played in ${APP_NAME} yet` : "This file can't be played"
   }
   if (track.providerId === 'spotify') return "This Spotify track can't be played"
   return 'Playback for this service is not available yet'

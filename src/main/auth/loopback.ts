@@ -1,5 +1,6 @@
 import { createServer, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
+import { APP_NAME } from '@shared/app'
 
 export interface LoopbackResult {
   code: string
@@ -22,7 +23,7 @@ const CALLBACK_PATH = '/callback'
 const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000
 
 const PAGE = (message: string): string =>
-  `<!doctype html><meta charset="utf-8"><title>TurnTable</title><p style="font-family:system-ui">${message}</p>`
+  `<!doctype html><meta charset="utf-8"><title>${APP_NAME}</title><p style="font-family:system-ui">${message}</p>`
 
 /**
  * Starts a one-shot HTTP server on 127.0.0.1 that receives an OAuth redirect
@@ -76,7 +77,7 @@ export async function startLoopbackServer(options: LoopbackOptions = {}): Promis
     const onStartupError = (error: NodeJS.ErrnoException): void => {
       reject(
         error.code === 'EADDRINUSE'
-          ? new Error(`Port ${port} is already in use. Close whatever is using it, or quit any other TurnTable window, and try again.`)
+          ? new Error(`Port ${port} is already in use. Close whatever is using it, or quit any other ${APP_NAME} window, and try again.`)
           : error
       )
     }

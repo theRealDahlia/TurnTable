@@ -5,6 +5,7 @@ import { SPOTIFY } from '../descriptors'
 import { LIBRARY_WRITE_SCOPES, PLAYBACK_SCOPES, REQUIRED_SCOPES } from './config'
 import { RateLimitGate } from './rateLimit'
 import type { MusicProvider } from '../types'
+import { APP_NAME } from '@shared/app'
 
 const API_BASE = 'https://api.spotify.com/v1'
 /** Spotify's maximum page size for saved tracks. */
@@ -129,7 +130,7 @@ export interface SpotifyProvider extends MusicProvider {
 /** The user signed in before saving songs existed, so their grant doesn't cover it. */
 export class LibraryPermissionError extends Error {
   constructor() {
-    super('Reconnect Spotify to allow saving songs in TurnTable.')
+    super(`Reconnect Spotify to allow saving songs in ${APP_NAME}.`)
     this.name = 'LibraryPermissionError'
   }
 }
@@ -137,7 +138,7 @@ export class LibraryPermissionError extends Error {
 /** The user signed in before playback existed, so their grant doesn't cover it. */
 export class PlaybackPermissionError extends Error {
   constructor() {
-    super('Reconnect Spotify to allow playback in TurnTable.')
+    super(`Reconnect Spotify to allow playback in ${APP_NAME}.`)
     this.name = 'PlaybackPermissionError'
   }
 }

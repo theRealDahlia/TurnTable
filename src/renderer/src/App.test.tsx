@@ -361,15 +361,15 @@ describe('App', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Play Local Song' }))
       await screen.findByRole('contentinfo', { name: 'Player' })
 
-      emit({ type: 'error', kind: 'account', message: 'Spotify Premium is required to play music in TurnTable.' })
+      emit({ type: 'error', kind: 'account', message: 'Spotify Premium is required to play music in Muze.' })
       emit(playingState(FIRST, { positionMs: 99_000 }))
 
       expect(screen.queryByRole('alert')).toBeNull()
     })
 
     it.each([
-      ['a free account', 'Spotify Premium is required to play music in TurnTable.'],
-      ['a sign-in that predates playback', 'Reconnect Spotify to allow playback in TurnTable.']
+      ['a free account', 'Spotify Premium is required to play music in Muze.'],
+      ['a sign-in that predates playback', 'Reconnect Spotify to allow playback in Muze.']
     ])('tells the user why when Spotify refuses to play (%s)', async (_label, message) => {
       spotifyApi.play.mockRejectedValue(new Error(`Error invoking remote method 'spotify:play': Error: ${message}`))
       await openLibrary()

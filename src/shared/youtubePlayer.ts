@@ -1,3 +1,5 @@
+import { APP_NAME } from './app'
+
 /** The page that runs YouTube's embedded player; the app shows it in a frame. */
 export const YOUTUBE_PLAYER_PAGE = 'youtube-player.html'
 
@@ -91,7 +93,7 @@ export function describeYouTubeError(code: number): string {
     case 150:
       return "The owner of this video doesn't allow it to be played outside YouTube."
     case 153:
-      return "YouTube refused to play inside TurnTable (the player couldn't be verified)."
+      return `YouTube refused to play inside ${APP_NAME} (the player couldn't be verified).`
     default:
       return `YouTube couldn't play this video (error ${code}).`
   }

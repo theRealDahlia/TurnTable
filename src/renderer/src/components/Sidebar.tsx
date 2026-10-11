@@ -1,4 +1,5 @@
 import { BrandMark } from './icons'
+import { APP_NAME } from '@shared/app'
 
 export type Page = 'library' | 'search' | 'connections'
 
@@ -55,7 +56,7 @@ export function Sidebar({ page, onNavigate, children }: Props): React.JSX.Elemen
     <aside className="sidebar">
       <div className="brand">
         <BrandMark className="brand-mark" />
-        <span>TurnTable</span>
+        <span>{APP_NAME}</span>
       </div>
       <nav aria-label="Main">
         {ITEMS.map((item) => (

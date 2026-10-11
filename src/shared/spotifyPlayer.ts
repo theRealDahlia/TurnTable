@@ -1,3 +1,5 @@
+import { APP_NAME } from './app'
+
 /** IPC channels. `page*` ones connect the hidden player page to the main process; the rest serve the app window. */
 export const SpotifyPlayerChannel = {
   pageGetToken: 'spotify-player:get-token',
@@ -55,8 +57,8 @@ export interface PlayerPageBridge {
 }
 
 export const SPOTIFY_ERRORS = {
-  premium: 'Spotify Premium is required to play music in TurnTable.',
-  initialization: "Spotify playback isn't available in this build of TurnTable (Widevine could not start).",
+  premium: `Spotify Premium is required to play music in ${APP_NAME}.`,
+  initialization: `Spotify playback isn't available in this build of ${APP_NAME} (Widevine could not start).`,
   authentication: 'Spotify rejected the sign-in. Reconnect Spotify and try again.',
   notReady: "Spotify's player did not start in time. Check your connection and try again.",
   loadFailed: "Couldn't load Spotify's player. Check your connection and try again."

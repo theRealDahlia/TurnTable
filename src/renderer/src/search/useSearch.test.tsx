@@ -303,12 +303,12 @@ describe('useSearch saving', () => {
   it('puts the heart back, says why, and does not report a change, when saving fails', async () => {
     const onSaved = vi.fn()
     const { result } = await searched([], onSaved)
-    api.saveTrack.mockRejectedValue(new Error("Error invoking remote method 'library:save': Error: Reconnect Spotify to allow saving songs in TurnTable."))
+    api.saveTrack.mockRejectedValue(new Error("Error invoking remote method 'library:save': Error: Reconnect Spotify to allow saving songs in Muze."))
 
     act(() => result.current.toggleSave(result.current.results.spotify!.tracks[0]!))
     await waitFor(() => expect(result.current.saveError).toBeDefined())
 
-    expect(result.current.saveError).toEqual({ providerId: 'spotify', message: 'Reconnect Spotify to allow saving songs in TurnTable.' })
+    expect(result.current.saveError).toEqual({ providerId: 'spotify', message: 'Reconnect Spotify to allow saving songs in Muze.' })
     expect(savedOf(result.current.results.spotify?.tracks)).toEqual([false, false])
     expect(result.current.pending).toEqual({})
     expect(onSaved).not.toHaveBeenCalled()

@@ -1,5 +1,6 @@
 import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
+import { APP_NAME } from '@shared/app'
 
 /** Whatever Spotify asks for, never stay blocked longer than this, so a garbled header can't lock the app out for good. */
 const MAX_BLOCK_MS = 7 * 24 * 60 * 60 * 1000
@@ -55,13 +56,13 @@ export function describeWait(until: number, now: number): string {
   return `at ${clock}${day}, in about ${hours} hour${hours === 1 ? '' : 's'}`
 }
 
-/** Spotify has asked TurnTable to stop for a while; no request is made until then. */
+/** Spotify has asked the app to stop for a while; no request is made until then. */
 export class RateLimitedError extends Error {
   constructor(
     readonly until: number,
     now: number
   ) {
-    super(`Spotify has temporarily limited TurnTable's access (rate limit). Try again ${describeWait(until, now)}.`)
+    super(`Spotify has temporarily limited ${APP_NAME}'s access (rate limit). Try again ${describeWait(until, now)}.`)
     this.name = 'RateLimitedError'
   }
 }

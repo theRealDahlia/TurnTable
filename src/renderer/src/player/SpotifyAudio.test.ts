@@ -292,10 +292,10 @@ describe('SpotifyAudio errors', () => {
     await startPlaying(t)
     t.events.length = 0
 
-    t.send({ type: 'error', kind: 'account', message: 'Spotify Premium is required to play music in TurnTable.' })
+    t.send({ type: 'error', kind: 'account', message: 'Spotify Premium is required to play music in Muze.' })
     t.send(state({ positionMs: 9000 }))
 
-    expect(t.errors).toEqual(['Spotify Premium is required to play music in TurnTable.'])
+    expect(t.errors).toEqual(['Spotify Premium is required to play music in Muze.'])
     expect(t.events).toEqual([])
     expect(t.audio.paused).toBe(true)
   })
