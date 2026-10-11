@@ -123,4 +123,35 @@ describe('PlayerBar', () => {
     expect(screen.queryByText(/FLAC/)).toBeNull()
     expect(screen.getByText('Slow Weather')).toBeTruthy()
   })
+
+  describe('slider fill', () => {
+    const fillOf = (name: string): string => (screen.getByRole('slider', { name }) as HTMLInputElement).style.getPropertyValue('--progress')
+
+    it('fills the seek bar up to the playback position', () => {
+      render(<PlayerBar player={makePlayer({ currentTime: 65, duration: 200 })} />)
+      expect(fillOf('Seek')).toBe('32.5%')
+    })
+
+    it('fills the volume bar up to the volume', () => {
+      render(<PlayerBar player={makePlayer({ volume: 0.4 })} />)
+      expect(fillOf('Volume')).toBe('40%')
+    })
+
+    it.each([
+      ['an unknown duration', { currentTime: 30, duration: 0 }, '0%'],
+      ['a position past the end', { currentTime: 500, duration: 200 }, '100%'],
+      ['a negative position', { currentTime: -5, duration: 200 }, '0%'],
+      ['a position that is not a number', { currentTime: Number.NaN, duration: 200 }, '0%']
+    ])('stays within 0-100%% for %s', (_label, state, expected) => {
+      render(<PlayerBar player={makePlayer(state)} />)
+      expect(fillOf('Seek')).toBe(expected)
+    })
+
+    it('shows a speaker icon next to the volume control, hidden from assistive technology', () => {
+      const { container } = render(<PlayerBar player={makePlayer()} />)
+      const icon = container.querySelector('.player-volume svg')
+      expect(icon).not.toBeNull()
+      expect(icon!.getAttribute('aria-hidden')).toBe('true')
+    })
+  })
 })

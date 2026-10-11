@@ -2,6 +2,7 @@ import { isPlayable, unplayableReason } from '@shared/media'
 import type { ProviderStatus, Track } from '@shared/types'
 import { formatQuality } from '../lib/quality'
 import { formatDuration } from '../library/query'
+import { NoteIcon, PauseIcon, PlayIcon } from './icons'
 import { ProviderLogo } from './ProviderLogo'
 
 interface Props {
@@ -20,13 +21,20 @@ export function TrackRow({ track, provider, current, playing, onPlay }: Props): 
   const quality = formatQuality(track.quality)
 
   return (
-    <li className="track" data-current={current} onDoubleClick={() => playable && onPlay(track)}>
+    <li className="track" data-current={current} data-playing={current && playing} onDoubleClick={() => playable && onPlay(track)}>
       <div className="track-art-wrap">
         {track.artworkUrl ? (
           <img className="track-art" src={track.artworkUrl} alt="" loading="lazy" />
         ) : (
-          <span className="track-art track-art-empty" aria-hidden="true" />
+          <span className="track-art track-art-empty" aria-hidden="true">
+            <NoteIcon />
+          </span>
         )}
+        <span className="equalizer" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </span>
         <button
           type="button"
           className="track-play"
@@ -35,7 +43,7 @@ export function TrackRow({ track, provider, current, playing, onPlay }: Props): 
           disabled={!playable}
           onClick={() => onPlay(track)}
         >
-          {action === 'Pause' ? '❚❚' : '▶'}
+          {action === 'Pause' ? <PauseIcon /> : <PlayIcon />}
         </button>
       </div>
       <div className="track-main">

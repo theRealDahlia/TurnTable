@@ -300,4 +300,71 @@ describe('LibraryPage', () => {
     expect(rows()).toHaveLength(1)
     expect(rows()[0]!.querySelector('img.track-art')).toBeNull()
   })
+
+  describe('loading, layout and empty states', () => {
+    const sample = [track('spotify', 1), track('spotify', 2)]
+    const skeletonRows = (container: HTMLElement): number => container.querySelectorAll('.skeleton-row').length
+
+    it('shows placeholder rows, hidden from assistive technology, while the first tracks load', () => {
+      const { container } = render(<LibraryPage library={makeLibrary({ loading: true }, [])} player={makePlayer()} onOpenConnections={vi.fn()} />)
+
+      expect(skeletonRows(container)).toBe(8)
+      expect(container.querySelector('.skeleton-row')!.closest('ul')!.getAttribute('aria-hidden')).toBe('true')
+      expect(rows()).toHaveLength(0)
+      expect(screen.queryByText('No saved tracks found on your connected services.')).toBeNull()
+    })
+
+    it('replaces the placeholders as soon as tracks arrive, even while more are loading', () => {
+      const { container } = render(<LibraryPage library={makeLibrary({ loading: true }, sample)} player={makePlayer()} onOpenConnections={vi.fn()} />)
+      expect(skeletonRows(container)).toBe(0)
+      expect(rows()).toHaveLength(2)
+    })
+
+    it('does not show placeholders for a search that found nothing', async () => {
+      const { container } = render(<LibraryPage library={makeLibrary({ loading: true }, sample)} player={makePlayer()} onOpenConnections={vi.fn()} />)
+      await userEvent.type(screen.getByRole('searchbox'), 'zzz')
+      expect(skeletonRows(container)).toBe(0)
+    })
+
+    it('shows placeholders, and no controls yet, while it is still checking which services are connected', () => {
+      const library = makeLibrary({ listing: true, loading: true, providers: [], libraries: {} })
+      const { container } = render(<LibraryPage library={library} player={makePlayer()} onOpenConnections={vi.fn()} />)
+
+      expect(skeletonRows(container)).toBe(8)
+      expect(screen.queryByRole('searchbox')).toBeNull()
+      expect(screen.queryByText('No services connected')).toBeNull()
+    })
+
+    it('labels the columns for sighted users without cluttering the accessibility tree', () => {
+      const { container } = render(<LibraryPage library={makeLibrary({}, sample)} player={makePlayer()} onOpenConnections={vi.fn()} />)
+
+      const header = container.querySelector('.track-header')!
+      expect(header.getAttribute('aria-hidden')).toBe('true')
+      expect(header.textContent).toContain('Title')
+      expect(header.textContent).toContain('Album')
+      expect(header.textContent).toContain('Format')
+    })
+
+    it('leaves out the column headings when there is nothing to list, and explains instead', () => {
+      const { container } = render(<LibraryPage library={makeLibrary()} player={makePlayer()} onOpenConnections={vi.fn()} />)
+
+      expect(container.querySelector('.track-header')).toBeNull()
+      expect(container.querySelector('.empty-state.compact')).not.toBeNull()
+      expect(screen.getByText('No saved tracks found on your connected services.')).toBeTruthy()
+    })
+
+    it('marks which row is playing, so it can show it, and which is only paused', () => {
+      const current = track('spotify', 1)
+      const playing = render(<LibraryPage library={makeLibrary({}, sample)} player={makePlayer({ track: current, status: 'playing' })} onOpenConnections={vi.fn()} />)
+      const row = (title: string): HTMLElement => rows().find((r) => r.textContent?.includes(title))!
+
+      expect(row('Song 1').getAttribute('data-playing')).toBe('true')
+      expect(row('Song 2').getAttribute('data-playing')).toBe('false')
+      playing.unmount()
+
+      render(<LibraryPage library={makeLibrary({}, sample)} player={makePlayer({ track: current, status: 'paused' })} onOpenConnections={vi.fn()} />)
+      expect(row('Song 1').getAttribute('data-current')).toBe('true')
+      expect(row('Song 1').getAttribute('data-playing')).toBe('false')
+    })
+  })
 })
