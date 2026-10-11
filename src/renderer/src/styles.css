@@ -316,7 +316,7 @@ body {
 
 .track {
   display: grid;
-  grid-template-columns: 44px minmax(0, 3fr) minmax(0, 2fr) 28px 56px;
+  grid-template-columns: 44px minmax(0, 3fr) minmax(0, 2fr) 32px 56px;
   align-items: center;
   gap: 14px;
   padding: 8px 10px;
@@ -369,19 +369,19 @@ body {
 }
 
 .logo-sm {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
 }
 
 .logo-sm svg {
-  width: 16px;
-  height: 16px;
+  width: 19px;
+  height: 19px;
 }
 
 .logo-sm img {
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
+  width: 21px;
+  height: 21px;
+  border-radius: 5px;
 }
 
 .show-more {
@@ -417,7 +417,7 @@ body {
 
 @media (max-width: 640px) {
   .track {
-    grid-template-columns: 44px minmax(0, 1fr) 28px 48px;
+    grid-template-columns: 44px minmax(0, 1fr) 32px 48px;
   }
 
   .track-album {
@@ -426,5 +426,86 @@ body {
 
   .toolbar {
     flex-direction: column;
+  }
+}
+
+/* App shell */
+.app {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  padding: 28px 14px;
+  border-right: 1px solid var(--border);
+}
+
+.brand {
+  padding: 0 12px 24px;
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.nav-item svg {
+  width: 20px;
+  height: 20px;
+}
+
+.nav-item:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+}
+
+.nav-item[aria-current='page'] {
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+@media (max-width: 640px) {
+  .app {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sidebar {
+    position: static;
+    height: auto;
+    padding: 12px 16px;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .brand {
+    padding-bottom: 8px;
+  }
+
+  .sidebar nav {
+    flex-direction: row;
   }
 }

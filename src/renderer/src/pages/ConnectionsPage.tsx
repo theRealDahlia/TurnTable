@@ -3,7 +3,12 @@ import type { ProviderId, ProviderStatus } from '@shared/types'
 import { ProviderChip } from '../components/ProviderChip'
 import { describeError } from '../lib/errors'
 
-export function ConnectionsPage(): React.JSX.Element {
+interface Props {
+  /** Called after a service is connected or disconnected, so other pages can refresh. */
+  onChanged?: () => void
+}
+
+export function ConnectionsPage({ onChanged }: Props): React.JSX.Element {
   const [providers, setProviders] = useState<ProviderStatus[]>([])
   const [loading, setLoading] = useState(true)
   const [busyId, setBusyId] = useState<ProviderId>()
@@ -35,6 +40,7 @@ export function ConnectionsPage(): React.JSX.Element {
       if (provider.connected) await window.turntable.disconnectProvider(provider.id)
       else await window.turntable.connectProvider(provider.id)
       setReloadCount((count) => count + 1)
+      onChanged?.()
     } catch (e) {
       setError(describeError(e))
     } finally {
