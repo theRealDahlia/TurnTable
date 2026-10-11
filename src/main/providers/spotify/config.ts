@@ -9,8 +9,14 @@ export const SPOTIFY_REDIRECT_PORT = 43821
 /** What the Web Playback SDK (`streaming`) and starting a track on its device (`user-modify-playback-state`) need. */
 export const PLAYBACK_SCOPES = ['streaming', 'user-modify-playback-state']
 
-/** The minimum for reading the library and playing it, and nothing broader. */
-const SCOPES = ['user-library-read', ...PLAYBACK_SCOPES]
+/** What saving songs to the library, and removing them again, needs. */
+export const LIBRARY_WRITE_SCOPES = ['user-library-modify']
+
+/** What the app needs beyond reading the library; a grant without all of these must be renewed. */
+export const REQUIRED_SCOPES = [...PLAYBACK_SCOPES, ...LIBRARY_WRITE_SCOPES]
+
+/** The minimum for reading the library, playing it and saving to it, and nothing broader. */
+const SCOPES = ['user-library-read', ...REQUIRED_SCOPES]
 
 export function spotifyOAuthConfig(clientId: string | undefined): OAuthConfig {
   if (!clientId) {

@@ -26,6 +26,10 @@ export interface ProviderStatus extends ProviderDescriptor {
   connected: boolean
   /** Signed in, but with an older grant that lacks permissions the app now needs (e.g. playback). */
   needsReauthorization?: boolean
+  /** The service can be searched for tracks. */
+  searchable?: boolean
+  /** Tracks found by searching can be saved to, and removed from, the user's library on the service. */
+  savable?: boolean
 }
 
 export interface Track {
@@ -43,6 +47,8 @@ export interface Track {
   /** False when the service says this track can't be played in TurnTable (for example, its owner turned off embedding). */
   playable?: boolean
   savedAt?: string
+  /** In search results: whether the track is already in the user's library on its service. */
+  saved?: boolean
 }
 
 export interface TrackPage {

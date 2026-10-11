@@ -34,7 +34,10 @@ beforeEach(() => {
     listProviders: vi.fn().mockResolvedValue(ALL),
     connectProvider: vi.fn().mockResolvedValue(undefined),
     disconnectProvider: vi.fn().mockResolvedValue(undefined),
-    getSavedTracks: vi.fn()
+    getSavedTracks: vi.fn(),
+    searchTracks: vi.fn(),
+    saveTrack: vi.fn(),
+    unsaveTrack: vi.fn()
   }
   Object.assign(window, { turntable: api })
 })

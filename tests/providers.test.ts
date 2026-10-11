@@ -35,3 +35,80 @@ describe('api', () => {
     await expect(createApi(createDefaultRegistry()).disconnectProvider('spotify')).resolves.toBeUndefined()
   })
 })
+
+describe('api: search and saving', () => {
+  const fake = (extra: Record<string, unknown> = {}) => {
+    const provider = {
+      info: { id: 'spotify', name: 'Spotify' },
+      isConnected: async () => true,
+      connect: async () => undefined,
+      disconnect: async () => undefined,
+      getSavedTracks: async () => ({ tracks: [] }),
+      search: vi.fn().mockResolvedValue({ tracks: [], nextCursor: undefined }),
+      saveTrack: vi.fn().mockResolvedValue(undefined),
+      unsaveTrack: vi.fn().mockResolvedValue(undefined),
+      ...extra
+    }
+    return { provider, api: createApi(createDefaultRegistry({ spotify: provider as never })) }
+  }
+
+  it('passes a trimmed query and cursor to the service', async () => {
+    const { provider, api } = fake()
+    await api.searchTracks('spotify', '  foo fighters ', '10')
+    expect(provider.search).toHaveBeenCalledExactlyOnceWith('foo fighters', '10')
+  })
+
+  it.each([['an empty query', ''], ['a blank query', '   '], ['a query that is not text', 42], ['a huge query', 'x'.repeat(201)]])('refuses %s', async (_label, query) => {
+    const { provider, api } = fake()
+    await expect(api.searchTracks('spotify', query as string)).rejects.toThrow(/search/i)
+    expect(provider.search).not.toHaveBeenCalled()
+  })
+
+  it('refuses a cursor that is not text, or is absurdly long', async () => {
+    const { provider, api } = fake()
+    await expect(api.searchTracks('spotify', 'foo', 5 as never)).rejects.toThrow('Invalid library cursor')
+    await expect(api.searchTracks('spotify', 'foo', 'x'.repeat(501))).rejects.toThrow('Invalid library cursor')
+    expect(provider.search).not.toHaveBeenCalled()
+  })
+
+  it('saves and removes tracks through the service', async () => {
+    const { provider, api } = fake()
+    await api.saveTrack('spotify', 'track-1')
+    await api.unsaveTrack('spotify', 'track-1')
+    expect(provider.saveTrack).toHaveBeenCalledExactlyOnceWith('track-1')
+    expect(provider.unsaveTrack).toHaveBeenCalledExactlyOnceWith('track-1')
+  })
+
+  it.each([['empty', ''], ['not text', 5], ['huge', 'x'.repeat(101)]])('refuses a track id that is %s', async (_label, id) => {
+    const { provider, api } = fake()
+    await expect(api.saveTrack('spotify', id as string)).rejects.toThrow('not a valid track')
+    await expect(api.unsaveTrack('spotify', id as string)).rejects.toThrow('not a valid track')
+    expect(provider.saveTrack).not.toHaveBeenCalled()
+  })
+
+  it('says plainly when a service cannot do it, instead of failing with a TypeError', async () => {
+    const api = createApi(createDefaultRegistry())
+    await expect(api.searchTracks('qobuz', 'foo')).rejects.toThrow("Qobuz doesn't support search")
+    await expect(api.saveTrack('qobuz', 'x')).rejects.toThrow("Qobuz doesn't support saving songs")
+    await expect(api.unsaveTrack('qobuz', 'x')).rejects.toThrow("Qobuz doesn't support removing saved songs")
+  })
+
+  it('rejects unknown services', async () => {
+    const api = createApi(createDefaultRegistry())
+    await expect(api.searchTracks('napster' as never, 'foo')).rejects.toThrow('Unknown provider')
+    await expect(api.saveTrack('napster' as never, 'x')).rejects.toThrow('Unknown provider')
+  })
+
+  it('reports in each status whether a service can be searched and saved to', async () => {
+    const { provider } = fake()
+    const statuses = await createDefaultRegistry({ spotify: provider as never }).listStatuses()
+    expect(statuses.find((s) => s.id === 'spotify')).toMatchObject({ searchable: true, savable: true })
+    expect(statuses.find((s) => s.id === 'qobuz')).toMatchObject({ searchable: false, savable: false })
+  })
+
+  it('does not call a service that can save but not remove savable', async () => {
+    const { provider } = fake({ unsaveTrack: undefined })
+    const statuses = await createDefaultRegistry({ spotify: provider as never }).listStatuses()
+    expect(statuses.find((s) => s.id === 'spotify')?.savable).toBe(false)
+  })
+})

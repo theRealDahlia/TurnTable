@@ -5,14 +5,14 @@ import { SPOTIFY_REDIRECT_PORT, spotifyOAuthConfig } from '../src/main/providers
 import { createSpotifyProvider } from '../src/main/providers/spotify/provider'
 
 describe('spotifyOAuthConfig', () => {
-  it('targets Spotify with only the scopes the library and playback need', () => {
+  it('targets Spotify with only the scopes reading, playing and saving the library need', () => {
     const config = spotifyOAuthConfig('abc123')
 
     expect(config).toMatchObject({
       clientId: 'abc123',
       authorizeUrl: 'https://accounts.spotify.com/authorize',
       tokenUrl: 'https://accounts.spotify.com/api/token',
-      scopes: ['user-library-read', 'streaming', 'user-modify-playback-state'],
+      scopes: ['user-library-read', 'streaming', 'user-modify-playback-state', 'user-library-modify'],
       loopbackPort: SPOTIFY_REDIRECT_PORT
     })
   })

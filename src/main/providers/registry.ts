@@ -22,7 +22,9 @@ export class ProviderRegistry {
       [...this.providers.values()].map(async (provider) => ({
         ...provider.info,
         connected: await provider.isConnected(),
-        needsReauthorization: (await provider.needsReauthorization?.()) ?? false
+        needsReauthorization: (await provider.needsReauthorization?.()) ?? false,
+        searchable: provider.search !== undefined,
+        savable: provider.saveTrack !== undefined && provider.unsaveTrack !== undefined
       }))
     )
   }

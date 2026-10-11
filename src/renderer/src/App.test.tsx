@@ -40,7 +40,10 @@ beforeEach(() => {
     disconnectProvider: vi.fn().mockResolvedValue(undefined),
     getSavedTracks: vi.fn().mockResolvedValue({
       tracks: [{ id: 't1', providerId: 'spotify', title: 'First Song', artists: ['Someone'], durationMs: 60_000 }]
-    })
+    }),
+    searchTracks: vi.fn(),
+    saveTrack: vi.fn(),
+    unsaveTrack: vi.fn()
   }
   Object.assign(window, { turntable: api })
 })
