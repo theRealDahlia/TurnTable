@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { AuthRequiredError, type OAuthSession } from '../src/main/auth/session'
-import { RatingPermissionError, createYouTubeProvider } from '../src/main/providers/youtube/provider'
+import { RatingPermissionError, createYouTubeProvider, isTopicChannel } from '../src/main/providers/youtube/provider'
 
 const json = (body: unknown, init: ResponseInit = {}): Response =>
   new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' }, ...init })
@@ -9,7 +9,7 @@ const ID_A = 'abcdefghijk'
 const ID_B = 'lmnopqrstuv'
 const ID_C = 'wxyzABCDEFG'
 
-const hit = (id: string) => ({ id: { videoId: id } })
+const hit = (id: string, channelTitle = 'Foo Fighters - Topic') => ({ id: { videoId: id }, snippet: { channelTitle } })
 const video = (id: string, overrides: Record<string, unknown> = {}) => ({
   id,
   snippet: {
@@ -26,7 +26,7 @@ const rating = (videoId: string, value: string) => ({ videoId, rating: value })
 
 /** A full search: the ids, the details of those videos, and which of them are liked. */
 const answers = (ids: string[], liked: string[] = [], extra: { next?: string; details?: unknown[] } = {}) => [
-  json({ items: ids.map(hit), nextPageToken: extra.next }),
+  json({ items: ids.map((id) => hit(id)), nextPageToken: extra.next }),
   json({ items: extra.details ?? ids.map((id) => video(id)) }),
   json({ items: ids.map((id) => rating(id, liked.includes(id) ? 'like' : 'none')) })
 ]
@@ -63,10 +63,66 @@ describe('YouTube Music search', () => {
       videoCategoryId: '10',
       videoEmbeddable: 'true',
       q: 'foo fighters',
-      maxResults: '20'
+      maxResults: '50'
     })
+    expect(url.searchParams.get('fields')).toBe('nextPageToken,items(id(videoId),snippet(channelTitle))')
     expect(url.searchParams.has('pageToken')).toBe(false)
     expect(methodOf(fetchFn, 0)).toBe('GET')
+  })
+
+  describe('only YouTube Music songs', () => {
+    it('keeps the audio tracks from artist "Topic" channels and drops everything else', async () => {
+      const { provider, fetchFn } = setup([
+        json({
+          items: [
+            hit(ID_A),
+            hit(ID_B, 'Foo Fighters'),
+            hit(ID_C, 'Some Fan Uploads'),
+            hit('lmnopqrst12', 'Foo Fighters VEVO'),
+            hit('uvwxyz12345', 'Dave Grohl - topic'),
+            hit('abc12345678', 'Topic Of Discussion')
+          ]
+        }),
+        json({ items: [video(ID_A), video('uvwxyz12345')] }),
+        json({ items: [rating(ID_A, 'none'), rating('uvwxyz12345', 'none')] })
+      ])
+
+      const { tracks } = await provider.search!('foo')
+
+      expect(tracks.map((t) => t.id)).toEqual([ID_A, 'uvwxyz12345'])
+      // Details and ratings are only asked for the songs, so nothing is spent on the rest.
+      expect(urlOf(fetchFn, 1).searchParams.get('id')).toBe(`${ID_A},uvwxyz12345`)
+      expect(urlOf(fetchFn, 2).searchParams.get('id')).toBe(`${ID_A},uvwxyz12345`)
+    })
+
+    it('stops after the search when none of the results is a song, and still offers the next page', async () => {
+      const { provider, fetchFn } = setup([json({ items: [hit(ID_A, 'Foo Fighters'), hit(ID_B, 'Fan Channel')], nextPageToken: 'CAoQAA' })])
+      expect(await provider.search!('foo')).toEqual({ tracks: [], nextCursor: 'CAoQAA' })
+      expect(fetchFn).toHaveBeenCalledOnce()
+    })
+
+    it('ignores results that come without a channel', async () => {
+      const { provider, fetchFn } = setup([json({ items: [{ id: { videoId: ID_A } }, { id: { videoId: ID_B }, snippet: {} }] })])
+      expect((await provider.search!('foo')).tracks).toEqual([])
+      expect(fetchFn).toHaveBeenCalledOnce()
+    })
+
+    it.each([
+      ['Foo Fighters - Topic', true],
+      ['Foo Fighters  -  Topic', true],
+      ['  Foo Fighters - Topic ', true],
+      ['Foo Fighters - TOPIC', true],
+      ['AC-DC - Topic', true],
+      ['Foo Fighters', false],
+      ['Topic', false],
+      ['- Topic', false],
+      ['Topic - Foo Fighters', false],
+      ['Foo Fighters - Topic Channel', false],
+      ['', false],
+      [undefined, false]
+    ])('judges the channel %j to be a song channel: %s', (title, expected) => {
+      expect(isTopicChannel(title)).toBe(expected)
+    })
   })
 
   it('then fetches the details and the liked state of exactly the videos found', async () => {

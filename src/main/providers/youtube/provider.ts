@@ -15,8 +15,11 @@ const FIELDS = 'nextPageToken,items(id,snippet(title,channelTitle,categoryId,thu
 const PREFERRED_ARTWORK_WIDTH = 300
 const MAX_ERROR_MESSAGE_LENGTH = 200
 const MAX_QUERY_LENGTH = 200
-/** Results per search page; a bigger page costs the same quota, but most people look at the first few. */
-const SEARCH_PAGE_SIZE = 20
+/**
+ * Candidates per search page. Only the songs YouTube Music lists are kept, which is a minority of what a
+ * search returns, and a page of any size costs the same quota, so ask for the most.
+ */
+const SEARCH_PAGE_SIZE = 50
 
 /** Page tokens are opaque and come back from the renderer, so only accept what Google issues (URL-safe base64). */
 const PAGE_TOKEN_PATTERN = /^[A-Za-z0-9_-]{1,200}$/
@@ -59,7 +62,7 @@ export interface YouTubeProviderOptions {
 }
 
 interface SearchResponse {
-  items?: { id?: { videoId?: string } }[]
+  items?: { id?: { videoId?: string }; snippet?: { channelTitle?: string } }[]
   nextPageToken?: string
 }
 
@@ -83,9 +86,20 @@ export function parseIsoDuration(value: string | undefined): number {
   return (((days ?? 0) * 24 + (hours ?? 0)) * 3600 + (minutes ?? 0) * 60 + (seconds ?? 0)) * 1000
 }
 
+const TOPIC_SUFFIX = /\s+-\s+Topic$/i
+
+/**
+ * YouTube Music's songs are the audio tracks YouTube generates for each artist, on channels named
+ * "<Artist> - Topic". The API has no way to search YouTube Music itself, so this is what tells a song
+ * from a fan upload, a live recording or a regular video.
+ */
+export function isTopicChannel(channelTitle: string | undefined): boolean {
+  return TOPIC_SUFFIX.test(channelTitle?.trim() ?? '')
+}
+
 /** Auto-generated artist channels are named "<Artist> - Topic"; show just the artist. */
 export function artistFromChannel(channelTitle: string | undefined): string[] {
-  const name = channelTitle?.replace(/\s+-\s+Topic$/i, '').trim()
+  const name = channelTitle?.replace(TOPIC_SUFFIX, '').trim()
   return name ? [name] : []
 }
 
@@ -185,7 +199,7 @@ export function createYouTubeProvider(session: OAuthSession, options: YouTubePro
       if (!text || text.length > MAX_QUERY_LENGTH) throw new Error('Type something to search for.')
       if (cursor !== undefined && !PAGE_TOKEN_PATTERN.test(cursor)) throw new Error('Invalid library cursor')
 
-      // Only embeddable music videos: those are the ones TurnTable can play.
+      // Only embeddable music: those are the ones TurnTable can play.
       const search = new URLSearchParams({
         part: 'snippet',
         type: 'video',
@@ -193,12 +207,15 @@ export function createYouTubeProvider(session: OAuthSession, options: YouTubePro
         videoEmbeddable: 'true',
         q: text,
         maxResults: String(SEARCH_PAGE_SIZE),
-        fields: 'nextPageToken,items(id(videoId))'
+        fields: 'nextPageToken,items(id(videoId),snippet(channelTitle))'
       })
       if (cursor !== undefined) search.set('pageToken', cursor)
       const page = await getJson<SearchResponse>(`/search?${search.toString()}`)
 
-      const ids = (page.items ?? []).flatMap((item) => (item.id?.videoId && VIDEO_ID_PATTERN.test(item.id.videoId) ? [item.id.videoId] : []))
+      // Keep only what YouTube Music lists as songs, before spending quota on their details.
+      const ids = (page.items ?? []).flatMap((item) =>
+        item.id?.videoId && VIDEO_ID_PATTERN.test(item.id.videoId) && isTopicChannel(item.snippet?.channelTitle) ? [item.id.videoId] : []
+      )
       if (ids.length === 0) return { tracks: [], nextCursor: page.nextPageToken }
 
       // A search only names the videos, so one request fetches their details and another says which are liked.
