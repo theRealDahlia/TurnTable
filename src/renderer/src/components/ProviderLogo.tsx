@@ -1,0 +1,49 @@
+import { siSoundcloud, siSpotify, siYoutubemusic } from 'simple-icons'
+import type { ProviderId } from '@shared/types'
+
+interface BrandIcon {
+  path: string
+  hex: string
+}
+
+/** Official marks from Simple Icons (CC0 data; the marks remain their owners' trademarks). */
+const BRAND_ICONS: Partial<Record<ProviderId, BrandIcon>> = {
+  spotify: siSpotify,
+  youtubeMusic: siYoutubemusic,
+  soundcloud: siSoundcloud
+}
+
+/** Generic music-note glyph for services without a bundled brand mark (Qobuz) and local files. */
+const NOTE_PATH = 'M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm12-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z'
+
+interface Props {
+  id: ProviderId
+  name: string
+}
+
+export function ProviderLogo({ id, name }: Props): React.JSX.Element {
+  const brand = BRAND_ICONS[id]
+
+  return (
+    <span className="logo" data-provider={id}>
+      {brand ? (
+        <svg viewBox="0 0 24 24" role="img" aria-label={`${name} logo`} fill={`#${brand.hex}`}>
+          <path d={brand.path} />
+        </svg>
+      ) : (
+        <svg
+          viewBox="0 0 24 24"
+          role="img"
+          aria-label={`${name} logo`}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d={NOTE_PATH} />
+        </svg>
+      )}
+    </span>
+  )
+}
