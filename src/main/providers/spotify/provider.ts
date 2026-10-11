@@ -3,6 +3,7 @@ import { AuthRequiredError, type OAuthSession } from '../../auth/session'
 import { parseOffsetCursor } from '../cursor'
 import { SPOTIFY } from '../descriptors'
 import { PLAYBACK_SCOPES } from './config'
+import { RateLimitGate } from './rateLimit'
 import type { MusicProvider } from '../types'
 
 const API_BASE = 'https://api.spotify.com/v1'
@@ -43,6 +44,9 @@ export interface SpotifyProviderOptions {
   sleep?: (ms: number) => Promise<void>
   /** Source of jitter in [0, 1); injectable so tests are deterministic. */
   random?: () => number
+  now?: () => number
+  /** Remembers when Spotify said to stop; the app passes one that survives restarts. */
+  gate?: RateLimitGate
 }
 
 const MAX_ERROR_MESSAGE_LENGTH = 200
@@ -120,7 +124,8 @@ export class PlaybackPermissionError extends Error {
 }
 
 export function createSpotifyProvider(session: OAuthSession, options: SpotifyProviderOptions = {}): SpotifyProvider {
-  const { fetch: fetchFn = fetch, sleep = defaultSleep, random = Math.random } = options
+  const { fetch: fetchFn = fetch, sleep = defaultSleep, random = Math.random, now = Date.now } = options
+  const gate = options.gate ?? new RateLimitGate({ now })
 
   /**
    * Calls the Web API and returns a successful response. A 401 triggers one retry with a freshly
@@ -133,6 +138,7 @@ export function createSpotifyProvider(session: OAuthSession, options: SpotifyPro
     const body = init.body === undefined ? undefined : JSON.stringify(init.body)
 
     for (;;) {
+      await gate.check()
       const token = await session.getAccessToken({ forceRefresh })
       forceRefresh = false
       const headers: Record<string, string> = { Authorization: `Bearer ${token}` }
@@ -152,9 +158,8 @@ export function createSpotifyProvider(session: OAuthSession, options: SpotifyPro
 
       if (response.status === 429) {
         const delay = rateLimitDelay(response, rateLimitRetries, random)
-        if (rateLimitRetries >= MAX_RATE_LIMIT_RETRIES || delay > MAX_WAIT_MS) {
-          throw new Error(`Spotify is rate limiting requests. Try again in ${Math.ceil(delay / 1000)}s.`)
-        }
+        // Too long to wait here, or Spotify keeps refusing: remember it, so nothing calls Spotify until it's over.
+        if (rateLimitRetries >= MAX_RATE_LIMIT_RETRIES || delay > MAX_WAIT_MS) throw await gate.block(delay)
         rateLimitRetries++
         await sleep(delay)
         continue

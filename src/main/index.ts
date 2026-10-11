@@ -12,6 +12,7 @@ import { LocalLibrary } from './providers/local/library'
 import { readArtwork, readFileMetadata } from './providers/local/metadata'
 import { createLocalProvider } from './providers/local/provider'
 import { createSpotifyProvider, type SpotifyProvider } from './providers/spotify/provider'
+import { FileRateLimitStore, RateLimitGate } from './providers/spotify/rateLimit'
 import { denyAllPermissions, registerSpotifyPlayback } from './spotifyPlayer/electron'
 import { createDefaultRegistry } from './providers/registry'
 
@@ -85,7 +86,9 @@ function createRegistry(): { registry: ReturnType<typeof createDefaultRegistry>;
     }
   })
 
-  const spotify = createSpotifyProvider(spotifySession)
+  // Spotify's "wait until..." survives restarts, so reopening the app can't keep calling a service that said stop.
+  const gate = new RateLimitGate({ store: new FileRateLimitStore(join(app.getPath('userData'), 'spotify-rate-limit.json')), now: Date.now })
+  const spotify = createSpotifyProvider(spotifySession, { gate })
   return { registry: createDefaultRegistry({ spotify, local }), library, spotify }
 }
 

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { AuthRequiredError, type OAuthSession } from '../src/main/auth/session'
 import { createSpotifyProvider } from '../src/main/providers/spotify/provider'
+import { RateLimitGate, type RateLimitStore } from '../src/main/providers/spotify/rateLimit'
 
 const json = (body: unknown, init: ResponseInit = {}): Response =>
   new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' }, ...init })
@@ -25,7 +26,7 @@ const item = (id: string | null, overrides = {}) => ({
   }
 })
 
-function setup(responses: Response[], random = () => 0) {
+function setup(responses: Response[], random = () => 0, extra: { now?: () => number; gate?: RateLimitGate } = {}) {
   const session = {
     getAccessToken: vi.fn().mockResolvedValue('token-1'),
     disconnect: vi.fn().mockResolvedValue(undefined),
@@ -38,7 +39,8 @@ function setup(responses: Response[], random = () => 0) {
   const provider = createSpotifyProvider(session as unknown as OAuthSession, {
     fetch: fetchFn as unknown as typeof fetch,
     sleep,
-    random
+    random,
+    ...extra
   })
   return { session, fetchFn, sleep, provider }
 }
@@ -191,7 +193,7 @@ describe('Spotify getSavedTracks', () => {
     it('backs off exponentially when Spotify keeps refusing, then gives up', async () => {
       const { provider, sleep, fetchFn } = setup([limited(), limited(), limited(), limited()])
 
-      await expect(provider.getSavedTracks()).rejects.toThrow('rate limiting')
+      await expect(provider.getSavedTracks()).rejects.toThrow('rate limit')
 
       expect(sleep.mock.calls.map((call) => call[0])).toEqual([1000, 2000, 4000])
       expect(fetchFn).toHaveBeenCalledTimes(4)
@@ -212,9 +214,63 @@ describe('Spotify getSavedTracks', () => {
     it('reports instead of waiting when asked to wait unreasonably long', async () => {
       const { provider, sleep, fetchFn } = setup([limited('3600')])
 
-      await expect(provider.getSavedTracks()).rejects.toThrow('Try again in 3600s')
+      await expect(provider.getSavedTracks()).rejects.toThrow(/rate limit.*in about 1 hour/)
       expect(sleep).not.toHaveBeenCalled()
       expect(fetchFn).toHaveBeenCalledOnce()
+    })
+
+    describe('after Spotify says to stop for a long time', () => {
+      const memoryStore = (): RateLimitStore & { saved?: number } => {
+        const store: RateLimitStore & { saved?: number } = {
+          read: async () => store.saved,
+          write: async (value) => void (store.saved = value)
+        }
+        return store
+      }
+
+      it('sends nothing more to Spotify until the wait is over, then resumes', async () => {
+        let time = 1_000_000
+        const { provider, fetchFn, session } = setup([limited('3600'), json({ items: [item('abc')], next: null })], () => 0, { now: () => time })
+
+        await expect(provider.getSavedTracks()).rejects.toThrow('rate limit')
+        for (let i = 0; i < 3; i++) await expect(provider.getSavedTracks()).rejects.toThrow('rate limit')
+        expect(fetchFn).toHaveBeenCalledOnce()
+        expect(session.getAccessToken).toHaveBeenCalledOnce()
+
+        time += 3_600_000 + 1
+        expect((await provider.getSavedTracks()).tracks).toHaveLength(1)
+        expect(fetchFn).toHaveBeenCalledTimes(2)
+      })
+
+      it('also holds back starting playback and paging', async () => {
+        const { provider, fetchFn } = setup([limited('3600')], () => 0, { now: () => 1_000_000 })
+        await expect(provider.getSavedTracks()).rejects.toThrow('rate limit')
+
+        await expect(provider.startPlayback('abcdef0123456789abcdef0123456789abcdef01', '4iV5W9uYEdYUVa79Axb7Rh')).rejects.toThrow('rate limit')
+        await expect(provider.getSavedTracks('50')).rejects.toThrow('rate limit')
+        expect(fetchFn).toHaveBeenCalledOnce()
+      })
+
+      it('remembers the wait across a restart', async () => {
+        const store = memoryStore()
+        const now = () => 1_000_000
+        const first = setup([limited('86000')], () => 0, { gate: new RateLimitGate({ store, now }), now })
+        await expect(first.provider.getSavedTracks()).rejects.toThrow('rate limit')
+        expect(store.saved).toBe(1_000_000 + 86_000_000)
+
+        // A new run of the app: new provider, new gate, same saved file.
+        const second = setup([json({ items: [], next: null })], () => 0, { gate: new RateLimitGate({ store, now }), now })
+        await expect(second.provider.getSavedTracks()).rejects.toThrow(/rate limit.*in about 24 hours/)
+        expect(second.fetchFn).not.toHaveBeenCalled()
+        expect(second.session.getAccessToken).not.toHaveBeenCalled()
+      })
+
+      it('does not block when a short wait is honored and the retry works', async () => {
+        const { provider, fetchFn } = setup([limited('2'), json({ items: [], next: null }), json({ items: [], next: null })])
+        await provider.getSavedTracks()
+        await provider.getSavedTracks()
+        expect(fetchFn).toHaveBeenCalledTimes(3)
+      })
     })
   })
 
