@@ -25,14 +25,15 @@ const NOTE_PATH = 'M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm12-2a3 3 0 
 interface Props {
   id: ProviderId
   name: string
+  size?: 'md' | 'sm'
 }
 
-export function ProviderLogo({ id, name }: Props): React.JSX.Element {
+export function ProviderLogo({ id, name, size = 'md' }: Props): React.JSX.Element {
   const brand = BRAND_ICONS[id]
   const image = BRAND_IMAGES[id]
 
   return (
-    <span className="logo" data-provider={id}>
+    <span className={size === 'sm' ? 'logo logo-sm' : 'logo'} data-provider={id}>
       {image ? (
         <img src={image} alt={`${name} logo`} />
       ) : brand ? (
