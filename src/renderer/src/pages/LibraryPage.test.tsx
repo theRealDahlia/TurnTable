@@ -168,6 +168,22 @@ describe('LibraryPage', () => {
     expect(library.reload).toHaveBeenCalledOnce()
   })
 
+  it('links the service logo back to the track on its service when a link is known', () => {
+    const linked = [
+      track('spotify', 1, { url: 'https://open.spotify.com/track/abc' }),
+      track('qobuz', 2) // no link known
+    ]
+    render(<LibraryPage library={makeLibrary({}, linked)} onOpenConnections={vi.fn()} />)
+
+    const link = screen.getByRole('link', { name: 'Open Song 1 on Spotify' })
+    expect(link.getAttribute('href')).toBe('https://open.spotify.com/track/abc')
+    expect(link.getAttribute('target')).toBe('_blank')
+    expect(link.getAttribute('rel')).toContain('noreferrer')
+    expect(within(link).getByRole('img', { name: 'Spotify logo' })).toBeTruthy()
+    // Only the tracks with a known link get one.
+    expect(screen.getAllByRole('link')).toHaveLength(1)
+  })
+
   it('handles tracks without artwork or album', () => {
     const bare = [track('spotify', 1, { album: undefined, artworkUrl: undefined })]
     render(<LibraryPage library={makeLibrary({}, bare)} onOpenConnections={vi.fn()} />)

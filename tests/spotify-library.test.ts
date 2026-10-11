@@ -20,6 +20,7 @@ const item = (id: string | null, overrides = {}) => ({
         { url: 'https://img/64', width: 64 }
       ]
     },
+    external_urls: { spotify: `https://open.spotify.com/track/${id}` },
     ...overrides
   }
 })
@@ -61,6 +62,7 @@ describe('Spotify getSavedTracks', () => {
           album: 'Album',
           durationMs: 200_000,
           artworkUrl: 'https://img/300',
+          url: 'https://open.spotify.com/track/abc',
           savedAt: '2026-01-02T03:04:05Z'
         }
       ],
@@ -101,6 +103,21 @@ describe('Spotify getSavedTracks', () => {
   it('does not loop forever if Spotify claims more pages but returns none', async () => {
     const { provider } = setup([json({ items: [], next: 'https://api.spotify.com/v1/me/tracks?offset=0' })])
     expect((await provider.getSavedTracks()).nextCursor).toBeUndefined()
+  })
+
+  it.each([
+    ['a non-Spotify host', 'https://evil.example/track/abc'],
+    ['plain http', 'http://open.spotify.com/track/abc'],
+    ['a javascript: URL', 'javascript:alert(1)'],
+    ['a look-alike host', 'https://open.spotify.com.evil.example/track/abc']
+  ])('does not pass on a link to %s', async (_label, url) => {
+    const { provider } = setup([json({ items: [item('a', { external_urls: { spotify: url } })], next: null })])
+    expect((await provider.getSavedTracks()).tracks[0]!.url).toBeUndefined()
+  })
+
+  it('copes with a track that has no external_urls', async () => {
+    const { provider } = setup([json({ items: [item('a', { external_urls: undefined })], next: null })])
+    expect((await provider.getSavedTracks()).tracks[0]!.url).toBeUndefined()
   })
 
   it('handles tracks with no album or artwork', async () => {

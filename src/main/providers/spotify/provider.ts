@@ -26,6 +26,7 @@ interface SpotifyTrack {
   is_local?: boolean
   artists: { name: string }[]
   album?: { name: string; images?: SpotifyImage[] }
+  external_urls?: { spotify?: string }
 }
 
 interface SavedTracksResponse {
@@ -75,6 +76,11 @@ function pickArtwork(images: SpotifyImage[] = []): string | undefined {
   return (bySize.find((image) => (image.width ?? 0) >= PREFERRED_ARTWORK_WIDTH) ?? bySize.at(-1))?.url
 }
 
+/** Only links that really point at Spotify's web player are passed on to the UI. */
+function spotifyWebUrl(url: string | undefined): string | undefined {
+  return url?.startsWith('https://open.spotify.com/') ? url : undefined
+}
+
 function toTrack(savedAt: string, track: SpotifyTrack | null): Track | undefined {
   // Removed/unavailable tracks come back as null, and local files have no Spotify id to play.
   if (!track || !track.id || track.is_local) return undefined
@@ -86,6 +92,7 @@ function toTrack(savedAt: string, track: SpotifyTrack | null): Track | undefined
     album: track.album?.name,
     durationMs: track.duration_ms,
     artworkUrl: pickArtwork(track.album?.images),
+    url: spotifyWebUrl(track.external_urls?.spotify),
     savedAt
   }
 }

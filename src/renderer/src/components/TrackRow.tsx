@@ -20,9 +20,22 @@ export function TrackRow({ track, provider }: Props): React.JSX.Element {
         <span className="track-artists">{track.artists.join(', ')}</span>
       </div>
       <span className="track-album">{track.album}</span>
-      <span className="track-source" title={`Saved on ${provider.name}`}>
-        <ProviderLogo id={provider.id} name={provider.name} size="sm" />
-      </span>
+      {track.url ? (
+        <a
+          className="track-source"
+          href={track.url}
+          target="_blank"
+          rel="noreferrer"
+          title={`Open on ${provider.name}`}
+          aria-label={`Open ${track.title} on ${provider.name}`}
+        >
+          <ProviderLogo id={provider.id} name={provider.name} size="sm" />
+        </a>
+      ) : (
+        <span className="track-source" title={`Saved on ${provider.name}`}>
+          <ProviderLogo id={provider.id} name={provider.name} size="sm" />
+        </span>
+      )}
       <span className="track-duration">{formatDuration(track.durationMs)}</span>
     </li>
   )

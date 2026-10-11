@@ -34,6 +34,8 @@ export interface Track {
   album?: string
   durationMs: number
   artworkUrl?: string
+  /** Web page for the track on its own service, used to link back to it. */
+  url?: string
   savedAt?: string
 }
 

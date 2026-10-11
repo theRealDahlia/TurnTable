@@ -361,6 +361,15 @@ body {
   color: var(--text-muted);
 }
 
+.track-source {
+  display: grid;
+  border-radius: 50%;
+}
+
+a.track-source:hover .logo {
+  background: color-mix(in srgb, var(--text) 14%, transparent);
+}
+
 .track-duration {
   font-size: 0.8125rem;
   font-variant-numeric: tabular-nums;
