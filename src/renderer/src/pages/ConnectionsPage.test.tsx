@@ -174,4 +174,26 @@ describe('ConnectionsPage', () => {
       }
     })
   })
+
+  describe('reconnecting for new permissions', () => {
+    const stale = (): ProviderStatus => provider({ connected: true, needsReauthorization: true })
+
+    it('offers Reconnect instead of Disconnect, and explains why', async () => {
+      api.listProviders.mockResolvedValue([stale()])
+      render(<ConnectionsPage />)
+
+      expect(await screen.findByText(/Reconnect to enable playback/)).toBeTruthy()
+      expect(screen.queryByRole('button', { name: 'Disconnect Spotify' })).toBeNull()
+
+      await userEvent.click(screen.getByRole('button', { name: 'Reconnect Spotify' }))
+      expect(api.connectProvider).toHaveBeenCalledWith('spotify')
+      expect(api.disconnectProvider).not.toHaveBeenCalled()
+    })
+
+    it('shows a normal connected chip once permissions are up to date', async () => {
+      api.listProviders.mockResolvedValue([provider({ connected: true, needsReauthorization: false })])
+      render(<ConnectionsPage />)
+      expect(await screen.findByRole('button', { name: 'Disconnect Spotify' })).toBeTruthy()
+    })
+  })
 })

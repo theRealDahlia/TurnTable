@@ -6,8 +6,11 @@ import type { OAuthConfig } from '../../auth/oauth'
  */
 export const SPOTIFY_REDIRECT_PORT = 43821
 
-/** Only what the library needs. Playback scopes are requested when playback is built. */
-const SCOPES = ['user-library-read']
+/** What the Web Playback SDK (`streaming`) and starting a track on its device (`user-modify-playback-state`) need. */
+export const PLAYBACK_SCOPES = ['streaming', 'user-modify-playback-state']
+
+/** The minimum for reading the library and playing it, and nothing broader. */
+const SCOPES = ['user-library-read', ...PLAYBACK_SCOPES]
 
 export function spotifyOAuthConfig(clientId: string | undefined): OAuthConfig {
   if (!clientId) {

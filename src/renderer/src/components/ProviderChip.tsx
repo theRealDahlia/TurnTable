@@ -22,7 +22,10 @@ export function ProviderChip({ provider, busy, onToggle, onAddFolders }: Props):
   const { name, connected } = provider
   const isLocal = provider.id === 'local'
   // Local files has no account: "connecting" means choosing the folders to read.
-  const action = isLocal ? (connected ? 'Remove folders' : 'Choose folders') : connected ? 'Disconnect' : 'Connect'
+  const reconnect = connected && provider.needsReauthorization === true
+  const action = isLocal
+    ? connected ? 'Remove folders' : 'Choose folders'
+    : reconnect ? 'Reconnect' : connected ? 'Disconnect' : 'Connect'
 
   return (
     <li className="chip" data-connected={connected}>
@@ -31,7 +34,7 @@ export function ProviderChip({ provider, busy, onToggle, onAddFolders }: Props):
         <span className="chip-name">{name}</span>
         <span className="chip-meta">
           <span className="status-dot" aria-hidden="true" />
-          {connected ? 'Connected' : 'Not connected'} · {describeQuality(provider)}
+          {reconnect ? 'Reconnect to enable playback' : connected ? 'Connected' : 'Not connected'} · {describeQuality(provider)}
         </span>
       </div>
       {isLocal && connected && (

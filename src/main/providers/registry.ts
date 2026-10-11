@@ -21,7 +21,8 @@ export class ProviderRegistry {
     return Promise.all(
       [...this.providers.values()].map(async (provider) => ({
         ...provider.info,
-        connected: await provider.isConnected()
+        connected: await provider.isConnected(),
+        needsReauthorization: (await provider.needsReauthorization?.()) ?? false
       }))
     )
   }

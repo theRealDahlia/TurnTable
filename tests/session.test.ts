@@ -156,4 +156,42 @@ describe('OAuthSession', () => {
     await expect(unconfigured.isConnected()).resolves.toBe(false)
     await expect(unconfigured.connect()).rejects.toThrow('not set up')
   })
+
+  describe('scopes', () => {
+    it('knows which scopes the stored grant covers', async () => {
+      await saveTokens({ scope: 'user-library-read streaming' })
+      expect(await session.hasScopes(['streaming'])).toBe(true)
+      expect(await session.hasScopes(['user-library-read', 'streaming'])).toBe(true)
+      expect(await session.hasScopes(['streaming', 'user-modify-playback-state'])).toBe(false)
+    })
+
+    it('treats a grant with no recorded scope, or no grant at all, as covering nothing', async () => {
+      expect(await session.hasScopes(['streaming'])).toBe(false)
+      await saveTokens({ scope: undefined })
+      expect(await session.hasScopes(['streaming'])).toBe(false)
+    })
+
+    it('trivially covers an empty requirement', async () => {
+      await saveTokens({ scope: undefined })
+      expect(await session.hasScopes([])).toBe(true)
+    })
+
+    it('keeps the granted scope when a refresh response leaves it out', async () => {
+      await saveTokens({ expiresAt: now - 1, scope: 'user-library-read streaming' })
+      oauth.refresh.mockResolvedValue({ accessToken: 'fresh', refreshToken: 'rt', expiresAt: now + 3_600_000 })
+
+      await session.getAccessToken()
+
+      expect(await session.hasScopes(['streaming'])).toBe(true)
+    })
+
+    it('adopts the scope a refresh response reports', async () => {
+      await saveTokens({ expiresAt: now - 1, scope: 'user-library-read' })
+      oauth.refresh.mockResolvedValue({ accessToken: 'fresh', expiresAt: now + 3_600_000, scope: 'user-library-read streaming' })
+
+      await session.getAccessToken()
+
+      expect(await session.hasScopes(['streaming'])).toBe(true)
+    })
+  })
 })

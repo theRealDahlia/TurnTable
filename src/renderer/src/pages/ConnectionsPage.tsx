@@ -48,7 +48,9 @@ export function ConnectionsPage({ onChanged }: Props): React.JSX.Element {
     }
   }
 
-  const toggle = (provider: ProviderStatus): Promise<void> => run(provider, provider.connected ? 'disconnect' : 'connect')
+  // Signing in again replaces an older grant that lacks the permissions the app now needs.
+  const toggle = (provider: ProviderStatus): Promise<void> =>
+    run(provider, provider.connected && !provider.needsReauthorization ? 'disconnect' : 'connect')
   const addFolders = (provider: ProviderStatus): Promise<void> => run(provider, 'connect')
 
   const connectedCount = providers.filter((p) => p.connected).length

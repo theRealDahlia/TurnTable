@@ -24,6 +24,8 @@ export interface ProviderDescriptor {
 
 export interface ProviderStatus extends ProviderDescriptor {
   connected: boolean
+  /** Signed in, but with an older grant that lacks permissions the app now needs (e.g. playback). */
+  needsReauthorization?: boolean
 }
 
 export interface Track {

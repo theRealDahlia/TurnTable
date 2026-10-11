@@ -33,6 +33,12 @@ export class OAuthSession {
     return (await this.deps.store.get(this.deps.providerId)) !== undefined
   }
 
+  /** Whether the stored grant includes every scope in `required`. */
+  async hasScopes(required: string[]): Promise<boolean> {
+    const granted = new Set((await this.deps.store.get(this.deps.providerId))?.scope?.split(/\s+/))
+    return required.every((scope) => granted.has(scope))
+  }
+
   async connect(): Promise<void> {
     const tokens = await this.deps.oauth.authorize(this.deps.config())
     await this.deps.store.set(this.deps.providerId, tokens)
@@ -52,20 +58,22 @@ export class OAuthSession {
       await this.disconnect()
       throw this.authRequired()
     }
-    return (await this.refresh(tokens.refreshToken)).accessToken
+    return (await this.refresh(tokens.refreshToken, tokens.scope)).accessToken
   }
 
   /** Concurrent callers share one refresh, since a rotating refresh token can only be used once. */
-  private refresh(refreshToken: string): Promise<TokenSet> {
-    this.refreshing ??= this.doRefresh(refreshToken).finally(() => {
+  private refresh(refreshToken: string, scope: string | undefined): Promise<TokenSet> {
+    this.refreshing ??= this.doRefresh(refreshToken, scope).finally(() => {
       this.refreshing = undefined
     })
     return this.refreshing
   }
 
-  private async doRefresh(refreshToken: string): Promise<TokenSet> {
+  private async doRefresh(refreshToken: string, previousScope: string | undefined): Promise<TokenSet> {
     try {
-      const tokens = await this.deps.oauth.refresh(this.deps.config(), refreshToken)
+      const refreshed = await this.deps.oauth.refresh(this.deps.config(), refreshToken)
+      // A refresh response may omit the scope; the grant itself hasn't changed.
+      const tokens = { ...refreshed, scope: refreshed.scope ?? previousScope }
       await this.deps.store.set(this.deps.providerId, tokens)
       return tokens
     } catch (error) {

@@ -2,6 +2,7 @@ import type { Track, TrackPage } from '@shared/types'
 import { AuthRequiredError, type OAuthSession } from '../../auth/session'
 import { parseOffsetCursor } from '../cursor'
 import { SPOTIFY } from '../descriptors'
+import { PLAYBACK_SCOPES } from './config'
 import type { MusicProvider } from '../types'
 
 const API_BASE = 'https://api.spotify.com/v1'
@@ -98,7 +99,20 @@ function toTrack(savedAt: string, track: SpotifyTrack | null): Track | undefined
   }
 }
 
-export function createSpotifyProvider(session: OAuthSession, options: SpotifyProviderOptions = {}): MusicProvider {
+export interface SpotifyProvider extends MusicProvider {
+  /** An access token for the Web Playback SDK, or an error asking the user to reconnect if playback was never authorized. */
+  getPlaybackToken(): Promise<string>
+}
+
+/** The user signed in before playback existed, so their grant doesn't cover it. */
+export class PlaybackPermissionError extends Error {
+  constructor() {
+    super('Reconnect Spotify to allow playback in TurnTable.')
+    this.name = 'PlaybackPermissionError'
+  }
+}
+
+export function createSpotifyProvider(session: OAuthSession, options: SpotifyProviderOptions = {}): SpotifyProvider {
   const { fetch: fetchFn = fetch, sleep = defaultSleep, random = Math.random } = options
 
   /**
@@ -146,6 +160,15 @@ export function createSpotifyProvider(session: OAuthSession, options: SpotifyPro
     isConnected: () => session.isConnected(),
     connect: () => session.connect(),
     disconnect: () => session.disconnect(),
+
+    async needsReauthorization() {
+      return (await session.isConnected()) && !(await session.hasScopes(PLAYBACK_SCOPES))
+    },
+
+    async getPlaybackToken() {
+      if (!(await session.hasScopes(PLAYBACK_SCOPES))) throw new PlaybackPermissionError()
+      return session.getAccessToken()
+    },
 
     async getSavedTracks(cursor): Promise<TrackPage> {
       const offset = parseOffsetCursor(cursor)
