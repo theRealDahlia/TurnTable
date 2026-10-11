@@ -1,6 +1,11 @@
 import { join } from 'node:path'
-import { app, BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow, safeStorage, shell } from 'electron'
+import { OAuthClient } from './auth/oauth'
+import { OAuthSession } from './auth/session'
+import { TokenStore } from './auth/tokenStore'
 import { registerIpc } from './ipc/register'
+import { spotifyOAuthConfig } from './providers/spotify/config'
+import { createSpotifyProvider } from './providers/spotify/provider'
 import { createDefaultRegistry } from './providers/registry'
 
 function createWindow(): void {
@@ -32,8 +37,33 @@ function createWindow(): void {
   else void window.loadFile(join(__dirname, '../renderer/index.html'))
 }
 
+function createRegistry(): ReturnType<typeof createDefaultRegistry> {
+  const store = new TokenStore(join(app.getPath('userData'), 'tokens.bin'), {
+    isAvailable: () => safeStorage.isEncryptionAvailable(),
+    encrypt: (plain) => safeStorage.encryptString(plain),
+    decrypt: (data) => safeStorage.decryptString(data)
+  })
+  const oauth = new OAuthClient({
+    openUrl: async (url) => {
+      if (!url.startsWith('https://')) throw new Error('Refusing to open a non-https sign-in URL')
+      await shell.openExternal(url)
+    },
+    fetch,
+    now: Date.now
+  })
+  const spotify = new OAuthSession({
+    providerId: 'spotify',
+    serviceName: 'Spotify',
+    config: () => spotifyOAuthConfig(import.meta.env.MAIN_VITE_SPOTIFY_CLIENT_ID),
+    oauth,
+    store,
+    now: Date.now
+  })
+  return createDefaultRegistry({ spotify: createSpotifyProvider(spotify) })
+}
+
 app.whenReady().then(() => {
-  registerIpc(createDefaultRegistry())
+  registerIpc(createRegistry())
   createWindow()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

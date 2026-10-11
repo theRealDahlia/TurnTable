@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { OAuthClient, type OAuthConfig } from '../src/main/auth/oauth'
+import { OAuthClient, TokenRequestError, type OAuthConfig } from '../src/main/auth/oauth'
 
 const config: OAuthConfig = {
   clientId: 'client-1',
@@ -62,7 +62,10 @@ describe('OAuthClient', () => {
     const fetchMock = vi.fn(async () => tokenResponse({ error: 'invalid_grant', secret: 'x' }, 400))
     const client = new OAuthClient({ openUrl: browser.openUrl, fetch: fetchMock as never, now: () => 0 })
 
-    await expect(client.authorize(config)).rejects.toThrow('status 400')
+    const error = await client.authorize(config).catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(TokenRequestError)
+    expect((error as TokenRequestError).status).toBe(400)
+    expect((error as Error).message).not.toContain('secret')
   })
 
   it('rejects a token response with no access token', async () => {

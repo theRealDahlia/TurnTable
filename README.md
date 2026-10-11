@@ -29,6 +29,15 @@ npm run build    # production bundles into out/
 
 If the app fails to start with "Electron uninstall", run `node node_modules/electron/install.js` to download the Electron binary.
 
+## Spotify setup
+
+1. Create an app at https://developer.spotify.com/dashboard.
+2. Add this redirect URI exactly: `http://127.0.0.1/callback`. Spotify lets a loopback address use any port, and TurnTable picks a free one at sign-in.
+3. Copy `.env.example` to `.env` and paste the app's client ID into `MAIN_VITE_SPOTIFY_CLIENT_ID`. No client secret is needed.
+4. Restart `npm run dev`, then click Connect on the Spotify chip.
+
+Spotify apps in development mode only work for accounts you add under User Management in the dashboard.
+
 ## Open decisions
 
 - First service to integrate (Spotify has the most accessible API)

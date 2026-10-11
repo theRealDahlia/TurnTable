@@ -1,4 +1,5 @@
 import type { ProviderId, ProviderStatus } from '@shared/types'
+import { PROVIDER_DESCRIPTORS } from './descriptors'
 import { createPlaceholderProvider } from './placeholder'
 import type { MusicProvider } from './types'
 
@@ -26,42 +27,9 @@ export class ProviderRegistry {
   }
 }
 
-export function createDefaultRegistry(): ProviderRegistry {
-  return new ProviderRegistry([
-    createPlaceholderProvider({
-      id: 'spotify',
-      name: 'Spotify',
-      authKind: 'oauth-pkce',
-      playback: 'sdk',
-      maxQuality: { codec: 'ogg-vorbis', lossless: false, bitrateKbps: 320 }
-    }),
-    createPlaceholderProvider({
-      id: 'youtubeMusic',
-      name: 'YouTube Music',
-      authKind: 'oauth-pkce',
-      playback: 'embed',
-      maxQuality: { codec: 'opus', lossless: false, bitrateKbps: 256 }
-    }),
-    createPlaceholderProvider({
-      id: 'soundcloud',
-      name: 'SoundCloud',
-      authKind: 'oauth-pkce',
-      playback: 'stream',
-      maxQuality: { codec: 'aac', lossless: false, bitrateKbps: 256 }
-    }),
-    createPlaceholderProvider({
-      id: 'qobuz',
-      name: 'Qobuz',
-      authKind: 'credentials',
-      playback: 'stream',
-      maxQuality: { codec: 'flac', lossless: true, sampleRateHz: 192000, bitDepth: 24 }
-    }),
-    createPlaceholderProvider({
-      id: 'local',
-      name: 'Local files',
-      authKind: 'none',
-      playback: 'file',
-      maxQuality: { codec: 'flac', lossless: true, sampleRateHz: 192000, bitDepth: 24 }
-    })
-  ])
+/** Real integrations replace the placeholder for their service; the rest stay placeholders. */
+export function createDefaultRegistry(implementations: Partial<Record<ProviderId, MusicProvider>> = {}): ProviderRegistry {
+  return new ProviderRegistry(
+    PROVIDER_DESCRIPTORS.map((descriptor) => implementations[descriptor.id] ?? createPlaceholderProvider(descriptor))
+  )
 }

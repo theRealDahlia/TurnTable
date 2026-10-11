@@ -27,6 +27,14 @@ interface TokenResponse {
   scope?: string
 }
 
+/** The token endpoint rejected a request. `status` lets callers tell a revoked grant (400/401) from an outage. */
+export class TokenRequestError extends Error {
+  constructor(readonly status: number) {
+    super(`Token request failed with status ${status}`)
+    this.name = 'TokenRequestError'
+  }
+}
+
 /** OAuth 2.0 authorization-code flow with PKCE for native apps (RFC 7636 / RFC 8252). */
 export class OAuthClient {
   constructor(private readonly deps: OAuthDeps) {}
@@ -79,7 +87,7 @@ export class OAuthClient {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
       body: new URLSearchParams({ ...params, client_id: config.clientId })
     })
-    if (!response.ok) throw new Error(`Token request failed with status ${response.status}`)
+    if (!response.ok) throw new TokenRequestError(response.status)
 
     const body = (await response.json()) as TokenResponse
     if (!body.access_token) throw new Error('Token response did not include an access token')
