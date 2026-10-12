@@ -99,6 +99,15 @@ The queue is always one service's list: next, previous and shuffle never move to
 
 The keyboard's media keys drive the same controls where the system delivers them. They reach the app through the browser's Media Session, through key events when a keyboard delivers them to the window, and, for Spotify (which plays in a hidden window), through the media keys that window receives. YouTube plays inside YouTube's own embedded player, a frame from youtube.com that would otherwise keep the keys to itself, so while a YouTube track plays the app also plays a looping silent sound of its own, which gives the app its own media session whose skip keys know the queue. If the keys still don't skip YouTube tracks on your machine, a global shortcut is the fallback, but on macOS it needs the Accessibility permission, so it isn't turned on.
 
+## Spotify's request limits
+
+Spotify limits how fast an app may call it, and a development-mode app has a stricter allowance. Muze keeps its requests low:
+
+- A service's library is fetched only when you first open its tab (Local files load at once, since they cost no requests), not when the app starts.
+- Spotify requests are sent at least half a second apart, so a long library arrives at a steady pace instead of in a burst.
+- A song saved or removed in Search changes the library already loaded by that one song; nothing is fetched again. The Library is fetched again only when you press Refresh.
+- The first time Spotify says "too many requests", Muze stops sending anything to Spotify until the time Spotify gave has passed (and for longer if it refuses again straight after). It does not retry in between, and the stop survives restarts. The Library says when to try again.
+
 ## Privacy policy
 
 [`docs/PRIVACY.md`](docs/PRIVACY.md) is only a draft of a privacy policy. It describes what the app does today, but it has blanks that still need filling in, it has not been reviewed by a lawyer, and the app does not show it. It is not a real, enforceable legal document. Do not rely on it, and do not release Muze to other people without a proper privacy policy written or reviewed by a lawyer and kept in step with what the app does.

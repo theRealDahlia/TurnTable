@@ -171,47 +171,72 @@ describe('Spotify getSavedTracks', () => {
     const limited = (retryAfter?: string): Response =>
       new Response(null, { status: 429, headers: retryAfter ? { 'Retry-After': retryAfter } : {} })
 
-    it('waits for Retry-After, then retries and succeeds', async () => {
-      const { provider, sleep, fetchFn } = setup([limited('7'), json({ items: [item('abc')], next: null })])
+    it('stops at the first refusal, without waiting or retrying, and says when to try again', async () => {
+      const { provider, sleep, fetchFn } = setup([limited('7')], () => 0, { now: () => 1_000_000 })
 
-      const page = await provider.getSavedTracks()
+      await expect(provider.getSavedTracks()).rejects.toThrow(/rate limit.*in about 7 seconds/)
 
-      expect(page.tracks).toHaveLength(1)
-      expect(sleep).toHaveBeenCalledExactlyOnceWith(7000)
-      expect(fetchFn).toHaveBeenCalledTimes(2)
+      expect(fetchFn).toHaveBeenCalledOnce()
+      expect(sleep).not.toHaveBeenCalled()
     })
 
-    it('never retries immediately, even when Retry-After is missing, zero or malformed', async () => {
+    it('never retries at once, even when Retry-After is missing, zero or malformed: it stops for at least the backoff', async () => {
       for (const header of [undefined, '0', 'soon', '-3']) {
-        const { provider, sleep } = setup([limited(header), json({ items: [], next: null })])
+        let time = 1_000_000
+        const { provider, fetchFn } = setup([limited(header), json({ items: [], next: null })], () => 0, { now: () => time })
+
+        await expect(provider.getSavedTracks()).rejects.toThrow('rate limit')
+        await expect(provider.getSavedTracks()).rejects.toThrow('rate limit')
+        expect(fetchFn).toHaveBeenCalledOnce()
+
+        time += 5001
         await provider.getSavedTracks()
-        expect(sleep).toHaveBeenCalledOnce()
-        expect(sleep.mock.calls[0]![0]).toBeGreaterThanOrEqual(1000)
+        expect(fetchFn).toHaveBeenCalledTimes(2)
       }
     })
 
-    it('backs off exponentially when Spotify keeps refusing, then gives up', async () => {
-      const { provider, sleep, fetchFn } = setup([limited(), limited(), limited(), limited()])
+    it('stops for twice as long each time Spotify refuses again straight after', async () => {
+      let time = 1_000_000
+      const { provider } = setup([limited(), limited(), limited(), json({ items: [], next: null })], () => 0, { now: () => time })
+      const until = async (): Promise<number> => {
+        const error = (await provider.getSavedTracks().catch((e: unknown) => e)) as { until: number }
+        return error.until - time
+      }
+
+      const waits: number[] = []
+      for (let i = 0; i < 3; i++) {
+        waits.push(await until())
+        time += waits[i]! + 1
+      }
+
+      expect(waits).toEqual([5000, 10_000, 20_000])
+    })
+
+    it('starts the backoff again after a request that worked', async () => {
+      let time = 1_000_000
+      const { provider } = setup([limited(), json({ items: [], next: null }), limited()], () => 0, { now: () => time })
 
       await expect(provider.getSavedTracks()).rejects.toThrow('rate limit')
+      time += 5001
+      await provider.getSavedTracks()
+      const error = (await provider.getSavedTracks().catch((e: unknown) => e)) as { until: number }
 
-      expect(sleep.mock.calls.map((call) => call[0])).toEqual([1000, 2000, 4000])
-      expect(fetchFn).toHaveBeenCalledTimes(4)
+      expect(error.until - time).toBe(5000)
     })
 
     it('adds jitter to the backoff', async () => {
-      const { provider, sleep } = setup([limited(), json({ items: [], next: null })], () => 0.5)
-      await provider.getSavedTracks()
-      expect(sleep).toHaveBeenCalledWith(1125)
+      const { provider } = setup([limited()], () => 0.5, { now: () => 1_000_000 })
+      const error = (await provider.getSavedTracks().catch((e: unknown) => e)) as { until: number }
+      expect(error.until - 1_000_000).toBe(5125)
     })
 
     it('lets a long Retry-After win over a short backoff', async () => {
-      const { provider, sleep } = setup([limited('20'), limited('3'), json({ items: [], next: null })])
-      await provider.getSavedTracks()
-      expect(sleep.mock.calls.map((call) => call[0])).toEqual([20_000, 3000])
+      const { provider } = setup([limited('20')], () => 0, { now: () => 1_000_000 })
+      const error = (await provider.getSavedTracks().catch((e: unknown) => e)) as { until: number }
+      expect(error.until - 1_000_000).toBe(20_000)
     })
 
-    it('reports instead of waiting when asked to wait unreasonably long', async () => {
+    it('reports a long wait with the clock time', async () => {
       const { provider, sleep, fetchFn } = setup([limited('3600')])
 
       await expect(provider.getSavedTracks()).rejects.toThrow(/rate limit.*in about 1 hour/)
@@ -263,13 +288,6 @@ describe('Spotify getSavedTracks', () => {
         await expect(second.provider.getSavedTracks()).rejects.toThrow(/rate limit.*in about 24 hours/)
         expect(second.fetchFn).not.toHaveBeenCalled()
         expect(second.session.getAccessToken).not.toHaveBeenCalled()
-      })
-
-      it('does not block when a short wait is honored and the retry works', async () => {
-        const { provider, fetchFn } = setup([limited('2'), json({ items: [], next: null }), json({ items: [], next: null })])
-        await provider.getSavedTracks()
-        await provider.getSavedTracks()
-        expect(fetchFn).toHaveBeenCalledTimes(3)
       })
     })
   })

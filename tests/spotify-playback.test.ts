@@ -81,13 +81,12 @@ describe('Spotify startPlayback', () => {
     expect(session.disconnect).toHaveBeenCalledOnce()
   })
 
-  it('waits as Spotify asks on a 429, then retries the same PUT', async () => {
+  it('stops at a 429 instead of retrying the PUT, and says when to try again', async () => {
     const { provider, sleep, fetchFn } = setup([new Response(null, { status: 429, headers: { 'Retry-After': '2' } }), noContent()])
 
-    await provider.startPlayback(DEVICE, TRACK)
+    await expect(provider.startPlayback(DEVICE, TRACK)).rejects.toThrow(/rate limit/)
 
-    expect(sleep).toHaveBeenCalledExactlyOnceWith(2000)
-    expect(fetchFn).toHaveBeenCalledTimes(2)
-    expect((fetchFn.mock.calls[1] as [string, RequestInit])[1].method).toBe('PUT')
+    expect(sleep).not.toHaveBeenCalled()
+    expect(fetchFn).toHaveBeenCalledOnce()
   })
 })

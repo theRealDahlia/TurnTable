@@ -237,10 +237,10 @@ describe('Spotify saving songs', () => {
     await expect(provider.saveTrack!(ID_A)).rejects.toThrow('Spotify: Insufficient client scope (status 403)')
   })
 
-  it('waits as Spotify asks when it is rate limiting', async () => {
+  it('stops when Spotify is rate limiting, and does not send the save again', async () => {
     const { provider, fetchFn } = setup([new Response(null, { status: 429, headers: { 'Retry-After': '2' } }), empty()])
-    await provider.saveTrack!(ID_A)
-    expect(fetchFn).toHaveBeenCalledTimes(2)
+    await expect(provider.saveTrack!(ID_A)).rejects.toThrow(/rate limit/)
+    expect(fetchFn).toHaveBeenCalledOnce()
   })
 })
 

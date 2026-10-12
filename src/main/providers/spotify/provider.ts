@@ -12,11 +12,12 @@ const API_BASE = 'https://api.spotify.com/v1'
 const PAGE_SIZE = 50
 /** Artwork at least this wide looks sharp in the library without downloading the 640px original. */
 const PREFERRED_ARTWORK_WIDTH = 300
-/** Rate-limit handling: wait at least Retry-After, backing off exponentially if Spotify keeps refusing. */
-const MAX_RATE_LIMIT_RETRIES = 3
-const BASE_BACKOFF_MS = 1000
-/** Longer waits than this are reported to the user instead of silently stalling the library. */
-const MAX_WAIT_MS = 30_000
+/**
+ * Rate-limit handling: the first refusal stops every request until Retry-After has passed, with no retry in the
+ * meantime. If Spotify gives no usable Retry-After, or keeps refusing straight after, the stop is at least this
+ * long and doubles each time.
+ */
+const BASE_BACKOFF_MS = 5000
 
 interface SpotifyImage {
   url: string
@@ -83,11 +84,11 @@ async function toApiError(response: Response): Promise<Error> {
 
 const defaultSleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
 
-/** How long to wait before retry number `attempt` (0-based): the larger of Retry-After and exponential backoff. */
+/** How long to stop after refusal number `attempt` in a row (0-based): the larger of Retry-After and exponential backoff. */
 function rateLimitDelay(response: Response, attempt: number, random: () => number): number {
   const header = Number(response.headers.get('Retry-After'))
   const retryAfterMs = Number.isFinite(header) && header > 0 ? header * 1000 : 0
-  const backoffMs = BASE_BACKOFF_MS * 2 ** attempt + random() * 250
+  const backoffMs = BASE_BACKOFF_MS * 2 ** Math.min(attempt, 10) + random() * 250
   return Math.max(retryAfterMs, backoffMs)
 }
 
@@ -154,6 +155,8 @@ export function createSpotifyProvider(session: OAuthSession, options: SpotifyPro
   const { minIntervalMs = 0 } = options
   /** The earliest time the next request may be sent. */
   let nextSlot = 0
+  /** How many refusals in a row, so the stop gets longer each time Spotify refuses again straight after. */
+  let refusals = 0
 
   /** Waits for this request's turn: each one is at least `minIntervalMs` after the one before, even when several are asked for at once. */
   async function waitForTurn(): Promise<void> {
@@ -166,18 +169,16 @@ export function createSpotifyProvider(session: OAuthSession, options: SpotifyPro
 
   /**
    * Calls the Web API and returns a successful response. A 401 triggers one retry with a freshly
-   * refreshed token; a 429 waits as Spotify asks (with exponential backoff) and retries a few times.
+   * refreshed token; a 429 stops all requests until Spotify's Retry-After has passed (see `rateLimitDelay`).
    */
   async function call(path: string, init: { method?: string; body?: unknown } = {}): Promise<Response> {
     let forceRefresh = false
     let refreshed = false
-    let rateLimitRetries = 0
     const body = init.body === undefined ? undefined : JSON.stringify(init.body)
 
     for (;;) {
       await gate.check()
       const token = await session.getAccessToken({ forceRefresh })
-      forceRefresh = false
       const headers: Record<string, string> = { Authorization: `Bearer ${token}` }
       if (body !== undefined) headers['Content-Type'] = 'application/json'
       await waitForTurn()
@@ -195,14 +196,11 @@ export function createSpotifyProvider(session: OAuthSession, options: SpotifyPro
       }
 
       if (response.status === 429) {
-        const delay = rateLimitDelay(response, rateLimitRetries, random)
-        // Too long to wait here, or Spotify keeps refusing: remember it, so nothing calls Spotify until it's over.
-        if (rateLimitRetries >= MAX_RATE_LIMIT_RETRIES || delay > MAX_WAIT_MS) throw await gate.block(delay)
-        rateLimitRetries++
-        await sleep(delay)
-        continue
+        // Stop at the first refusal: remember it, so nothing calls Spotify again, from this request or any other, until it's over.
+        throw await gate.block(rateLimitDelay(response, refusals++, random))
       }
 
+      refusals = 0
       if (!response.ok) throw await toApiError(response)
       return response
     }
