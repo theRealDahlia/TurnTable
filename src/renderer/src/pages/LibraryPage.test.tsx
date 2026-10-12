@@ -75,7 +75,7 @@ const titles = (): (string | null)[] => rows().map((row) => row.querySelector('.
 afterEach(cleanup)
 
 describe('LibraryPage', () => {
-  const sample = [track('spotify', 1), track('spotify', 2), track('qobuz', 3, { title: 'Café Noir', artists: ['Zoë'] })]
+  const sample = [track('spotify', 1), track('spotify', 2), track('spotify', 3, { title: 'Café Noir', artists: ['Zoë'] })]
 
   it('lists tracks with title, artists, album, service logo and duration', () => {
     render(<LibraryPage library={makeLibrary({}, sample)} player={makePlayer()} onOpenConnections={vi.fn()} />)
@@ -114,20 +114,34 @@ describe('LibraryPage', () => {
     expect(screen.getByText('No tracks match your search.')).toBeTruthy()
   })
 
-  it('filters by service and shows per-service counts, only for connected services', async () => {
-    render(<LibraryPage library={makeLibrary({}, sample)} player={makePlayer()} onOpenConnections={vi.fn()} />)
+  it("shows one service's library at a time, starting with the first connected, with no combined view", async () => {
+    const mixed = [...sample, track('qobuz', 4, { title: 'Qobuz Song' })]
+    render(<LibraryPage library={makeLibrary({}, mixed)} player={makePlayer()} onOpenConnections={vi.fn()} />)
     const filters = within(screen.getByRole('group', { name: 'Filter by service' }))
 
-    expect(filters.getByRole('button', { name: /^All\s*3$/ })).toBeTruthy()
-    expect(filters.getByRole('button', { name: /^Spotify\s*2$/ })).toBeTruthy()
+    expect(filters.queryByRole('button', { name: /^All/ })).toBeNull()
     expect(filters.queryByRole('button', { name: /SoundCloud/ })).toBeNull()
+    expect(filters.getByRole('button', { name: /^Spotify\s*3$/ }).getAttribute('aria-pressed')).toBe('true')
+    expect(titles()).toEqual(['Café Noir', 'Song 2', 'Song 1'])
+    expect(screen.getByRole('status').textContent).toBe('3 tracks')
 
-    await userEvent.click(filters.getByRole('button', { name: /^Qobuz/ }))
-    expect(titles()).toEqual(['Café Noir'])
+    await userEvent.click(filters.getByRole('button', { name: /^Qobuz\s*1$/ }))
+    expect(titles()).toEqual(['Qobuz Song'])
     expect(filters.getByRole('button', { name: /^Qobuz/ }).getAttribute('aria-pressed')).toBe('true')
+    expect(filters.getByRole('button', { name: /^Spotify/ }).getAttribute('aria-pressed')).toBe('false')
+  })
 
-    await userEvent.click(filters.getByRole('button', { name: /^All/ }))
-    expect(rows()).toHaveLength(3)
+  it('moves to another connected service when the one on show is disconnected', async () => {
+    const mixed = [...sample, track('qobuz', 4, { title: 'Qobuz Song' })]
+    const { rerender } = render(<LibraryPage library={makeLibrary({}, mixed)} player={makePlayer()} onOpenConnections={vi.fn()} />)
+    await userEvent.click(screen.getByRole('button', { name: /^Qobuz/ }))
+    expect(titles()).toEqual(['Qobuz Song'])
+
+    const providers = [provider('spotify', 'Spotify', true), provider('qobuz', 'Qobuz', false)]
+    rerender(<LibraryPage library={makeLibrary({ providers }, sample)} player={makePlayer()} onOpenConnections={vi.fn()} />)
+
+    expect(titles()).toEqual(['Café Noir', 'Song 2', 'Song 1'])
+    expect(screen.getByRole('button', { name: /^Spotify/ }).getAttribute('aria-pressed')).toBe('true')
   })
 
   it('renders in chunks and reveals more on request', async () => {
@@ -179,7 +193,8 @@ describe('LibraryPage', () => {
     expect(alert.textContent).toContain('Spotify: Spotify request failed with status 500')
     await userEvent.click(screen.getByRole('button', { name: 'Retry Spotify' }))
     expect(library.retry).toHaveBeenCalledWith('spotify')
-    // The other service's tracks are still shown.
+    // The other service's tracks are still there when its tab is chosen.
+    await userEvent.click(screen.getByRole('button', { name: /^Qobuz/ }))
     expect(titles()).toEqual(['Song 3'])
   })
 
@@ -196,7 +211,7 @@ describe('LibraryPage', () => {
   it('links the service logo back to the track on its service when a link is known', () => {
     const linked = [
       track('spotify', 1, { url: 'https://open.spotify.com/track/abc' }),
-      track('qobuz', 2) // no link known
+      track('spotify', 2) // no link known
     ]
     render(<LibraryPage library={makeLibrary({}, linked)} player={makePlayer()} onOpenConnections={vi.fn()} />)
 
@@ -214,7 +229,7 @@ describe('LibraryPage', () => {
       track('local', n, { quality: { codec: 'flac', lossless: true, bitDepth: 24, sampleRateHz: 96000 }, ...overrides })
     const library = (tracks: Track[]): Library => {
       const lib = makeLibrary({}, tracks)
-      lib.providers = [...lib.providers, provider('local', 'Local files', true)]
+      lib.providers = [provider('local', 'Local files', true), ...lib.providers]
       return lib
     }
 
@@ -271,6 +286,7 @@ describe('LibraryPage', () => {
       const player = makePlayer()
       render(<LibraryPage library={library([unplayable])} player={player} onOpenConnections={vi.fn()} />)
 
+      if (unplayable.providerId !== 'local') await userEvent.click(screen.getByRole('button', { name: new RegExp(`^${unplayable.providerId === 'qobuz' ? 'Qobuz' : 'Spotify'}`) }))
       const button = screen.getByRole('button', { name: `Play ${unplayable.title}` }) as HTMLButtonElement
       expect(button.disabled).toBe(true)
       expect(button.title).toMatch(reason)
@@ -278,10 +294,13 @@ describe('LibraryPage', () => {
       expect(player.play).not.toHaveBeenCalled()
     })
 
-    it('lets a Spotify track with a valid id be played, alongside local files in one queue', async () => {
+    it("plays a Spotify track with a valid id, queueing only Spotify's tracks, never the local files", async () => {
       const player = makePlayer()
       const spotifyTrack = track('spotify', 2, { id: '4iV5W9uYEdYUVa79Axb7Rh', title: 'Spotify Song' })
       render(<LibraryPage library={library([local(1), spotifyTrack])} player={player} onOpenConnections={vi.fn()} />)
+      expect(screen.getByRole('button', { name: 'Play Song 1' })).toBeTruthy()
+      await userEvent.click(screen.getByRole('button', { name: /^Spotify/ }))
+      expect(screen.queryByRole('button', { name: 'Play Song 1' })).toBeNull()
 
       const button = screen.getByRole('button', { name: 'Play Spotify Song' }) as HTMLButtonElement
       expect(button.disabled).toBe(false)
@@ -289,7 +308,7 @@ describe('LibraryPage', () => {
 
       const [played, queue] = (player.play as ReturnType<typeof vi.fn>).mock.calls[0] as [Track, Track[]]
       expect(played.id).toBe('4iV5W9uYEdYUVa79Axb7Rh')
-      expect(queue.map((t) => t.providerId).sort()).toEqual(['local', 'spotify'])
+      expect(queue.map((t) => t.providerId)).toEqual(['spotify'])
     })
 
     it('shows the audio format of each track that has one', () => {

@@ -89,7 +89,7 @@ export function ConnectionsPage({ onChanged }: Props): React.JSX.Element {
     <main className="page">
       <header className="page-header">
         <h1>Connections</h1>
-        <p>Link your streaming services to see every saved track in one place.</p>
+        <p>Link your streaming services to see each one's saved tracks.</p>
         {!loading && (
           <p className="summary" aria-live="polite">
             {connectedCount} of {providers.length} connected

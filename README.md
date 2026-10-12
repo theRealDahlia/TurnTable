@@ -6,7 +6,7 @@ One app to view and play the saved tracks from all of your music streaming servi
 
 ## Goal
 
-Connect several streaming accounts (Spotify, Apple Music, YouTube, Tidal, SoundCloud, Deezer, …), pull each one's saved/liked tracks, and show them together in a single library. Playback uses each service's official player or embed.
+Connect several streaming accounts (Spotify, Apple Music, YouTube, Tidal, SoundCloud, Deezer, …), pull each one's saved/liked tracks, and show each service's library on its own (they are never mixed in one list or one queue, which Spotify's and SoundCloud's rules require). Playback uses each service's official player or embed.
 
 ## Planned features
 
@@ -93,7 +93,7 @@ The **Search** page searches every connected service at once and puts each one's
 
 ## Shuffle and media keys
 
-The shuffle button in the player bar plays the current queue in a random order. The song that is playing carries on and the rest is reordered (including songs listed before it). There is no last song: when every song has played, a new pass starts in a fresh order that never begins with the song just played, so skipping never runs out (with a single song there is nothing to skip to). Previous goes back through what was played, across passes, and turning shuffle off returns to the listed order from the song that is playing.
+The queue is always one service's list: next, previous and shuffle never move to another service, and playback stops at the end of the list. The shuffle button in the player bar plays the current queue in a random order. The song that is playing carries on and the rest is reordered (including songs listed before it). There is no last song: when every song has played, a new pass starts in a fresh order that never begins with the song just played, so skipping never runs out (with a single song there is nothing to skip to). Previous goes back through what was played, across passes, and turning shuffle off returns to the listed order from the song that is playing.
 
 **F7** does what the Previous button does and **F9** what the Next button does, whenever the Muze window is in front (a held key counts once; the key combinations with Cmd, Ctrl, Option or Shift are left alone). On most Mac keyboards those keys carry the skip symbols, and they only reach an app as F7 and F9 when you hold Fn or have turned on *Use F1, F2, etc. keys as standard function keys* in System Settings > Keyboard.
 

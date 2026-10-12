@@ -327,7 +327,7 @@ describe('App', () => {
       expect(spotifyApi.resume).toHaveBeenCalledOnce()
     })
 
-    it('moves on to the next Spotify track when one ends, then hands over to a local file', async () => {
+    it('moves on to the next Spotify track when one ends, and stops after the last rather than moving to another service', async () => {
       await openLibrary()
       await userEvent.click(screen.getByRole('button', { name: 'Play Spotify One' }))
       emit(playingState(FIRST))
@@ -338,11 +338,10 @@ describe('App', () => {
 
       emit(playingState(SECOND))
       emit(playingState(SECOND, { paused: true, positionMs: 0, ended: true }))
-      await vi.waitFor(() => expect(mediaPlay).toHaveBeenCalledOnce())
-      expect(within(screen.getByRole('contentinfo', { name: 'Player' })).getByText('Local Song')).toBeTruthy()
-      // A finished track leaves Spotify's player paused already, so there is nothing to silence or start.
+      // The local file is another service's, so the queue ends here.
+      expect(mediaPlay).not.toHaveBeenCalled()
       expect(spotifyApi.play).toHaveBeenCalledTimes(2)
-      expect(spotifyApi.pause).not.toHaveBeenCalled()
+      expect(within(screen.getByRole('contentinfo', { name: 'Player' })).queryByText('Local Song')).toBeNull()
     })
 
     it('stops Spotify when the user picks a local file mid-song', async () => {
@@ -350,6 +349,7 @@ describe('App', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Play Spotify One' }))
       emit(playingState(FIRST))
 
+      await userEvent.click(screen.getByRole('button', { name: /^Local files/ }))
       await userEvent.click(screen.getByRole('button', { name: 'Play Local Song' }))
 
       expect(spotifyApi.pause).toHaveBeenCalled()
@@ -359,6 +359,7 @@ describe('App', () => {
 
     it('ignores Spotify events while a local file is playing', async () => {
       await openLibrary()
+      await userEvent.click(screen.getByRole('button', { name: /^Local files/ }))
       await userEvent.click(screen.getByRole('button', { name: 'Play Local Song' }))
       await screen.findByRole('contentinfo', { name: 'Player' })
 
@@ -424,8 +425,10 @@ describe('App', () => {
       await waitFor(() => expect(api.connectProvider).toHaveBeenCalledWith('local'))
 
       await userEvent.click(nav().getByRole('button', { name: 'Library' }))
+      // Each service has its own list, so Local files is chosen to see its tracks.
+      expect(await screen.findByText('Spotify Song')).toBeTruthy()
+      await userEvent.click(screen.getByRole('button', { name: /^Local files/ }))
       expect(await screen.findByText('Local Song')).toBeTruthy()
-      expect(screen.getByText('Spotify Song')).toBeTruthy()
       expect(requested('local')).toBe(1)
       expect(requested('spotify')).toBe(1)
     })
@@ -433,6 +436,8 @@ describe('App', () => {
     it('disconnecting one service drops its tracks without fetching anything', async () => {
       api.listProviders.mockResolvedValue([spotify(true), localStatus(true)])
       render(<App />)
+      await screen.findByText('Spotify Song')
+      await userEvent.click(screen.getByRole('button', { name: /^Local files/ }))
       await screen.findByText('Local Song')
       api.getSavedTracks.mockClear()
 

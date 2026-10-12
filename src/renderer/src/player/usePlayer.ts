@@ -61,7 +61,7 @@ const MEDIA_ERRORS: Record<number, string> = {
 }
 
 export interface Player extends State {
-  /** Plays `track`, with `queue` (in order) deciding what "next" and "previous" mean. */
+  /** Plays `track`, with `queue` (in order) deciding what "next" and "previous" mean. Only the queue's tracks from the same service as `track` are used. */
   play(track: Track, queue?: Track[]): void
   toggle(): void
   pause(): void
@@ -208,7 +208,8 @@ export function usePlayer({ createAudio = createDefaultMedia, random = Math.rand
         dispatch({ type: 'failed', error: `${track.title} can't be played in ${APP_NAME} yet.` })
         return
       }
-      const playable = queue.filter(isPlayable)
+      // A queue never crosses services: Spotify's and SoundCloud's rules don't allow their tracks to be mixed with others'.
+      const playable = queue.filter((t) => t.providerId === track.providerId && isPlayable(t))
       const listedIndex = playable.findIndex((t) => sameTrack(t, track))
       const listed = listedIndex >= 0 ? playable : [track]
       listedRef.current = listed

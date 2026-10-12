@@ -218,15 +218,24 @@ describe('usePlayer', () => {
       expect(result.current.status).toBe('loading')
     })
 
-    it('queues Spotify and local tracks together, in order', () => {
+    it("keeps the queue to the played track's own service, skipping the other services' tracks", () => {
       const { result } = setup()
       const queue = [track(1), spotifyTrack(), track(2)]
 
       act(() => result.current.play(queue[0]!, queue))
       act(() => result.current.next())
-      expect(audio.src).toBe(`spotify:track:${SPOTIFY_ID}`)
-      act(() => result.current.next())
       expect(audio.src).toBe(urlOf(queue[2]!))
+      expect(result.current.hasNext).toBe(false)
+    })
+
+    it('queues Spotify tracks together, in order', () => {
+      const { result } = setup()
+      const second = { ...spotifyTrack(), id: 'y'.repeat(22), title: 'Second' }
+      const queue = [spotifyTrack(), track(1), second]
+
+      act(() => result.current.play(queue[0]!, queue))
+      act(() => result.current.next())
+      expect(audio.src).toBe(`spotify:track:${'y'.repeat(22)}`)
     })
 
     it('shows the explanation a source gives for its own failure, not a generic one', () => {
@@ -705,13 +714,13 @@ describe('usePlayer shuffle', () => {
     expect(result.current.shuffle).toBe(true)
   })
 
-  it('treats the same song on different services as different songs', async () => {
+  it("never shuffles in another service's tracks", async () => {
     const local = track(1)
-    const sameId = track(1, { providerId: 'spotify', id: 'x'.repeat(22) })
+    const other = track(1, { providerId: 'spotify', id: 'x'.repeat(22) })
     const { result } = setup()
     act(() => result.current.setShuffle(true))
-    act(() => result.current.play(local, [local, sameId]))
+    act(() => result.current.play(local, [local, other]))
     await flush()
-    expect(result.current.hasNext).toBe(true)
+    expect(result.current.hasNext).toBe(false)
   })
 })

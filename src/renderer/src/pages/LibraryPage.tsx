@@ -20,12 +20,15 @@ interface Props {
 
 export function LibraryPage({ library, player, onOpenConnections }: Props): React.JSX.Element {
   const [query, setQuery] = useState('')
-  const [providerId, setProviderId] = useState<ProviderId>()
+  // Each service has its library to itself: Spotify's and SoundCloud's rules don't allow their content to be mixed with other services'.
+  const [chosenId, setChosenId] = useState<ProviderId>()
   const [sort, setSort] = useState<SortKey>('recent')
   const [limit, setLimit] = useState(PAGE_SIZE)
 
-  const connected = library.providers.filter((provider) => provider.connected)
+  const connected = useMemo(() => library.providers.filter((provider) => provider.connected), [library.providers])
   const providersById = useMemo(() => new Map(library.providers.map((p) => [p.id, p])), [library.providers])
+  // The chosen service, or the first connected one if none is chosen or the chosen one was disconnected.
+  const providerId = connected.find((provider) => provider.id === chosenId)?.id ?? connected[0]?.id
 
   const visible = useMemo(
     () => sortTracks(filterTracks(library.tracks, { query, providerId }), sort),
@@ -34,12 +37,12 @@ export function LibraryPage({ library, player, onOpenConnections }: Props): Reac
 
   const countFor = (id: ProviderId): number => library.libraries[id]?.tracks.length ?? 0
   const failed = connected.filter((provider) => library.libraries[provider.id]?.status === 'error')
-  const filtering = query.trim() !== '' || providerId !== undefined
+  const filtering = query.trim() !== ''
   // While the first tracks are on their way, show placeholder rows instead of an empty page.
   const showSkeleton = library.loading && visible.length === 0 && !filtering
 
-  const pickProvider = (id: ProviderId | undefined): void => {
-    setProviderId(id)
+  const pickProvider = (id: ProviderId): void => {
+    setChosenId(id)
     setLimit(PAGE_SIZE)
   }
 
@@ -48,7 +51,7 @@ export function LibraryPage({ library, player, onOpenConnections }: Props): Reac
       <header className="page-header page-header-split">
         <div>
           <h1>Library</h1>
-          <p>Your saved tracks from every connected service.</p>
+          <p>Your saved tracks, one service at a time.</p>
         </div>
         {connected.length > 0 && (
           <RefreshMenu
@@ -121,20 +124,12 @@ export function LibraryPage({ library, player, onOpenConnections }: Props): Reac
 
             <div className="filter-row">
               <div className="filters" role="group" aria-label="Filter by service">
-                <button
-                  type="button"
-                  className="filter"
-                  aria-pressed={providerId === undefined}
-                  onClick={() => pickProvider(undefined)}
-                >
-                  All <span className="filter-count">{library.tracks.length}</span>
-                </button>
                 {connected.map((provider) => (
                   <button
                     type="button"
                     key={provider.id}
                     className="filter"
-                    aria-pressed={providerId === provider.id}
+                    aria-pressed={provider.id === providerId}
                     onClick={() => pickProvider(provider.id)}
                   >
                     {provider.name} <span className="filter-count">{countFor(provider.id)}</span>
@@ -146,7 +141,7 @@ export function LibraryPage({ library, player, onOpenConnections }: Props): Reac
                 {library.refreshing
                   ? 'Refreshing your library…'
                   : library.loading
-                    ? `Loading your library… ${library.tracks.length} tracks so far`
+                    ? `Loading your library… ${providerId ? countFor(providerId) : 0} tracks so far`
                     : `${visible.length} ${visible.length === 1 ? 'track' : 'tracks'}${filtering ? ' found' : ''}`}
               </p>
             </div>
