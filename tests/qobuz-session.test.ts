@@ -185,7 +185,7 @@ describe('QobuzSession after sign-in', () => {
 describe('Qobuz provider', () => {
   it('signs in with the credentials it is given, and refuses to without them', async () => {
     const { session, fetchFn } = setup([json(login())])
-    const provider = createQobuzProvider(session)
+    const provider = createQobuzProvider(session, { app: () => ({ appId: 'app-id-1', appSecret: 'app-secret-1' }) })
     expect(provider.info).toMatchObject({ id: 'qobuz', name: 'Qobuz', authKind: 'credentials' })
 
     await expect(provider.connect()).rejects.toThrow('Enter your Qobuz email and password.')
@@ -199,7 +199,7 @@ describe('Qobuz provider', () => {
 
   it('replaces the placeholder in the registry', async () => {
     const { session } = setup()
-    const registry = createDefaultRegistry({ qobuz: createQobuzProvider(session) })
-    expect((await registry.listStatuses()).find((s) => s.id === 'qobuz')).toMatchObject({ connected: false, searchable: false })
+    const registry = createDefaultRegistry({ qobuz: createQobuzProvider(session, { app: () => ({ appId: 'app-id-1', appSecret: 'app-secret-1' }) }) })
+    expect((await registry.listStatuses()).find((s) => s.id === 'qobuz')).toMatchObject({ connected: false, searchable: true, savable: true })
   })
 })

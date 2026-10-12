@@ -75,6 +75,8 @@ Qobuz has no public API. Its API is for partners, and the [API Terms of Use](htt
 2. Restart `npm run dev`, then click Connect on the Qobuz chip and sign in with your Qobuz email and password. The password is sent once to Qobuz over https, in the request body (never in a URL), and is never stored or logged; only the sign-in token Qobuz returns is kept, encrypted. Qobuz's sign-in has no two-factor step, and accounts created through Google, Apple or Facebook need a Qobuz password set first.
 3. The terms require this notice, which Muze shows on the Qobuz sign-in: "This application uses the Qobuz API but is not certified by Qobuz."
 
+**What it does.** Your favorite tracks fill the Library (`favorite/getUserFavorites`), the Search page searches Qobuz (`track/search`) and adds or removes favorites (`favorite/create`, `favorite/delete`), and each track shows the quality your subscription can deliver (hi-res accounts get what the track has, up to 24-bit / 192 kHz; lossless accounts, CD quality; others, 320 kbps MP3). An account without a streaming subscription can browse but its tracks are not playable. The notice above is shown on Qobuz's chip, the Library and Qobuz's search results.
+
 Qobuz publishes no API documentation, so the requests are written from how third-party clients describe it, and have not been tried against the live service.
 
 ## Search

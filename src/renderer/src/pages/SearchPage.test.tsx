@@ -489,3 +489,18 @@ describe('SearchPage loading more by itself', () => {
     expect(FakeObserver.live).toHaveLength(0)
   })
 })
+
+describe('SearchPage Qobuz notice', () => {
+  const NOTICE = 'This application uses the Qobuz API but is not certified by Qobuz.'
+  const QOBUZ_CONNECTED = provider('qobuz', 'Qobuz', { authKind: 'credentials', playback: 'stream', searchable: true, savable: true })
+
+  it('is shown under Qobuz\'s results, as its terms require, and only there', () => {
+    const search = makeSearch({ query: 'e', tab: 'qobuz', results: { spotify: ready([track('spotify', 1)]), qobuz: ready([track('qobuz', 1)]) } })
+    show(search, makeLibrary([SPOTIFY, QOBUZ_CONNECTED]))
+    expect(screen.getByText(NOTICE)).toBeTruthy()
+
+    cleanup()
+    show({ ...search, tab: 'spotify' }, makeLibrary([SPOTIFY, QOBUZ_CONNECTED]))
+    expect(screen.queryByText(NOTICE)).toBeNull()
+  })
+})

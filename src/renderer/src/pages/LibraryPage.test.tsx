@@ -447,3 +447,22 @@ describe('refresh button', () => {
     expect(idle.querySelector('svg')?.getAttribute('class') ?? '').not.toContain('spinning')
   })
 })
+
+describe('Qobuz notice', () => {
+  const NOTICE = 'This application uses the Qobuz API but is not certified by Qobuz.'
+
+  it('is shown on the Library while Qobuz is connected, as its terms require', () => {
+    const library = makeLibrary({ providers: [provider('spotify', 'Spotify', true), provider('qobuz', 'Qobuz', true)] }, [track('spotify', 1)])
+    render(<LibraryPage library={library} player={makePlayer()} onOpenConnections={vi.fn()} />)
+    expect(screen.getByText(NOTICE)).toBeTruthy()
+  })
+
+  it('is not shown when Qobuz is not connected', () => {
+    render(<LibraryPage library={makeLibrary({}, [track('spotify', 1)])} player={makePlayer()} onOpenConnections={vi.fn()} />)
+    // makeLibrary connects Spotify and Qobuz both, so take Qobuz away.
+    cleanup()
+    const library = makeLibrary({ providers: [provider('spotify', 'Spotify', true), provider('qobuz', 'Qobuz', false)] }, [track('spotify', 1)])
+    render(<LibraryPage library={library} player={makePlayer()} onOpenConnections={vi.fn()} />)
+    expect(screen.queryByText(NOTICE)).toBeNull()
+  })
+})

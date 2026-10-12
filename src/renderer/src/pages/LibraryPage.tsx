@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { ProviderId } from '@shared/types'
 import { BrandMark, ClockIcon, SearchIcon } from '../components/icons'
+import { QobuzNotice } from '../components/QobuzNotice'
 import { RefreshMenu } from '../components/RefreshMenu'
 import { TrackRow } from '../components/TrackRow'
 import { TrackSkeleton } from '../components/TrackSkeleton'
@@ -200,6 +201,8 @@ export function LibraryPage({ library, player, onOpenConnections }: Props): Reac
       )}
 
       {library.listing && <TrackSkeleton />}
+
+      {connected.some((provider) => provider.id === 'qobuz') && <QobuzNotice />}
     </main>
   )
 }
