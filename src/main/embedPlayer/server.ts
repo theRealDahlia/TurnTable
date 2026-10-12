@@ -3,7 +3,11 @@ import { stat } from 'node:fs/promises'
 import { createServer, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { extname, join, normalize, sep } from 'node:path'
+import { SOUNDCLOUD_PLAYER_PAGE } from '@shared/soundcloudPlayer'
 import { YOUTUBE_PLAYER_PAGE } from '@shared/youtubePlayer'
+
+/** The player pages this server will serve. */
+const PAGES: readonly string[] = [YOUTUBE_PLAYER_PAGE, SOUNDCLOUD_PLAYER_PAGE]
 
 const CONTENT_TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -12,15 +16,16 @@ const CONTENT_TYPES: Record<string, string> = {
 }
 
 export interface PlayerServer {
-  /** Where the player page is served, e.g. `http://127.0.0.1:50321/youtube-player.html`. */
-  url: string
+  /** Where one of the player pages is served, e.g. `http://127.0.0.1:50321/youtube-player.html`. */
+  urlOf(page: string): string
   close(): void
 }
 
 /**
  * YouTube only plays embedded videos for a page with a real web origin, which a `file://` page doesn't have,
- * so the packaged app serves the player page over loopback. It serves the page and its scripts and nothing
- * else, to this machine only.
+ * so the packaged app serves the player pages over loopback (SoundCloud's page comes the same way, so both
+ * frames have the same kind of origin). It serves those pages and their scripts and nothing else, to this
+ * machine only.
  */
 export async function startPlayerServer(root: string): Promise<PlayerServer> {
   let origin = ''
@@ -38,7 +43,7 @@ export async function startPlayerServer(root: string): Promise<PlayerServer> {
     } catch {
       return deny(400)
     }
-    const isPage = path === `/${YOUTUBE_PLAYER_PAGE}`
+    const isPage = PAGES.some((page) => path === `/${page}`)
     const isScript = /^\/assets\/[\w.-]+\.(?:js|css)$/.test(path)
     if (!isPage && !isScript) return deny(404)
 
@@ -66,5 +71,11 @@ export async function startPlayerServer(root: string): Promise<PlayerServer> {
   })
   origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
 
-  return { url: `${origin}/${YOUTUBE_PLAYER_PAGE}`, close: () => void server.close() }
+  return {
+    urlOf(page) {
+      if (!PAGES.includes(page)) throw new Error(`Not a player page: ${page}`)
+      return `${origin}/${page}`
+    },
+    close: () => void server.close()
+  }
 }

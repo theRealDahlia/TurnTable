@@ -1,9 +1,10 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { IpcChannel, type TurnTableApi } from '@shared/ipc'
+import { SoundCloudPlayerChannel, type SoundCloudPlayerHostApi } from '@shared/soundcloudPlayer'
 import { YouTubePlayerChannel, type YouTubePlayerHostApi } from '@shared/youtubePlayer'
 import { SpotifyPlayerChannel, type SpotifyPlayerApi, type SpotifyPlayerEvent } from '@shared/spotifyPlayer'
 
-/** What the app window gets: the library API, the Spotify playback controls, and where YouTube's player page lives. */
+/** What the app window gets: the library API, the Spotify playback controls, and where each embedded player's page lives. */
 export function exposeAppApi(): void {
   const api: TurnTableApi = {
     listProviders: () => ipcRenderer.invoke(IpcChannel.listProviders),
@@ -32,7 +33,12 @@ export function exposeAppApi(): void {
     getPlayerUrl: () => ipcRenderer.invoke(YouTubePlayerChannel.playerUrl)
   }
 
+  const soundcloud: SoundCloudPlayerHostApi = {
+    getPlayerUrl: () => ipcRenderer.invoke(SoundCloudPlayerChannel.playerUrl)
+  }
+
   contextBridge.exposeInMainWorld('turntable', api)
   contextBridge.exposeInMainWorld('turntableSpotify', spotify)
   contextBridge.exposeInMainWorld('turntableYouTube', youtube)
+  contextBridge.exposeInMainWorld('turntableSoundCloud', soundcloud)
 }
