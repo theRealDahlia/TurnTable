@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { ProviderId } from '@shared/types'
 import { BrandMark, ClockIcon, SearchIcon } from '../components/icons'
 import { QobuzNotice } from '../components/QobuzNotice'
@@ -31,6 +31,14 @@ export function LibraryPage({ library, player, onOpenConnections }: Props): Reac
   // The chosen service, or the first connected one if none is chosen or the chosen one was disconnected.
   const providerId = connected.find((provider) => provider.id === chosenId)?.id ?? connected[0]?.id
 
+  // A service's library is fetched when its tab is first shown, and not before.
+  const { ensure } = library
+  useEffect(() => {
+    if (providerId) ensure(providerId)
+  }, [providerId, ensure])
+  // Between showing the tab and the first page arriving, it is loading, not empty.
+  const starting = providerId !== undefined && library.libraries[providerId] === undefined
+
   const visible = useMemo(
     () => sortTracks(filterTracks(library.tracks, { query, providerId }), sort),
     [library.tracks, query, providerId, sort]
@@ -40,7 +48,7 @@ export function LibraryPage({ library, player, onOpenConnections }: Props): Reac
   const failed = connected.filter((provider) => library.libraries[provider.id]?.status === 'error')
   const filtering = query.trim() !== ''
   // While the first tracks are on their way, show placeholder rows instead of an empty page.
-  const showSkeleton = library.loading && visible.length === 0 && !filtering
+  const showSkeleton = (library.loading || starting) && visible.length === 0 && !filtering
 
   const pickProvider = (id: ProviderId): void => {
     setChosenId(id)
@@ -141,7 +149,7 @@ export function LibraryPage({ library, player, onOpenConnections }: Props): Reac
               <p className="summary" role="status">
                 {library.refreshing
                   ? 'Refreshing your library…'
-                  : library.loading
+                  : library.loading || starting
                     ? `Loading your library… ${providerId ? countFor(providerId) : 0} tracks so far`
                     : `${visible.length} ${visible.length === 1 ? 'track' : 'tracks'}${filtering ? ' found' : ''}`}
               </p>
@@ -161,7 +169,7 @@ export function LibraryPage({ library, player, onOpenConnections }: Props): Reac
             )}
           </div>
 
-          {visible.length === 0 && !library.loading && (
+          {visible.length === 0 && !library.loading && !starting && (
             <section className="empty-state compact">
               <SearchIcon className="empty-icon" />
               <p>{filtering ? 'No tracks match your search.' : 'No saved tracks found on your connected services.'}</p>

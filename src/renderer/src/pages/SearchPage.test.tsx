@@ -50,6 +50,7 @@ function makeLibrary(providers: ProviderStatus[] = [SPOTIFY, YOUTUBE, QOBUZ], tr
     reload: vi.fn(),
     refresh: vi.fn(),
     refreshProvider: vi.fn(),
+    ensure: vi.fn(),
     retry: vi.fn(),
     ...overrides
   }

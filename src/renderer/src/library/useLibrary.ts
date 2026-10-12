@@ -17,6 +17,8 @@ interface State {
   providers: ProviderStatus[]
   libraries: Libraries
   error?: string
+  /** Goes up each time the whole list of services is read afresh, so callers that wait for it can tell. */
+  listings: number
 }
 
 type Action =
@@ -29,7 +31,7 @@ type Action =
   | { type: 'providerDone'; id: ProviderId }
   | { type: 'providerFailed'; id: ProviderId; error: string }
 
-const initialState: State = { phase: 'listing', providers: [], libraries: {} }
+const initialState: State = { phase: 'listing', providers: [], libraries: {}, listings: 0 }
 
 /** Keeps the libraries of services that are still connected, and drops the rest. */
 function onlyConnected(libraries: Libraries, providers: ProviderStatus[]): Libraries {
@@ -49,10 +51,10 @@ function reducer(state: State, action: Action): State {
 
   switch (action.type) {
     case 'listed':
-      return { phase: 'ready', providers: action.providers, libraries: {} }
+      return { phase: 'ready', providers: action.providers, libraries: {}, listings: state.listings + 1 }
     case 'providersUpdated':
       // A fresh list of what is connected, without throwing away the libraries that are already loaded.
-      return { phase: 'ready', providers: action.providers, libraries: onlyConnected(state.libraries, action.providers) }
+      return { ...state, phase: 'ready', providers: action.providers, libraries: onlyConnected(state.libraries, action.providers) }
     case 'listFailed':
       return { ...state, phase: 'error', error: action.error }
     case 'providerStarted':
@@ -87,11 +89,17 @@ export interface Library {
   /** Starts over: re-checks connections and re-fetches every library. */
   reload(): void
   /**
-   * Re-checks connections and re-reads every connected service (or only `id`'s, leaving the others alone), e.g.
-   * after saving a song elsewhere. The lists on screen stay as they are until each new one is complete, and
-   * stay if it fails.
+   * Re-checks connections and re-reads every service whose library has been opened (or only `id`'s, even if it
+   * has not been opened yet, leaving the others alone). The lists on screen stay as they are until each new one
+   * is complete, and stay if it fails.
    */
   refresh(id?: ProviderId): void
+  /**
+   * Loads a service's library the first time it is needed, i.e. when its tab is shown, and does nothing if it has
+   * already been asked for. Nothing is fetched from a service nobody is looking at, so opening the app costs
+   * a service no requests at all until its library is opened. Local files are the exception: they cost no requests.
+   */
+  ensure(id: ProviderId): void
   /**
    * After a service was connected, disconnected or reconfigured: re-checks connections and re-fetches only
    * that service's library (or drops it if it is no longer connected). Other libraries are left alone,
@@ -102,9 +110,12 @@ export interface Library {
   retry(id: ProviderId): void
 }
 
+/** Reading local files makes no requests to anyone, so they are loaded at once; every other service waits until it is opened. */
+const loadsAtOnce = (id: ProviderId): boolean => id === 'local'
+
 /**
- * Loads the saved tracks of every connected service in the background, page by page, so search and
- * sorting cover the whole library. Services load in parallel and fail independently.
+ * Loads a service's saved tracks in the background, page by page, once its library is opened, so search and
+ * sorting cover the whole of it. Services load independently and fail independently.
  */
 export function useLibrary(): Library {
   const [state, dispatch] = useReducer(reducer, initialState)
@@ -148,7 +159,7 @@ export function useLibrary(): Library {
         const providers = await window.turntable.listProviders()
         if (run !== epoch.current) return
         dispatch({ type: 'listed', providers })
-        await Promise.all(providers.filter((p) => p.connected).map((p) => loadProvider(p.id)))
+        await Promise.all(providers.filter((p) => p.connected && loadsAtOnce(p.id)).map((p) => loadProvider(p.id)))
       } catch (e) {
         if (run === epoch.current) dispatch({ type: 'listFailed', error: describeError(e) })
       }
@@ -187,8 +198,9 @@ export function useLibrary(): Library {
   const refreshProvider = useCallback(
     (id: ProviderId): void =>
       recheck((providers) => {
-        if (providers.some((p) => p.id === id && p.connected)) void loadProvider(id)
-        else wanted.current.delete(id)
+        if (!providers.some((p) => p.id === id && p.connected)) wanted.current.delete(id)
+        // A library nobody has opened is loaded when it is opened, not now.
+        else if (wanted.current.has(id) || loadsAtOnce(id)) void loadProvider(id)
       }),
     [recheck, loadProvider]
   )
@@ -198,10 +210,23 @@ export function useLibrary(): Library {
       recheck((providers) => {
         for (const { id, connected } of providers) {
           if (!connected) wanted.current.delete(id)
-          else if (only === undefined || only === id) void loadProvider(id, true)
+          else if (only === id || (only === undefined && (wanted.current.has(id) || loadsAtOnce(id)))) void loadProvider(id, true)
         }
       }),
     [recheck, loadProvider]
+  )
+
+  // It changes when the list of services does, so a page that calls it from an effect asks again once the list is known.
+  const providers = state.providers
+  const { listings } = state
+  const ensure = useCallback(
+    (id: ProviderId): void => {
+      if (wanted.current.has(id) || !providers.some((p) => p.id === id && p.connected)) return
+      void loadProvider(id)
+    },
+    // `listings` makes it change after a full reload even if the new list looks the same as the old one.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [providers, listings, loadProvider]
   )
 
   const tracks = useMemo(
@@ -219,6 +244,7 @@ export function useLibrary(): Library {
     refreshing: Object.values(state.libraries).some((lib) => lib.incoming !== undefined),
     reload: useCallback(() => setReloadCount((count) => count + 1), []),
     refresh,
+    ensure,
     refreshProvider,
     retry: useCallback((id: ProviderId) => void loadProvider(id), [loadProvider])
   }

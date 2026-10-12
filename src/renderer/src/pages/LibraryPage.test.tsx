@@ -43,6 +43,7 @@ function makeLibrary(overrides: Partial<Library> = {}, tracks: Track[] = []): Li
     reload: vi.fn(),
     refresh: vi.fn(),
     refreshProvider: vi.fn(),
+    ensure: vi.fn(),
     retry: vi.fn(),
     ...overrides
   }
@@ -130,6 +131,27 @@ describe('LibraryPage', () => {
     expect(titles()).toEqual(['Qobuz Song'])
     expect(filters.getByRole('button', { name: /^Qobuz/ }).getAttribute('aria-pressed')).toBe('true')
     expect(filters.getByRole('button', { name: /^Spotify/ }).getAttribute('aria-pressed')).toBe('false')
+  })
+
+  it("asks for a service's library when its tab is shown, and for the next one when it is chosen", async () => {
+    const library = makeLibrary({}, sample)
+    render(<LibraryPage library={library} player={makePlayer()} onOpenConnections={vi.fn()} />)
+    expect(library.ensure).toHaveBeenCalledWith('spotify')
+    expect(library.ensure).not.toHaveBeenCalledWith('qobuz')
+
+    await userEvent.click(screen.getByRole('button', { name: /^Qobuz/ }))
+
+    expect(library.ensure).toHaveBeenCalledWith('qobuz')
+  })
+
+  it('shows it is loading, not empty, between choosing a service and its first page', () => {
+    const library = makeLibrary({}, [])
+    delete library.libraries.spotify
+    const { container } = render(<LibraryPage library={library} player={makePlayer()} onOpenConnections={vi.fn()} />)
+
+    expect(container.querySelectorAll('.skeleton-row').length).toBeGreaterThan(0)
+    expect(screen.queryByText('No saved tracks found on your connected services.')).toBeNull()
+    expect(screen.getByRole('status').textContent).toBe('Loading your library… 0 tracks so far')
   })
 
   it('moves to another connected service when the one on show is disconnected', async () => {
