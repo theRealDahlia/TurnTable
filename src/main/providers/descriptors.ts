@@ -25,6 +25,15 @@ export const SOUNDCLOUD: ProviderDescriptor = {
   maxQuality: { codec: 'aac', lossless: false, bitrateKbps: 160 }
 }
 
+/** Qobuz streams lossless FLAC up to 24-bit / 192 kHz to subscribers; it signs in with the user's own account. */
+export const QOBUZ: ProviderDescriptor = {
+  id: 'qobuz',
+  name: 'Qobuz',
+  authKind: 'credentials',
+  playback: 'stream',
+  maxQuality: { codec: 'flac', lossless: true, sampleRateHz: 192000, bitDepth: 24 }
+}
+
 export const LOCAL: ProviderDescriptor = {
   id: 'local',
   name: 'Local files',
@@ -37,12 +46,6 @@ export const PROVIDER_DESCRIPTORS: ProviderDescriptor[] = [
   SPOTIFY,
   YOUTUBE_MUSIC,
   SOUNDCLOUD,
-  {
-    id: 'qobuz',
-    name: 'Qobuz',
-    authKind: 'credentials',
-    playback: 'stream',
-    maxQuality: { codec: 'flac', lossless: true, sampleRateHz: 192000, bitDepth: 24 }
-  },
+  QOBUZ,
   LOCAL
 ]

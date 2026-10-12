@@ -112,3 +112,57 @@ describe('api: search and saving', () => {
     expect(statuses.find((s) => s.id === 'spotify')?.savable).toBe(false)
   })
 })
+
+describe('api: signing in with credentials', () => {
+  const fake = () => {
+    const connect = vi.fn().mockResolvedValue(undefined)
+    const provider = {
+      info: { id: 'qobuz', name: 'Qobuz', authKind: 'credentials' },
+      isConnected: async () => false,
+      connect,
+      disconnect: async () => undefined,
+      getSavedTracks: async () => ({ tracks: [] })
+    }
+    return { connect, api: createApi(createDefaultRegistry({ qobuz: provider as never })) }
+  }
+
+  it('passes the account\'s details on to a service that signs in with them, trimming the email only', async () => {
+    const { connect, api } = fake()
+    await api.connectProvider('qobuz', { username: '  me@example.com ', password: ' p w ' })
+    expect(connect).toHaveBeenCalledExactlyOnceWith({ username: 'me@example.com', password: ' p w ' })
+  })
+
+  it.each([
+    ['nothing', undefined],
+    ['no password', { username: 'me@example.com' }],
+    ['no email', { password: 'pw' }],
+    ['a blank email', { username: '   ', password: 'pw' }],
+    ['an empty password', { username: 'me@example.com', password: '' }],
+    ['details that are not text', { username: 5, password: {} }],
+    ['something that is not an object', 'me@example.com:pw']
+  ])('asks for the email and password when given %s, without calling the service', async (_label, credentials) => {
+    const { connect, api } = fake()
+    await expect(api.connectProvider('qobuz', credentials as never)).rejects.toThrow('Enter your Qobuz email and password.')
+    expect(connect).not.toHaveBeenCalled()
+  })
+
+  it('refuses absurdly long details', async () => {
+    const { connect, api } = fake()
+    await expect(api.connectProvider('qobuz', { username: 'x'.repeat(257), password: 'pw' })).rejects.toThrow('too long')
+    await expect(api.connectProvider('qobuz', { username: 'a@b.c', password: 'x'.repeat(257) })).rejects.toThrow('too long')
+    expect(connect).not.toHaveBeenCalled()
+  })
+
+  it('never repeats the password in an error', async () => {
+    const { api } = fake()
+    const error = (await api.connectProvider('qobuz', { username: 'x'.repeat(257), password: 'secret-pw' }).catch((e: unknown) => e)) as Error
+    expect(error.message).not.toContain('secret-pw')
+  })
+
+  it('does not hand credentials to a service that signs in in a browser', async () => {
+    const connect = vi.fn().mockResolvedValue(undefined)
+    const provider = { info: { id: 'spotify', name: 'Spotify', authKind: 'oauth-pkce' }, isConnected: async () => false, connect, disconnect: async () => undefined, getSavedTracks: async () => ({ tracks: [] }) }
+    await createApi(createDefaultRegistry({ spotify: provider as never })).connectProvider('spotify', { username: 'a@b.c', password: 'pw' })
+    expect(connect).toHaveBeenCalledExactlyOnceWith()
+  })
+})

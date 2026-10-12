@@ -10,10 +10,17 @@ export const IpcChannel = {
   unsaveTrack: 'library:unsave'
 } as const
 
+/** An account's own sign-in, for services that have no browser sign-in of their own (Qobuz). Never stored. */
+export interface Credentials {
+  username: string
+  password: string
+}
+
 /** The API the preload script exposes to the renderer as `window.turntable`. */
 export interface TurnTableApi {
   listProviders(): Promise<ProviderStatus[]>
-  connectProvider(id: ProviderId): Promise<void>
+  /** Signs in. Services with an account of their own (`authKind: 'credentials'`) need the user's credentials. */
+  connectProvider(id: ProviderId, credentials?: Credentials): Promise<void>
   disconnectProvider(id: ProviderId): Promise<void>
   getSavedTracks(id: ProviderId, cursor?: string): Promise<TrackPage>
   /** Searches one service's catalog. Pass the previous page's `nextCursor` for more results. */

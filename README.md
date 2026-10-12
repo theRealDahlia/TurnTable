@@ -67,6 +67,16 @@ SoundCloud's official API signs you in with OAuth 2.1 (Authorization Code with P
 
 Tokens last about an hour and each refresh token works once, so the app stores the new one each time. Disconnecting revokes the app's access on SoundCloud (`POST /disconnect`) and does not touch your own sign-in to soundcloud.com.
 
+## Qobuz setup
+
+Qobuz has no public API. Its API is for partners, and the [API Terms of Use](http://static.qobuz.com/apps/api/QobuzAPI-TermsofUse.pdf) say you may not use it without an application ID and secret that Qobuz issued to you, and may not share them. Request your own from Qobuz (the usual contact given is api@qobuz.com; check Qobuz's site). Muze ships with none, and does not use ones taken from Qobuz's web player or other projects.
+
+1. Put your application ID and secret in `.env` as `MAIN_VITE_QOBUZ_APP_ID` and `MAIN_VITE_QOBUZ_APP_SECRET`.
+2. Restart `npm run dev`, then click Connect on the Qobuz chip and sign in with your Qobuz email and password. The password is sent once to Qobuz over https, in the request body (never in a URL), and is never stored or logged; only the sign-in token Qobuz returns is kept, encrypted. Qobuz's sign-in has no two-factor step, and accounts created through Google, Apple or Facebook need a Qobuz password set first.
+3. The terms require this notice, which Muze shows on the Qobuz sign-in: "This application uses the Qobuz API but is not certified by Qobuz."
+
+Qobuz publishes no API documentation, so the requests are written from how third-party clients describe it, and have not been tried against the live service.
+
 ## Search
 
 The **Search** page searches every connected service at once and puts each one's results under its own tab (a chip per service; local files are searched in the library already loaded). Press Enter or Search; results are not fetched as you type, because a YouTube search costs quota. The heart on a result saves it to your library on that service (Spotify: a saved song; YouTube Music: a like) and removes it again; the Library catches up the next time you open it.

@@ -8,7 +8,7 @@ import { SpotifyPlayerChannel, type SpotifyPlayerApi, type SpotifyPlayerEvent } 
 export function exposeAppApi(): void {
   const api: TurnTableApi = {
     listProviders: () => ipcRenderer.invoke(IpcChannel.listProviders),
-    connectProvider: (id) => ipcRenderer.invoke(IpcChannel.connectProvider, id),
+    connectProvider: (id, credentials) => ipcRenderer.invoke(IpcChannel.connectProvider, id, credentials),
     disconnectProvider: (id) => ipcRenderer.invoke(IpcChannel.disconnectProvider, id),
     getSavedTracks: (id, cursor) => ipcRenderer.invoke(IpcChannel.savedTracks, id, cursor),
     searchTracks: (id, query, cursor) => ipcRenderer.invoke(IpcChannel.searchTracks, id, query, cursor),

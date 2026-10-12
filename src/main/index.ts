@@ -20,6 +20,9 @@ import { youtubeOAuthConfig } from './providers/youtube/config'
 import { createYouTubeProvider } from './providers/youtube/provider'
 import { soundcloudOAuthConfig } from './providers/soundcloud/config'
 import { createSoundCloudProvider } from './providers/soundcloud/provider'
+import { qobuzApp } from './providers/qobuz/config'
+import { createQobuzProvider } from './providers/qobuz/provider'
+import { QobuzSession } from './providers/qobuz/session'
 import { APP_NAME } from '@shared/app'
 
 function createWindow(): void {
@@ -100,6 +103,13 @@ function createRegistry(): { registry: ReturnType<typeof createDefaultRegistry>;
     now: Date.now
   })
 
+  const qobuzSession = new QobuzSession({
+    app: () => qobuzApp(import.meta.env.MAIN_VITE_QOBUZ_APP_ID, import.meta.env.MAIN_VITE_QOBUZ_APP_SECRET),
+    store,
+    fetch,
+    now: Date.now
+  })
+
   const folders = new FolderStore(join(app.getPath('userData'), 'local-folders.json'))
   const library = new LocalLibrary({ folders, readMetadata: readFileMetadata })
   const local = createLocalProvider({
@@ -116,7 +126,7 @@ function createRegistry(): { registry: ReturnType<typeof createDefaultRegistry>;
   // Spotify's "wait until..." survives restarts, so reopening the app can't keep calling a service that said stop.
   const gate = new RateLimitGate({ store: new FileRateLimitStore(join(app.getPath('userData'), 'spotify-rate-limit.json')), now: Date.now })
   const spotify = createSpotifyProvider(spotifySession, { gate })
-  return { registry: createDefaultRegistry({ spotify, local, youtubeMusic: createYouTubeProvider(youtubeSession), soundcloud: createSoundCloudProvider(soundcloudSession) }), library, spotify }
+  return { registry: createDefaultRegistry({ spotify, local, youtubeMusic: createYouTubeProvider(youtubeSession), soundcloud: createSoundCloudProvider(soundcloudSession), qobuz: createQobuzProvider(qobuzSession) }), library, spotify }
 }
 
 app.whenReady().then(async () => {
