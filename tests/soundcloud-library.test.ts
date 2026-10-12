@@ -76,6 +76,14 @@ describe('toTrack', () => {
     expect(toTrack(item(1, { access: undefined }))).not.toHaveProperty('playable')
   })
 
+  it('marks a track whose uploader does not allow embedding as unplayable, since only SoundCloud\'s own player can play it', () => {
+    expect(toTrack(item(1, { embeddable_by: 'all' }))).not.toHaveProperty('playable')
+    expect(toTrack(item(1, { embeddable_by: 'me' }))?.playable).toBe(false)
+    expect(toTrack(item(1, { embeddable_by: 'none' }))?.playable).toBe(false)
+    expect(toTrack(item(1, { embeddable_by: undefined }))).not.toHaveProperty('playable')
+    expect(toTrack(item(1, { access: 'preview', embeddable_by: 'all' }))?.playable).toBe(false)
+  })
+
   it('uses the uploader\'s picture when the track has no artwork, and no picture when there is neither', () => {
     expect(toTrack(item(1, { artwork_url: null }))?.artworkUrl).toBe('https://i1.sndcdn.com/avatars-x-t300x300.jpg')
     expect(toTrack(item(1, { artwork_url: null, user: { username: 'x', avatar_url: null } }))?.artworkUrl).toBeUndefined()

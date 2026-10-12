@@ -51,7 +51,7 @@ export const isPlayable = (track: PlayableFacts): boolean => playbackUrl(track) 
 /** Why a track has no Play button, for the tooltip. */
 export function unplayableReason(track: Pick<Track, 'providerId' | 'quality' | 'playable'>): string {
   if (track.providerId === 'youtubeMusic') return "The owner of this video doesn't allow it to be played outside YouTube"
-  if (track.providerId === 'soundcloud' && track.playable === false) return "SoundCloud doesn't let this track be played outside SoundCloud (it may be a preview, or blocked)"
+  if (track.providerId === 'soundcloud' && track.playable === false) return "SoundCloud doesn't let this track be played outside SoundCloud (it may be a preview, blocked, or not shared for embedding)"
 
   if (track.providerId === 'local') {
     return track.quality ? `${track.quality.codec.toUpperCase()} files can't be played in ${APP_NAME} yet` : "This file can't be played"

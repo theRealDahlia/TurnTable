@@ -29,6 +29,8 @@ interface ScTrack {
   artwork_url?: string | null
   permalink_url?: string
   access?: string
+  /** Who may embed the track in a player: `all`, `me` or `none`. */
+  embeddable_by?: string
   metadata_artist?: string | null
   /** Whether the signed-in user has liked this track. */
   user_favorite?: boolean
@@ -71,6 +73,11 @@ function soundcloudWebUrl(url: string | undefined): string | undefined {
   return url?.startsWith('https://soundcloud.com/') ? url : undefined
 }
 
+/** Previews and blocked tracks can't be played in full, and neither can tracks whose uploader doesn't allow embedding. */
+function isPlayable(track: ScTrack): boolean {
+  return (track.access === undefined || track.access === 'playable') && (track.embeddable_by === undefined || track.embeddable_by === 'all')
+}
+
 export function toTrack(track: ScTrack | null): Track | undefined {
   if (!track) return undefined
   const id = trackUrn(track)
@@ -84,8 +91,8 @@ export function toTrack(track: ScTrack | null): Track | undefined {
     durationMs: typeof track.duration === 'number' && track.duration > 0 ? track.duration : 0,
     artworkUrl: artworkUrl(track),
     url: soundcloudWebUrl(track.permalink_url),
-    // Only fully streamable tracks can be played; the rest are previews, or blocked for this account or country.
-    ...(track.access !== undefined && track.access !== 'playable' ? { playable: false } : {})
+    // Only fully streamable tracks can be played, and only in SoundCloud's own player if the uploader allows embedding.
+    ...(isPlayable(track) ? {} : { playable: false })
   }
 }
 
