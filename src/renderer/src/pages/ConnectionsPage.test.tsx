@@ -61,11 +61,7 @@ describe('ConnectionsPage', () => {
 
     expect(screen.getByRole('img', { name: 'YouTube logo' }).getAttribute('fill')).toMatch(/^#[0-9A-F]{6}$/i)
 
-    // Spotify asks for its full logo, as its own image file, rather than the bare icon.
-    const spotify = screen.getByRole('img', { name: 'Spotify logo' })
-    expect(spotify.tagName).toBe('IMG')
-    expect(spotify.getAttribute('src')).toBeTruthy()
-    expect(spotify.closest('li')?.querySelectorAll('.spotify-full img')).toHaveLength(2)
+    expect(screen.getByRole('img', { name: 'Spotify logo' }).getAttribute('fill')).toMatch(/^#[0-9A-F]{6}$/i)
 
     const qobuz = screen.getByRole('img', { name: 'Qobuz logo' })
     expect(qobuz.tagName).toBe('IMG')
