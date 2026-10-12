@@ -1,4 +1,6 @@
+import { createHash } from 'node:crypto'
 import type { Credentials } from '@shared/ipc'
+import type { QobuzStream } from '@shared/qobuz'
 import type { AudioQuality, Track, TrackPage } from '@shared/types'
 import { parseOffsetCursor } from '../cursor'
 import { QOBUZ } from '../descriptors'
@@ -44,9 +46,40 @@ interface FavoriteIds {
 
 export type FetchFn = typeof fetch
 
+/** Qobuz's provider, which can also say where to stream a track from. */
+export interface QobuzProvider extends MusicProvider {
+  getStreamUrl(trackId: string): Promise<QobuzStream>
+}
+
 export interface QobuzProviderOptions {
   fetch?: FetchFn
   app: () => QobuzApp
+  now?: () => number
+}
+
+/** The stream format each kind of subscription can have: 320 kbps MP3, CD-quality FLAC, and FLAC up to 24-bit / 192 kHz. */
+const FORMAT_FOR_TIER: Record<Exclude<QobuzTier, 'none'>, number> = { lossy: 5, lossless: 6, hires: 27 }
+
+interface FileUrl {
+  url?: string
+  mime_type?: string
+  bit_depth?: number
+  sampling_rate?: number
+  /** True when the address is for a short preview, not the whole track. */
+  sample?: boolean
+  restrictions?: unknown[]
+}
+
+export type { QobuzStream }
+
+/** What Qobuz's answer says about the stream: FLAC or MP3, and for FLAC how deep and how fast. */
+export function streamQuality(info: FileUrl, fallback: AudioQuality | undefined): AudioQuality {
+  if (info.mime_type?.includes('mpeg')) return { codec: 'mp3', lossless: false, bitrateKbps: 320 }
+  const depth = typeof info.bit_depth === 'number' ? info.bit_depth : fallback?.bitDepth
+  const reported = typeof info.sampling_rate === 'number' ? info.sampling_rate : undefined
+  // Sampling rates come in kHz (44.1, 96) or Hz (44100), depending on who is asking.
+  const rate = reported === undefined ? fallback?.sampleRateHz : reported < 1000 ? Math.round(reported * 1000) : reported
+  return { codec: 'flac', lossless: true, bitDepth: depth, sampleRateHz: rate }
 }
 
 /** What a subscription can actually deliver of a track, which is at most what the track offers. */
@@ -98,8 +131,8 @@ async function toApiError(response: Response): Promise<Error> {
   }
 }
 
-export function createQobuzProvider(session: QobuzSession, options: QobuzProviderOptions): MusicProvider {
-  const { fetch: fetchFn = fetch } = options
+export function createQobuzProvider(session: QobuzSession, options: QobuzProviderOptions): QobuzProvider {
+  const { fetch: fetchFn = fetch, now = Date.now } = options
 
   /** Calls the API with the user's token; a 401 means the token no longer works, so the user must sign in again. */
   async function request(path: string, params: Record<string, string> = {}): Promise<Response> {
@@ -126,8 +159,36 @@ export function createQobuzProvider(session: QobuzSession, options: QobuzProvide
     await request(`favorite/${action}`, { track_ids: trackId })
   }
 
+  /** Qobuz signs the address of a stream for this application, which only the main process may do. */
+  async function getStreamUrl(trackId: string): Promise<QobuzStream> {
+    if (!TRACK_ID.test(trackId)) throw new Error('That is not a valid Qobuz track.')
+    // Nobody signed in is a different problem from an account that cannot stream.
+    await session.getToken()
+    const tier = await session.tier()
+    if (tier === 'none') throw new Error("Your Qobuz account doesn't include streaming, so its tracks can't be played here.")
+
+    const format = FORMAT_FOR_TIER[tier]
+    const timestamp = String(Math.floor(now() / 1000))
+    const signature = createHash('md5')
+      .update(`trackgetFileUrlformat_id${format}intentstreamtrack_id${trackId}${timestamp}${options.app().appSecret}`)
+      .digest('hex')
+    const info = await getJson<FileUrl>('track/getFileUrl', {
+      request_ts: timestamp,
+      request_sig: signature,
+      track_id: trackId,
+      format_id: String(format),
+      intent: 'stream'
+    })
+
+    // Only a whole track plays: a preview, or a restriction, means Qobuz won't stream this one to this account.
+    if (info.sample === true || (info.restrictions?.length ?? 0) > 0) throw new Error("Qobuz only allows a preview of this track, so it can't be played here.")
+    if (typeof info.url !== 'string' || !info.url.startsWith('https://')) throw new Error('Qobuz did not give an address to play this track from.')
+    return { url: info.url, quality: streamQuality(info, qualityFor({ id: trackId, maximum_bit_depth: format === 27 ? 24 : 16 }, tier)) }
+  }
+
   return {
     info: QOBUZ,
+    getStreamUrl,
     isConnected: () => session.isConnected(),
 
     async connect(credentials?: Credentials) {

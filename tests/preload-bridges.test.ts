@@ -30,11 +30,12 @@ afterEach(() => vi.unstubAllGlobals())
 describe('preload role separation', () => {
   it('gives the app window the library API, Spotify controls and the YouTube page lookup, and nothing from the player page', async () => {
     await loadPreloadFor('/app/out/renderer/index.html')
-    expect(Object.keys(exposed).sort()).toEqual(['turntable', 'turntableSoundCloud', 'turntableSpotify', 'turntableYouTube'])
+    expect(Object.keys(exposed).sort()).toEqual(['turntable', 'turntableQobuz', 'turntableSoundCloud', 'turntableSpotify', 'turntableYouTube'])
     expect(Object.keys(exposed.turntable as object).sort()).toEqual(['connectProvider', 'disconnectProvider', 'getSavedTracks', 'listProviders', 'saveTrack', 'searchTracks', 'unsaveTrack'])
     expect(Object.keys(exposed.turntableSpotify as object).sort()).toEqual(['onEvent', 'pause', 'play', 'resume', 'seek', 'setVolume'])
     expect(Object.keys(exposed.turntableYouTube as object)).toEqual(['getPlayerUrl'])
     expect(Object.keys(exposed.turntableSoundCloud as object)).toEqual(['getPlayerUrl'])
+    expect(Object.keys(exposed.turntableQobuz as object)).toEqual(['getStreamUrl'])
   })
 
   it('gives the hidden Spotify page only its narrow bridge: no library, no connections, no controls', async () => {
@@ -45,7 +46,7 @@ describe('preload role separation', () => {
 
   it('falls back to the app role for any other page', async () => {
     await loadPreloadFor('/somewhere/else.html')
-    expect(Object.keys(exposed).sort()).toEqual(['turntable', 'turntableSoundCloud', 'turntableSpotify', 'turntableYouTube'])
+    expect(Object.keys(exposed).sort()).toEqual(['turntable', 'turntableQobuz', 'turntableSoundCloud', 'turntableSpotify', 'turntableYouTube'])
   })
 })
 
@@ -61,6 +62,17 @@ describe('YouTube player lookup', () => {
     await loadPreloadFor('/app/out/renderer/spotify-player.html')
     expect(exposed.turntableYouTube).toBeUndefined()
     expect(exposed.turntableSoundCloud).toBeUndefined()
+    expect(exposed.turntableQobuz).toBeUndefined()
+  })
+})
+
+describe('Qobuz stream lookup', () => {
+  it('asks the main process, which signs the request, where to stream a track from', async () => {
+    invoke.mockResolvedValue({ url: 'https://streaming.example/track.flac', quality: { codec: 'flac', lossless: true } })
+    await loadPreloadFor('/app/out/renderer/index.html')
+    const result = await (exposed.turntableQobuz as { getStreamUrl(id: string): Promise<{ url: string }> }).getStreamUrl('12345')
+    expect(result.url).toBe('https://streaming.example/track.flac')
+    expect(invoke).toHaveBeenCalledWith('qobuz:stream-url', '12345')
   })
 })
 

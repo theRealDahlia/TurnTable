@@ -77,6 +77,8 @@ Qobuz has no public API. Its API is for partners, and the [API Terms of Use](htt
 
 **What it does.** Your favorite tracks fill the Library (`favorite/getUserFavorites`), the Search page searches Qobuz (`track/search`) and adds or removes favorites (`favorite/create`, `favorite/delete`), and each track shows the quality your subscription can deliver (hi-res accounts get what the track has, up to 24-bit / 192 kHz; lossless accounts, CD quality; others, 320 kbps MP3). An account without a streaming subscription can browse but its tracks are not playable. The notice above is shown on Qobuz's chip, the Library and Qobuz's search results.
 
+**Playback.** Playing a track asks Qobuz for a stream address (`track/getFileUrl`), a request signed with your application secret in the main process (the secret is never sent to a page or to Qobuz). The address goes to an `<audio>` element of its own, so FLAC up to 24-bit / 192 kHz is decoded and handed to the output unchanged, like a local file; the player bar shows the quality of the stream Qobuz actually sent. Addresses lapse, so if one has expired by the time you resume, a fresh one is fetched once and playback carries on from the same place. Previews and restricted tracks are refused with a message instead of being played as if they were the track.
+
 Qobuz publishes no API documentation, so the requests are written from how third-party clients describe it, and have not been tried against the live service.
 
 ## Search

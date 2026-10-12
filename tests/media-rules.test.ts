@@ -30,6 +30,18 @@ describe('playbackUrl', () => {
     expect(playbackUrl({ id: 'abcdefghijk', providerId: 'youtubeMusic', quality: undefined })).toBe('youtube:abcdefghijk')
   })
 
+  it('plays a Qobuz track through its number', () => {
+    expect(playbackUrl({ id: '12345', providerId: 'qobuz', quality: undefined })).toBe('qobuz:12345')
+  })
+
+  it.each([
+    ['a Qobuz track with a malformed id', { id: 'abc', providerId: 'qobuz' as const, quality: undefined }],
+    ['a Qobuz id that could alter a request', { id: '1&format_id=5', providerId: 'qobuz' as const, quality: undefined }],
+    ['a Qobuz track the account cannot stream', { id: '12345', providerId: 'qobuz' as const, quality: undefined, playable: false }]
+  ])('has nothing to play for %s', (_label, track) => {
+    expect(playbackUrl(track)).toBeUndefined()
+  })
+
   it('plays a SoundCloud track through its number', () => {
     expect(playbackUrl({ id: 'soundcloud:tracks:293', providerId: 'soundcloud', quality: undefined })).toBe('soundcloud:293')
   })
@@ -62,5 +74,6 @@ describe('unplayableReason', () => {
     expect(unplayableReason({ providerId: 'qobuz', quality: undefined })).toMatch(/not available yet/)
     expect(unplayableReason({ providerId: 'youtubeMusic', quality: undefined, playable: false })).toMatch(/owner .* outside YouTube/)
     expect(unplayableReason({ providerId: 'soundcloud', quality: undefined, playable: false })).toMatch(/SoundCloud doesn't let this track be played/)
+    expect(unplayableReason({ providerId: 'qobuz', quality: undefined, playable: false })).toMatch(/Qobuz doesn't stream this track to this account/)
   })
 })

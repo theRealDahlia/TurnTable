@@ -21,7 +21,8 @@ import { createYouTubeProvider } from './providers/youtube/provider'
 import { soundcloudOAuthConfig } from './providers/soundcloud/config'
 import { createSoundCloudProvider } from './providers/soundcloud/provider'
 import { qobuzApp } from './providers/qobuz/config'
-import { createQobuzProvider } from './providers/qobuz/provider'
+import { registerQobuzStreaming } from './providers/qobuz/electron'
+import { createQobuzProvider, type QobuzProvider } from './providers/qobuz/provider'
 import { QobuzSession } from './providers/qobuz/session'
 import { APP_NAME } from '@shared/app'
 
@@ -63,7 +64,7 @@ protocol.registerSchemesAsPrivileged([
   { scheme: MEDIA_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } }
 ])
 
-function createRegistry(): { registry: ReturnType<typeof createDefaultRegistry>; library: LocalLibrary; spotify: SpotifyProvider } {
+function createRegistry(): { registry: ReturnType<typeof createDefaultRegistry>; library: LocalLibrary; spotify: SpotifyProvider; qobuz: QobuzProvider } {
   const store = new TokenStore(join(app.getPath('userData'), 'tokens.bin'), {
     isAvailable: () => safeStorage.isEncryptionAvailable(),
     encrypt: (plain) => safeStorage.encryptString(plain),
@@ -127,7 +128,13 @@ function createRegistry(): { registry: ReturnType<typeof createDefaultRegistry>;
   // Spotify's "wait until..." survives restarts, so reopening the app can't keep calling a service that said stop.
   const gate = new RateLimitGate({ store: new FileRateLimitStore(join(app.getPath('userData'), 'spotify-rate-limit.json')), now: Date.now })
   const spotify = createSpotifyProvider(spotifySession, { gate })
-  return { registry: createDefaultRegistry({ spotify, local, youtubeMusic: createYouTubeProvider(youtubeSession), soundcloud: createSoundCloudProvider(soundcloudSession), qobuz: createQobuzProvider(qobuzSession, { app: qobuzCredentials }) }), library, spotify }
+  const qobuz = createQobuzProvider(qobuzSession, { app: qobuzCredentials })
+  return {
+    registry: createDefaultRegistry({ spotify, local, youtubeMusic: createYouTubeProvider(youtubeSession), soundcloud: createSoundCloudProvider(soundcloudSession), qobuz }),
+    library,
+    spotify,
+    qobuz
+  }
 }
 
 app.whenReady().then(async () => {
@@ -135,8 +142,9 @@ app.whenReady().then(async () => {
   await components.whenReady().catch((error: unknown) => console.warn('Widevine is not available:', error))
   denyAllPermissions(session.defaultSession)
 
-  const { registry, library, spotify } = createRegistry()
+  const { registry, library, spotify, qobuz } = createRegistry()
   registerSpotifyPlayback(spotify)
+  registerQobuzStreaming(qobuz)
   const embedPlayers = registerEmbedPlayers()
   app.on('will-quit', embedPlayers.close)
   protocol.handle(MEDIA_SCHEME, createMediaHandler({ resolve: (id) => library.resolve(id), readArtwork }))

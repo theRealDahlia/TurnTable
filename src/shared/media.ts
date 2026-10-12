@@ -38,6 +38,7 @@ export function playbackUrl(track: PlayableFacts): string | undefined {
   if (track.playable === false) return undefined
   if (track.providerId === 'spotify') return SPOTIFY_TRACK_ID.test(track.id) ? `${SPOTIFY_URI_PREFIX}${track.id}` : undefined
   if (track.providerId === 'youtubeMusic') return YOUTUBE_VIDEO_ID.test(track.id) ? `youtube:${track.id}` : undefined
+  if (track.providerId === 'qobuz') return /^\d{1,12}$/.test(track.id) ? `qobuz:${track.id}` : undefined
   if (track.providerId === 'soundcloud') {
     const id = SOUNDCLOUD_URN.exec(track.id)?.[1]
     return id ? `soundcloud:${id}` : undefined
@@ -51,6 +52,7 @@ export const isPlayable = (track: PlayableFacts): boolean => playbackUrl(track) 
 /** Why a track has no Play button, for the tooltip. */
 export function unplayableReason(track: Pick<Track, 'providerId' | 'quality' | 'playable'>): string {
   if (track.providerId === 'youtubeMusic') return "The owner of this video doesn't allow it to be played outside YouTube"
+  if (track.providerId === 'qobuz' && track.playable === false) return "Qobuz doesn't stream this track to this account (it may need a streaming subscription)"
   if (track.providerId === 'soundcloud' && track.playable === false) return "SoundCloud doesn't let this track be played outside SoundCloud (it may be a preview, blocked, or not shared for embedding)"
 
   if (track.providerId === 'local') {
