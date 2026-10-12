@@ -127,7 +127,8 @@ function createRegistry(): { registry: ReturnType<typeof createDefaultRegistry>;
 
   // Spotify's "wait until..." survives restarts, so reopening the app can't keep calling a service that said stop.
   const gate = new RateLimitGate({ store: new FileRateLimitStore(join(app.getPath('userData'), 'spotify-rate-limit.json')), now: Date.now })
-  const spotify = createSpotifyProvider(spotifySession, { gate })
+  // Half a second between requests: a library of thousands is fetched at a steady pace, never in a burst.
+  const spotify = createSpotifyProvider(spotifySession, { gate, minIntervalMs: 500 })
   const qobuz = createQobuzProvider(qobuzSession, { app: qobuzCredentials })
   return {
     registry: createDefaultRegistry({ spotify, local, youtubeMusic: createYouTubeProvider(youtubeSession), soundcloud: createSoundCloudProvider(soundcloudSession), qobuz }),

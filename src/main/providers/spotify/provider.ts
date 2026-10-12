@@ -57,6 +57,11 @@ export interface SpotifyProviderOptions {
   now?: () => number
   /** Remembers when Spotify said to stop; the app passes one that survives restarts. */
   gate?: RateLimitGate
+  /**
+   * The least time between two requests to Spotify, so a long list is fetched at a steady pace and never in a burst.
+   * Callers that ask at once are put in a queue. 0 (the default) means no spacing.
+   */
+  minIntervalMs?: number
 }
 
 const MAX_ERROR_MESSAGE_LENGTH = 200
@@ -146,6 +151,18 @@ export class PlaybackPermissionError extends Error {
 export function createSpotifyProvider(session: OAuthSession, options: SpotifyProviderOptions = {}): SpotifyProvider {
   const { fetch: fetchFn = fetch, sleep = defaultSleep, random = Math.random, now = Date.now } = options
   const gate = options.gate ?? new RateLimitGate({ now })
+  const { minIntervalMs = 0 } = options
+  /** The earliest time the next request may be sent. */
+  let nextSlot = 0
+
+  /** Waits for this request's turn: each one is at least `minIntervalMs` after the one before, even when several are asked for at once. */
+  async function waitForTurn(): Promise<void> {
+    if (minIntervalMs <= 0) return
+    const current = now()
+    const start = Math.max(current, nextSlot)
+    nextSlot = start + minIntervalMs
+    if (start > current) await sleep(start - current)
+  }
 
   /**
    * Calls the Web API and returns a successful response. A 401 triggers one retry with a freshly
@@ -163,6 +180,7 @@ export function createSpotifyProvider(session: OAuthSession, options: SpotifyPro
       forceRefresh = false
       const headers: Record<string, string> = { Authorization: `Bearer ${token}` }
       if (body !== undefined) headers['Content-Type'] = 'application/json'
+      await waitForTurn()
       const response = await fetchFn(`${API_BASE}${path}`, { method: init.method, headers, body })
 
       if (response.status === 401) {
