@@ -31,3 +31,62 @@ Apply these to all Spotify code.
 - **Deprecated endpoints:** do not use them. Prefer `/playlists/{id}/items` over `/playlists/{id}/tracks`, and `/me/library` over the type-specific library endpoints where `/me/library` offers the operation (it has no read/list operation, so `GET /me/tracks` is still correct for listing saved tracks).
 - **Errors:** handle every status code the schema documents for the endpoint, and surface Spotify's returned error message to the user.
 - **Developer Terms** (https://developer.spotify.com/terms): do not cache Spotify content beyond what immediate use needs (keep it in memory, never write it to disk), always attribute content to Spotify (logo plus a link back), and never use Spotify data to train machine-learning models.
+
+## Spotify Developer Policy and design rules
+
+These add to the Spotify Web API rules above (https://developer.spotify.com/policy, https://developer.spotify.com/documentation/design).
+
+- **Never mix services:** no Spotify content integrated with, listed beside, or queued with another service's (Policy III.5; design guidelines). Each service has its own library, list and play queue; next, previous and shuffle never cross services.
+- **Attribution:** wherever Spotify content or playback appears, show the Spotify logo and a link back ("Open Spotify" style). Use the full logo (icon alone only where space is too tight) from the official pack, unmodified: the green one only on pure black or white, the monochrome one otherwise, at least 70px wide, with clear space equal to half the icon's height.
+- **Artwork:** only Spotify's own artwork, in its original form. Never crop, blur, tint, put text, icons or controls over it, or put our logo on it. Round its corners (4px on small screens, 8px on large).
+- **Metadata:** show titles exactly as Spotify gives them. They may be shortened to fit, but the full text must be reachable.
+- **Playback:** only for Premium accounts. Always show the cover art and metadata of what plays. Never download, rip or record, and never synthesize play counts or follows.
+- **Data:** keep Spotify content in memory only; on disconnect delete the tokens and everything from Spotify on screen, and give the user an easy way to disconnect. Don't analyze Spotify content or use it for machine learning. Request only the data and scopes the feature needs.
+- **Naming:** the app's name must not start with "Spot" or be confusingly like Spotify; don't use Spotify marks in our name or imply endorsement.
+- **Distribution:** development-mode apps work only for allowlisted users. More users needs Spotify's approval. Before release the end-user agreement must contain the V.11 minimum terms, and the privacy policy must be shown before sign-up.
+
+## YouTube API rules
+
+Apply these to all YouTube code (https://developers.google.com/youtube/terms/developer-policies, https://developers.google.com/youtube/terms/api-services-terms-of-service).
+
+- **Official ways only:** the YouTube Data API for data and the YouTube IFrame player for playback. No scraping, no undocumented APIs, no other way to get at audio or video (III.E.6, III.D.7, III.I.14).
+- **Player:** never hide, obscure, resize below 200 by 200, modify or block it, and never play from a player that isn't on screen. Don't separate audio from video, and don't download, cache or play offline (III.F, III.I.6, III.I.7, III.I.9, III.E.1).
+- **Made for kids:** look up `status.madeForKids` for each video and never embed ones marked as such, since tracking must be off for them and the embedded player has no setting for it (III.E.4.j).
+- **Branding and naming:** call it "YouTube", not "YouTube Music" (the API has no YouTube Music access), and show YouTube's own logo and attribution wherever its content appears. Don't suggest endorsement (III.F.2, Terms 10, 13).
+- **Actions:** like or un-like a video only when the user clicks, never automatically (III.E.3.d, III.I.2).
+- **Data:** keep API data in memory only (it may not be kept beyond 30 days, and nothing is stored). Request only the scope in use. When the user disconnects, revoke the Google token at once and delete their data within 7 days (III.D.2.3, III.E.4).
+- **Users:** show a link to the YouTube Terms of Service and say that using the app means agreeing to them. The privacy policy must say the app uses YouTube API Services, link the Google Privacy Policy, and say how to revoke access at https://myaccount.google.com/permissions (III.A).
+- **Never mix:** don't merge non-YouTube results into YouTube results, and don't make other sources look like YouTube (III.C.5, III.F.2.b).
+- **Quota:** stay within quota. Use more only after YouTube's compliance audit, and only for the approved use.
+
+## SoundCloud API rules
+
+Apply these to all SoundCloud code (https://developers.soundcloud.com/docs/api/terms-of-use).
+
+- **Official ways only:** sign in with SoundCloud's own OAuth flow, with each user on their own account, and play only through SoundCloud's own player (the Widget). No file saving, downloads, stream ripping or scraping, and never get around copy protection.
+- **Never mix:** no playback experience that aggregates SoundCloud content with another service's. Don't build an on-demand service that combines content from multiple users.
+- **User actions:** like, un-like or play on the user's behalf only when they deliberately ask in the app.
+- **Attribution:** credit the uploader as the creator and SoundCloud as the source, with a visible link to each sound's page on soundcloud.com. Use SoundCloud's own logos and buttons unmodified. Don't use SoundCloud marks in the app's name.
+- **Linking:** before sending the user to sign in, tell them which SoundCloud data the app will use and why (the notice in `src/shared/linkNotice.ts`).
+- **Data:** keep content in memory only, make it unplayable and gone when the session ends, and respect uploaders' removals and disabled access. On disconnect, revoke the app's access and delete the user's data within 7 days.
+- **Not allowed:** advertising or sponsorship around the content, in-app purchases that unlock SoundCloud content, and using content to train or feed AI or machine-learning models.
+- **Limits:** respect rate limits and don't get more client IDs than needed.
+
+## Qobuz API rules
+
+Apply these to all Qobuz code. Qobuz has no public developer documentation; what follows is what its API terms and subscriber terms are known to require. If more is learned, add it here.
+
+- **Credentials:** the app ID and secret come from Qobuz and are the user's or developer's own, never copied from another project and never committed. Use only the official, approved route to the API, and apply for access if the app is to be shared.
+- **Notice:** wherever the API is used, show "This application uses the Qobuz API but is not certified by Qobuz." (`QOBUZ_NOTICE`).
+- **Sign-in:** the user's email and password go to Qobuz once, over HTTPS, in a request body (never a URL), and are never stored, logged or shown. Only the token is kept, encrypted.
+- **Streaming:** personal, non-commercial, real-time listening only, on one device at a time unless their plan allows more. Never download, record or save audio, and never get around Qobuz's protection measures or software (subscriber terms, articles 4, 7, 17, 21.8.3).
+- **Never artificially inflate streams,** by hand or by automation. Don't use content to train or feed AI.
+- **Data:** keep content in memory only, and delete the token on disconnect.
+- **Risk:** the app isn't certified by Qobuz and may be refused at any time. Treat Qobuz as a personal-use, at-your-own-risk connection, and say so wherever it is described.
+
+## Legal documents and user agreement
+
+- The documents in `docs/PRIVACY.md` and `docs/EULA.md` are drafts and mock-ups, not reviewed legal documents. The README says so, and it must keep saying so until a lawyer has reviewed them.
+- The app asks users to agree to them before anything runs (`LEGAL_VERSION` in `src/shared/legal.ts`). Change that version whenever either document changes in a way users must agree to again.
+- Keep the privacy policy accurate: change it in the same commit as any change to what the app stores, sends or asks for.
+- Re-read each service's current terms before adding a feature that touches it, and record anything new in this file.
