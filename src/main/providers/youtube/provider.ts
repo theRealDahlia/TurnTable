@@ -6,6 +6,8 @@ import { YOUTUBE_SCOPES } from './config'
 import { APP_NAME } from '@shared/app'
 
 const API_BASE = 'https://www.googleapis.com/youtube/v3'
+/** Google's endpoint for revoking a grant; revoking an access token revokes its refresh token too. */
+const REVOKE_URL = 'https://oauth2.googleapis.com/revoke'
 /** The most `videos.list` returns in one page. */
 const PAGE_SIZE = 50
 /** YouTube's category for music; the account's likes also include talks, gameplay and so on. */
@@ -189,7 +191,22 @@ export function createYouTubeProvider(session: OAuthSession, options: YouTubePro
     info: YOUTUBE_MUSIC,
     isConnected: () => session.isConnected(),
     connect: () => session.connect(),
-    disconnect: () => session.disconnect(),
+
+    async disconnect() {
+      // Google's rules ask for the grant to be revoked at once, but a failed revoke (offline, token already
+      // lapsed) must never stop the user disconnecting.
+      try {
+        const token = await session.getAccessToken()
+        await fetchFn(REVOKE_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ token }).toString()
+        })
+      } catch {
+        // The local sign-out below is what counts.
+      }
+      await session.disconnect()
+    },
 
     async needsReauthorization() {
       return (await session.isConnected()) && !(await session.hasScopes(YOUTUBE_SCOPES))

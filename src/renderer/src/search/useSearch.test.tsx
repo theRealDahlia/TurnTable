@@ -46,6 +46,42 @@ afterEach(cleanup)
 
 const idsOf = (tracks?: Track[]): string[] => (tracks ?? []).map((t) => t.id)
 
+describe('useSearch forgetting a service', () => {
+  it("drops that service's results and moves off its tab, leaving the others alone", async () => {
+    const { result } = renderHook(() => useSearch())
+    act(() => result.current.search('foo', ['spotify', 'youtubeMusic']))
+    await waitFor(() => expect(result.current.results.youtubeMusic?.status).toBe('ready'))
+    expect(result.current.tab).toBe('spotify')
+
+    act(() => result.current.forget('spotify'))
+
+    expect(result.current.results.spotify).toBeUndefined()
+    expect(idsOf(result.current.results.youtubeMusic?.tracks)).toEqual(['youtubeMusic-1', 'youtubeMusic-2'])
+    expect(result.current.tab).toBe('youtubeMusic')
+  })
+
+  it("clears that service's pending saves and save error", async () => {
+    api.saveTrack.mockRejectedValueOnce(new Error('Spotify said no'))
+    const { result } = renderHook(() => useSearch())
+    act(() => result.current.search('foo', ['spotify']))
+    await waitFor(() => expect(result.current.results.spotify?.status).toBe('ready'))
+    act(() => result.current.toggleSave(track('spotify', 1)))
+    await waitFor(() => expect(result.current.saveError?.providerId).toBe('spotify'))
+
+    act(() => result.current.forget('spotify'))
+
+    expect(result.current.saveError).toBeUndefined()
+    expect(result.current.tab).toBeUndefined()
+  })
+
+  it('does nothing for a service that was never searched', () => {
+    const { result } = renderHook(() => useSearch())
+    const before = result.current.results
+    act(() => result.current.forget('qobuz'))
+    expect(result.current.results).toBe(before)
+  })
+})
+
 describe('useSearch searching', () => {
   it('starts empty', () => {
     const { result } = renderHook(() => useSearch())

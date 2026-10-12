@@ -39,6 +39,7 @@ type Action =
   | { type: 'loadingMore'; id: ProviderId }
   | { type: 'moreFailed'; id: ProviderId; error: string }
   | { type: 'tab'; id: ProviderId }
+  | { type: 'forgot'; id: ProviderId }
   | { type: 'saving'; track: Track; saved: boolean }
   | { type: 'saved'; track: Track }
   | { type: 'saveFailed'; track: Track; revertTo: boolean; message: string }
@@ -93,6 +94,18 @@ function reducer(state: State, action: Action): State {
       return { ...change(action.id, (current) => ({ ...current, loadingMore: false, paused: true })), saveError: { providerId: action.id, message: action.error } }
     case 'tab':
       return { ...state, tab: action.id }
+    case 'forgot': {
+      if (!(action.id in state.results) && state.saveError?.providerId !== action.id) return state
+      const results = Object.fromEntries(Object.entries(state.results).filter(([id]) => id !== action.id))
+      const remaining = Object.keys(results) as ProviderId[]
+      return {
+        ...state,
+        results,
+        tab: state.tab === action.id ? remaining[0] : state.tab,
+        pending: Object.fromEntries(Object.entries(state.pending).filter(([key]) => !key.startsWith(`${action.id}:`))),
+        saveError: state.saveError?.providerId === action.id ? undefined : state.saveError
+      }
+    }
     case 'saving':
       return {
         ...state,
@@ -128,6 +141,8 @@ export interface SearchState {
   /** Searches one service again, e.g. after an error. */
   retry(id: ProviderId): void
   selectTab(id: ProviderId): void
+  /** Drops one service's results, e.g. when it is disconnected: its content must not outlive the connection. */
+  forget(id: ProviderId): void
   /** Saves a track that is not saved yet, or removes one that is. Shows the change at once and undoes it if it fails. */
   toggleSave(track: Track): void
 }
@@ -221,5 +236,7 @@ export function useSearch({ onSaved }: SearchOptions = {}): SearchState {
 
   const selectTab = useCallback((id: ProviderId): void => dispatch({ type: 'tab', id }), [])
 
-  return { ...state, search, loadMore, retry, selectTab, toggleSave }
+  const forget = useCallback((id: ProviderId): void => dispatch({ type: 'forgot', id }), [])
+
+  return { ...state, search, loadMore, retry, selectTab, forget, toggleSave }
 }

@@ -44,7 +44,13 @@ export function App(): React.JSX.Element {
       <div className="content">
         {page === 'library' && <LibraryPage library={library} player={player} onOpenConnections={() => setPage('connections')} />}
         {page === 'search' && <SearchPage library={library} player={player} search={search} onOpenConnections={() => setPage('connections')} />}
-        {page === 'connections' && <ConnectionsPage onChanged={library.refreshProvider} />}
+        {page === 'connections' && <ConnectionsPage
+            onChanged={(id) => {
+              library.refreshProvider(id)
+              // A service's content must not outlive its connection, so its search results go too.
+              search.forget(id)
+            }}
+          />}
       </div>
       <PlayerBar player={player} />
     </div>

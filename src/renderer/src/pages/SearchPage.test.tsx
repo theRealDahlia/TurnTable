@@ -64,6 +64,7 @@ function makeSearch(overrides: Partial<SearchState> = {}): SearchState {
     loadMore: vi.fn(),
     retry: vi.fn(),
     selectTab: vi.fn(),
+    forget: vi.fn(),
     toggleSave: vi.fn(),
     ...overrides
   }
