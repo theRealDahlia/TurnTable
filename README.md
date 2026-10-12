@@ -40,6 +40,16 @@ If the app fails to start with "Electron uninstall", run `node node_modules/elec
 
 Spotify apps in development mode only work for accounts you add under User Management in the dashboard.
 
+### Signing Electron so Spotify will play
+
+Spotify's player needs Widevine, and Spotify's licence server refuses the development certificate the castLabs Electron build ships with (every licence request answers HTTP 500 and the player says "Playback error"). castLabs signs the build for free through its EVS service:
+
+1. `python3 -m pip install --upgrade castlabs-evs`, then `python3 -m castlabs_evs.account signup`, and confirm the emailed code with `python3 -m castlabs_evs.account confirm-signup` (`resend` sends the code again). Then `python3 -m castlabs_evs.account refresh` signs you in on this computer.
+2. `npm run verify:electron` says what the build has now. "Certificate is valid for development only" means it needs signing.
+3. `npm run sign:electron` uploads the Electron app (about 190 MB) to castLabs, which sends back a signature. Run it again after every `npm install` that replaces Electron, because that undoes it.
+
+macOS may report the app's own code signature as inconsistent afterwards (`codesign --verify`), because iCloud Drive adds attributes to folders on the Desktop. Electron still starts and the EVS signature is still valid. A packaged release must be signed with EVS first and then code-signed and notarized by Apple, in that order.
+
 ## YouTube setup
 
 Muze is not affiliated with YouTube or YouTube Music. YouTube Music has no API of its own, so Muze uses the official YouTube Data API with your Google account and reads the videos you have liked (your YouTube Music thumbs-ups are the same likes). Use **Refresh** on the Library page after liking a song to pull it in: its menu has Refresh all, plus one choice per connected service. Only videos in YouTube's Music category are shown, in the order YouTube returns them (most recently liked first). YouTube does not report when a video was liked, so these tracks have no save date.

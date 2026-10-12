@@ -9,6 +9,8 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
+    "sign:electron": "python3 -m castlabs_evs.vmp sign-pkg node_modules/electron/dist",
+    "verify:electron": "python3 -m castlabs_evs.vmp verify-pkg node_modules/electron/dist",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "lint": "eslint .",
     "test": "vitest run",
