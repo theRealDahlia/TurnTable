@@ -312,16 +312,19 @@ button {
   min-width: 70px;
 }
 
-.spotify-full-on-dark {
+.spotify-full-on-dark,
+.spotify-icon-on-dark {
   display: none;
 }
 
 @media (prefers-color-scheme: dark) {
-  .spotify-full-on-dark {
+  .spotify-full-on-dark,
+  .spotify-icon-on-dark {
     display: block;
   }
 
-  .spotify-full-on-light {
+  .spotify-full-on-light,
+  .spotify-icon-on-light {
     display: none;
   }
 }

@@ -61,7 +61,11 @@ describe('ConnectionsPage', () => {
 
     expect(screen.getByRole('img', { name: 'YouTube logo' }).getAttribute('fill')).toMatch(/^#[0-9A-F]{6}$/i)
 
-    expect(screen.getByRole('img', { name: 'Spotify logo' }).getAttribute('fill')).toMatch(/^#[0-9A-F]{6}$/i)
+    // Spotify's own icon files, in the monochrome versions (white for dark, black for light), never its green.
+    const spotify = screen.getByRole('img', { name: 'Spotify logo' })
+    expect(spotify.tagName).toBe('IMG')
+    expect(spotify.closest('li')?.querySelectorAll('img.spotify-icon-on-dark, img.spotify-icon-on-light')).toHaveLength(2)
+    expect(spotify.closest('li')?.querySelector('svg[fill="#1ED760"]')).toBeNull()
 
     const qobuz = screen.getByRole('img', { name: 'Qobuz logo' })
     expect(qobuz.tagName).toBe('IMG')

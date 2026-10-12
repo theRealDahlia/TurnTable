@@ -1,6 +1,8 @@
-import { siSoundcloud, siSpotify, siYoutube } from 'simple-icons'
+import { siSoundcloud, siYoutube } from 'simple-icons'
 import type { ProviderId } from '@shared/types'
 import qobuzLogo from '../assets/logos/qobuz.svg'
+import spotifyIconBlack from '../assets/logos/spotify-icon-black.svg'
+import spotifyIconWhite from '../assets/logos/spotify-icon-white.svg'
 
 interface BrandIcon {
   path: string
@@ -9,7 +11,6 @@ interface BrandIcon {
 
 /** Official marks from Simple Icons (CC0 data; the marks remain their owners' trademarks). */
 const BRAND_ICONS: Partial<Record<ProviderId, BrandIcon>> = {
-  spotify: siSpotify,
   youtubeMusic: siYoutube,
   soundcloud: siSoundcloud
 }
@@ -34,7 +35,14 @@ export function ProviderLogo({ id, name, size = 'md' }: Props): React.JSX.Elemen
 
   return (
     <span className={size === 'sm' ? 'logo logo-sm' : 'logo'} data-provider={id}>
-      {image ? (
+      {id === 'spotify' ? (
+        // Spotify's own icon files, unmodified. Its guidelines allow the green one only on pure black or white,
+        // and these backgrounds are neither, so the monochrome one that suits the theme is used.
+        <>
+          <img className="spotify-icon-on-dark" src={spotifyIconWhite} alt={`${name} logo`} />
+          <img className="spotify-icon-on-light" src={spotifyIconBlack} alt="" aria-hidden="true" />
+        </>
+      ) : image ? (
         <img src={image} alt={`${name} logo`} />
       ) : brand ? (
         <svg viewBox="0 0 24 24" role="img" aria-label={`${name} logo`} fill={`#${brand.hex}`}>
