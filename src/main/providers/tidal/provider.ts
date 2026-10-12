@@ -1,13 +1,14 @@
-import type { TrackPage } from '@shared/types'
+import type { Track, TrackPage } from '@shared/types'
 import { APP_NAME } from '@shared/app'
 import { AuthRequiredError, type OAuthSession } from '../../auth/session'
 import { TIDAL } from '../descriptors'
 import { describeWait } from '../spotify/rateLimit'
 import type { MusicProvider } from '../types'
-import { COLLECTION_SCOPES, TIDAL_API, TIDAL_SCOPES } from './config'
-import { Included, identifiers, nextCursorOf, toTrack, type Document } from './jsonapi'
+import { COLLECTION_SCOPES, SEARCH_SCOPES, TIDAL_API, TIDAL_SCOPES } from './config'
+import { ID_PATTERN, Included, identifiers, nextCursorOf, toTrack, type Document } from './jsonapi'
 
 const MAX_ERROR_MESSAGE_LENGTH = 200
+const MAX_QUERY_LENGTH = 200
 /** Cursors come back from the renderer; TIDAL's are opaque, so only exclude what could break a URL or header. */
 const CURSOR_PATTERN = /^\S{1,500}$/
 
@@ -16,6 +17,17 @@ export class TidalPermissionError extends Error {
   constructor() {
     super(`Reconnect TIDAL to allow everything ${APP_NAME} needs.`)
     this.name = 'TidalPermissionError'
+  }
+}
+
+/** TIDAL refused a request; `status` is its HTTP status, so callers can tell a conflict from an outage. */
+export class TidalApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number
+  ) {
+    super(message)
+    this.name = 'TidalApiError'
   }
 }
 
@@ -48,20 +60,44 @@ const MAX_BLOCK_MS = 24 * 60 * 60 * 1000
  * is enough to show a page. If TIDAL turns that down, the shorter one still lists the tracks.
  */
 const LIBRARY_INCLUDES = ['items,items.artists,items.albums,items.albums.coverArt', 'items']
+/** The same for search results, whose tracks hang off the search result rather than off the user's collection. */
+const SEARCH_INCLUDES = ['tracks,tracks.artists,tracks.albums,tracks.albums.coverArt', 'tracks']
+
+/**
+ * Where a search is up to: which search result to continue, and TIDAL's cursor into its tracks. One string,
+ * since that is all a page hands back to ask for the next.
+ */
+function encodeSearchCursor(id: string, cursor: string): string | undefined {
+  const encoded = Buffer.from(JSON.stringify([id, cursor])).toString('base64url')
+  // A cursor that would not survive the trip to the app and back is dropped, which ends the results here.
+  return encoded.length <= 480 ? encoded : undefined
+}
+
+function decodeSearchCursor(encoded: string): { id: string; cursor: string } {
+  try {
+    const parsed: unknown = JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8'))
+    if (Array.isArray(parsed) && typeof parsed[0] === 'string' && typeof parsed[1] === 'string' && parsed[0] && CURSOR_PATTERN.test(parsed[1])) {
+      return { id: parsed[0].slice(0, 300), cursor: parsed[1] }
+    }
+  } catch {
+    // Falls through to the error below.
+  }
+  throw new Error('Invalid library cursor')
+}
 
 /** Turns a failed response into an error carrying TIDAL's own explanation (a JSON:API error object) when present. */
-async function toApiError(response: Response): Promise<Error> {
-  const fallback = `TIDAL request failed with status ${response.status}`
+async function toApiError(response: Response): Promise<TidalApiError> {
+  const fallback = new TidalApiError(`TIDAL request failed with status ${response.status}`, response.status)
   try {
     const body = (await response.json()) as { errors?: { detail?: unknown; title?: unknown }[] }
     const first = body.errors?.[0]
     const message = typeof first?.detail === 'string' ? first.detail : typeof first?.title === 'string' ? first.title : undefined
-    if (!message) return new Error(fallback)
+    if (!message) return fallback
     // The text is shown to the user, so drop control characters and cap the length.
     const clean = message.replace(/\p{Cc}/gu, ' ').trim().slice(0, MAX_ERROR_MESSAGE_LENGTH)
-    return new Error(clean ? `TIDAL: ${clean} (status ${response.status})` : fallback)
+    return clean ? new TidalApiError(`TIDAL: ${clean} (status ${response.status})`, response.status) : fallback
   } catch {
-    return new Error(fallback)
+    return fallback
   }
 }
 
@@ -70,8 +106,8 @@ export function createTidalProvider(session: OAuthSession, options: TidalProvide
   const sleep = options.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)))
   let nextSlot = 0
   let blockedUntil = 0
-  /** Which of the library's `include` lists TIDAL accepted; once it refuses the long one, the short one is used. */
-  let includeAttempt = 0
+  /** Which `include` list TIDAL accepted for the library and for search; once it refuses the long one, the short one is used. */
+  const includeAttempt = { library: 0, search: 0 }
 
   async function waitForTurn(): Promise<void> {
     if (minIntervalMs <= 0) return
@@ -125,6 +161,43 @@ export function createTidalProvider(session: OAuthSession, options: TidalProvide
     if (!(await session.hasScopes(scopes))) throw new TidalPermissionError()
   }
 
+
+  /** Runs `attempt` with the long `include` list, then with the short one if TIDAL refuses the long one (and keeps using it). */
+  async function withIncludes<T>(kind: 'library' | 'search', lists: string[], attempt: (include: string) => Promise<T>): Promise<T> {
+    for (;;) {
+      try {
+        return await attempt(lists[includeAttempt[kind]]!)
+      } catch (error) {
+        if (includeAttempt[kind] < lists.length - 1 && error instanceof TidalApiError && error.status === 400) {
+          includeAttempt[kind]++
+          continue
+        }
+        throw error
+      }
+    }
+  }
+
+  async function getDocument(path: string): Promise<Document> {
+    return (await (await request(path)).json()) as Document
+  }
+
+  const tracksOf = (document: Document): Track[] => {
+    const included = new Included(document.included)
+    return identifiers(document.data).flatMap((identifier) => toTrack(identifier, included) ?? [])
+  }
+
+  /** Adds a track to the user's collection or removes it. Already being there (or already gone) is not a failure. */
+  async function changeCollection(method: 'POST' | 'DELETE', trackId: string): Promise<void> {
+    if (!ID_PATTERN.test(trackId)) throw new Error('That is not a valid TIDAL track.')
+    await requireScopes(COLLECTION_SCOPES)
+    try {
+      await request('/userCollectionTracks/me/relationships/items', { method, body: { data: [{ id: trackId, type: 'tracks' }] } })
+    } catch (error) {
+      if (error instanceof TidalApiError && error.status === (method === 'POST' ? 409 : 404)) return
+      throw error
+    }
+  }
+
   return {
     info: TIDAL,
     isConnected: () => session.isConnected(),
@@ -139,24 +212,48 @@ export function createTidalProvider(session: OAuthSession, options: TidalProvide
       if (cursor !== undefined && !CURSOR_PATTERN.test(cursor)) throw new Error('Invalid library cursor')
       await requireScopes(COLLECTION_SCOPES)
 
-      for (;;) {
-        const params = new URLSearchParams({ include: LIBRARY_INCLUDES[includeAttempt]!, sort: '-addedAt' })
+      return withIncludes('library', LIBRARY_INCLUDES, async (include) => {
+        const params = new URLSearchParams({ include, sort: '-addedAt' })
         if (cursor !== undefined) params.set('page[cursor]', cursor)
-        try {
-          const document = (await (await request(`/userCollectionTracks/me/relationships/items?${params.toString()}`)).json()) as Document
-          const included = new Included(document.included)
-          const tracks = identifiers(document.data).flatMap((identifier) => toTrack(identifier, included) ?? [])
-          // A page can be empty after dropping tracks that can't be shown, so the cursor follows TIDAL's own link.
-          return { tracks, nextCursor: nextCursorOf(document) }
-        } catch (error) {
-          // TIDAL refused the long `include` list: use the short one from now on, and ask again.
-          if (includeAttempt < LIBRARY_INCLUDES.length - 1 && error instanceof Error && /status 400\)$/.test(error.message)) {
-            includeAttempt++
-            continue
-          }
-          throw error
+        const document = await getDocument(`/userCollectionTracks/me/relationships/items?${params.toString()}`)
+        // A page can be empty after dropping tracks that can't be shown, so the cursor follows TIDAL's own link.
+        return { tracks: tracksOf(document), nextCursor: nextCursorOf(document) }
+      })
+    },
+
+    async search(query, cursor): Promise<TrackPage> {
+      const text = query.trim()
+      if (!text || text.length > MAX_QUERY_LENGTH) throw new Error('Type something to search for.')
+      const position = cursor === undefined ? undefined : decodeSearchCursor(cursor)
+      await requireScopes(SEARCH_SCOPES)
+
+      return withIncludes('search', SEARCH_INCLUDES, async (include) => {
+        // The first page comes from the search itself; the rest from the same search result's track list.
+        if (position) {
+          const params = new URLSearchParams({ include, 'page[cursor]': position.cursor, explicitFilter: 'INCLUDE' })
+          const document = await getDocument(`/searchResults/${encodeURIComponent(position.id)}/relationships/tracks?${params.toString()}`)
+          const next = nextCursorOf(document)
+          return { tracks: tracksOf(document), nextCursor: next === undefined ? undefined : encodeSearchCursor(position.id, next) }
         }
-      }
+        const params = new URLSearchParams({ 'filter[query]': text, include, explicitFilter: 'INCLUDE' })
+        const document = await getDocument(`/searchResults?${params.toString()}`)
+        const result = identifiers(document.data)[0] as { id?: unknown; relationships?: { tracks?: { data?: unknown; links?: Document['links'] } } } | undefined
+        const tracksRelationship = result?.relationships?.tracks
+        const included = new Included(document.included)
+        const next = nextCursorOf({ links: tracksRelationship?.links })
+        return {
+          tracks: identifiers(tracksRelationship?.data).flatMap((identifier) => toTrack(identifier, included) ?? []),
+          nextCursor: next !== undefined && typeof result?.id === 'string' ? encodeSearchCursor(result.id, next) : undefined
+        }
+      })
+    },
+
+    async saveTrack(trackId) {
+      await changeCollection('POST', trackId)
+    },
+
+    async unsaveTrack(trackId) {
+      await changeCollection('DELETE', trackId)
     }
   }
 }

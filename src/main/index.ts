@@ -131,7 +131,7 @@ function createRegistry(): { registry: ReturnType<typeof createDefaultRegistry>;
   const spotify = createSpotifyProvider(spotifySession, { gate, minIntervalMs: 500 })
   const qobuz = createQobuzProvider(qobuzSession, { app: qobuzCredentials })
   return {
-    registry: createDefaultRegistry({ spotify, local, youtubeMusic: createYouTubeProvider(youtubeSession), tidal: createTidalProvider(tidalSession), qobuz }),
+    registry: createDefaultRegistry({ spotify, local, youtubeMusic: createYouTubeProvider(youtubeSession), tidal: createTidalProvider(tidalSession, { minIntervalMs: 300 }), qobuz }),
     library,
     spotify,
     qobuz
