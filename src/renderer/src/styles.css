@@ -875,7 +875,8 @@ button {
   height: 40px;
   object-fit: cover;
   background: var(--surface-sunken);
-  border-radius: 6px;
+  /* Spotify's guidelines round artwork to 8px on large screens. */
+  border-radius: 8px;
   box-shadow: 0 0 0 1px var(--border);
 }
 
@@ -1864,4 +1865,50 @@ html[data-platform='mac'] .drag-strip {
   text-align: left;
   vertical-align: top;
   border: 1px solid var(--border-strong);
+}
+
+/* ---------- Spotify's artwork rules ---------- */
+/* Spotify's guidelines forbid putting anything over its artwork, so for Spotify rows the play button and the "now playing" bars sit beside it instead of on it. */
+[data-service='spotify'] {
+  --track-columns: 76px minmax(0, 3fr) minmax(0, 2fr) minmax(0, 1.4fr) 28px 52px;
+}
+
+.search-results[data-service='spotify'] {
+  --track-columns: 76px minmax(0, 3fr) minmax(0, 2fr) minmax(0, 1.4fr) 28px 34px 52px;
+}
+
+.track[data-provider='spotify'] .track-art-wrap {
+  width: 76px;
+}
+
+.track[data-provider='spotify'] .track-art {
+  box-shadow: none;
+}
+
+.track[data-provider='spotify'] .track-play,
+.track[data-provider='spotify'] .equalizer {
+  inset: auto;
+  top: 6px;
+  left: 48px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+}
+
+.track[data-provider='spotify'] .equalizer {
+  padding: 8px 0;
+}
+
+.spotify-full-sm img {
+  height: 20px;
+  min-width: 70px;
+}
+
+.spotify-credit-player {
+  flex: none;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  margin: 0 0 0 10px;
+  font-size: 11px;
 }

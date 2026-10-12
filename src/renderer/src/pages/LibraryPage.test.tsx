@@ -222,7 +222,38 @@ describe('LibraryPage', () => {
     expect(link.getAttribute('rel')).toContain('noreferrer')
     expect(within(link).getByRole('img', { name: 'Spotify logo' })).toBeTruthy()
     // Only the tracks with a known link get one.
-    expect(screen.getAllByRole('link')).toHaveLength(1)
+    expect(screen.getAllByRole('link', { name: /^Open .* on / })).toHaveLength(1)
+  })
+
+  describe("Spotify's attribution", () => {
+    it('credits Spotify with its full logo and a link back below its tracks, and only there', async () => {
+      const mixed = [track('spotify', 1), track('qobuz', 2)]
+      render(<LibraryPage library={makeLibrary({}, mixed)} player={makePlayer()} onOpenConnections={vi.fn()} />)
+
+      expect(document.querySelector('.spotify-credit img[alt="Spotify logo"]')).toBeTruthy()
+      expect(screen.getByRole('link', { name: 'Open Spotify' }).getAttribute('href')).toBe('https://open.spotify.com')
+
+      await userEvent.click(screen.getByRole('button', { name: /^Qobuz/ }))
+      expect(screen.queryByRole('link', { name: 'Open Spotify' })).toBeNull()
+    })
+
+    it("marks the page with the service on show, so Spotify's rows can be laid out without anything over the artwork", async () => {
+      const mixed = [track('spotify', 1), track('qobuz', 2)]
+      const { container } = render(<LibraryPage library={makeLibrary({}, mixed)} player={makePlayer()} onOpenConnections={vi.fn()} />)
+      expect(container.querySelector('main')!.getAttribute('data-service')).toBe('spotify')
+      expect(rows()[0]!.getAttribute('data-provider')).toBe('spotify')
+
+      await userEvent.click(screen.getByRole('button', { name: /^Qobuz/ }))
+      expect(container.querySelector('main')!.getAttribute('data-service')).toBe('qobuz')
+    })
+
+    it('gives the whole title on hover, as the service wrote it', () => {
+      const long = track('spotify', 1, { title: 'A Very Long Title (Remastered 2011)', artists: ['One', 'Two'], album: 'The Album' })
+      render(<LibraryPage library={makeLibrary({}, [long])} player={makePlayer()} onOpenConnections={vi.fn()} />)
+      expect(screen.getByText('A Very Long Title (Remastered 2011)').getAttribute('title')).toBe('A Very Long Title (Remastered 2011)')
+      expect(screen.getByText('One, Two').getAttribute('title')).toBe('One, Two')
+      expect(screen.getByText('The Album').getAttribute('title')).toBe('The Album')
+    })
   })
 
   describe('playing', () => {

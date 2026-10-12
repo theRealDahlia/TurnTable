@@ -168,7 +168,7 @@ export function SearchPage({ library, player, search, onOpenConnections }: Props
             })}
           </div>
 
-          <div id="search-panel" role="tabpanel" aria-labelledby={`search-tab-${active.id}`} className="search-results">
+          <div id="search-panel" role="tabpanel" aria-labelledby={`search-tab-${active.id}`} className="search-results" data-service={active.id}>
             {active.needsReauthorization && active.savable && (
               <div className="banner" role="status">
                 <span>Reconnect {active.name} to save songs from here.</span>

@@ -3,6 +3,7 @@ import type { ProviderId } from '@shared/types'
 import { BrandMark, ClockIcon, SearchIcon } from '../components/icons'
 import { QobuzNotice } from '../components/QobuzNotice'
 import { RefreshMenu } from '../components/RefreshMenu'
+import { SpotifyFullLogo } from '../components/SpotifyFullLogo'
 import { TrackRow } from '../components/TrackRow'
 import { TrackSkeleton } from '../components/TrackSkeleton'
 import { filterTracks, sortTracks, type SortKey } from '../library/query'
@@ -47,7 +48,7 @@ export function LibraryPage({ library, player, onOpenConnections }: Props): Reac
   }
 
   return (
-    <main className="page page-wide">
+    <main className="page page-wide" data-service={providerId}>
       <header className="page-header page-header-split">
         <div>
           <h1>Library</h1>
@@ -193,6 +194,15 @@ export function LibraryPage({ library, player, onOpenConnections }: Props): Reac
             </button>
           )}
         </>
+      )}
+
+      {providerId === 'spotify' && visible.length > 0 && (
+        <p className="spotify-credit">
+          <SpotifyFullLogo />
+          <a href="https://open.spotify.com" target="_blank" rel="noreferrer">
+            Open Spotify
+          </a>
+        </p>
       )}
 
       {library.listing && <TrackSkeleton />}

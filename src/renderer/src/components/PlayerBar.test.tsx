@@ -56,6 +56,18 @@ describe('PlayerBar', () => {
     expect(bar.getByText('FLAC · 24-bit / 96 kHz')).toBeTruthy()
   })
 
+  it("credits Spotify with its logo and a link to the track while a Spotify track plays, and not for other services", () => {
+    const spotify = { id: '4iV5W9uYEdYUVa79Axb7Rh', providerId: 'spotify' as const, title: 'Everlong', artists: ['Foo Fighters'], durationMs: 250_000, url: 'https://open.spotify.com/track/4iV5W9uYEdYUVa79Axb7Rh' }
+    const { rerender } = render(<PlayerBar player={makePlayer({ track: spotify })} />)
+    const bar = within(screen.getByRole('contentinfo', { name: 'Player' }))
+    expect(bar.getByRole('img', { name: 'Spotify logo' })).toBeTruthy()
+    expect(bar.getByRole('link', { name: 'Open Spotify' }).getAttribute('href')).toBe(spotify.url)
+
+    rerender(<PlayerBar player={makePlayer()} />)
+    expect(screen.queryByRole('img', { name: 'Spotify logo' })).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Open Spotify' })).toBeNull()
+  })
+
   it('shows elapsed and total time, and exposes them to assistive tech on the seek slider', () => {
     render(<PlayerBar player={makePlayer()} />)
 

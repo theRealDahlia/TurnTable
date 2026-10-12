@@ -25,7 +25,7 @@ export function TrackRow({ track, provider, current, playing, onPlay, onToggleSa
   const quality = formatQuality(track.quality)
 
   return (
-    <li className="track" data-current={current} data-playing={current && playing} onDoubleClick={() => playable && onPlay(track)}>
+    <li className="track" data-provider={provider.id} data-current={current} data-playing={current && playing} onDoubleClick={() => playable && onPlay(track)}>
       <div className="track-art-wrap">
         {track.artworkUrl ? (
           <img className="track-art" src={track.artworkUrl} alt="" loading="lazy" />
@@ -51,10 +51,17 @@ export function TrackRow({ track, provider, current, playing, onPlay, onToggleSa
         </button>
       </div>
       <div className="track-main">
-        <span className="track-title">{track.title}</span>
-        <span className="track-artists">{track.artists.join(', ')}</span>
+        {/* Titles are shown as the service gives them; when one is cut short to fit, the hover text has all of it. */}
+        <span className="track-title" title={track.title}>
+          {track.title}
+        </span>
+        <span className="track-artists" title={track.artists.join(', ')}>
+          {track.artists.join(', ')}
+        </span>
       </div>
-      <span className="track-album">{track.album}</span>
+      <span className="track-album" title={track.album}>
+        {track.album}
+      </span>
       <span className="track-format">{quality}</span>
       {track.url ? (
         <a

@@ -2,6 +2,7 @@ import { formatQuality } from '../lib/quality'
 import { NextIcon, NoteIcon, PauseIcon, PlayIcon, PreviousIcon, ShuffleIcon, SpeakerIcon } from './icons'
 import { formatDuration } from '../library/query'
 import type { Player } from '../player/usePlayer'
+import { SpotifyFullLogo } from './SpotifyFullLogo'
 
 interface Props {
   player: Player
@@ -32,6 +33,17 @@ export function PlayerBar({ player }: Props): React.JSX.Element | null {
           <span className="track-artists">{track.artists.join(', ')}</span>
           {quality && <span className="quality-badge">{quality}</span>}
         </div>
+        {/* Spotify asks for its logo wherever its content plays, and a link back to it. */}
+        {track.providerId === 'spotify' && (
+          <span className="spotify-credit spotify-credit-player">
+            <SpotifyFullLogo size="sm" />
+            {track.url && (
+              <a href={track.url} target="_blank" rel="noreferrer">
+                Open Spotify
+              </a>
+            )}
+          </span>
+        )}
       </div>
 
       <div className="player-center">
