@@ -6,8 +6,11 @@ import type { OAuthConfig } from '../../auth/oauth'
  */
 export const SPOTIFY_REDIRECT_PORT = 43821
 
-/** What the Web Playback SDK (`streaming`) and starting a track on its device (`user-modify-playback-state`) need. */
-export const PLAYBACK_SCOPES = ['streaming', 'user-modify-playback-state']
+/**
+ * What the Web Playback SDK needs (`streaming`, plus the profile scopes it checks the account with; without
+ * them it fails with "Invalid token scopes") and starting a track on its device (`user-modify-playback-state`).
+ */
+export const PLAYBACK_SCOPES = ['streaming', 'user-read-email', 'user-read-private', 'user-modify-playback-state']
 
 /** What saving songs to the library, and removing them again, needs. */
 export const LIBRARY_WRITE_SCOPES = ['user-library-modify']

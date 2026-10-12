@@ -249,7 +249,7 @@ describe('Spotify grants', () => {
     const { provider, session } = setup([])
     await provider.needsReauthorization?.()
     expect(session.hasScopes).toHaveBeenCalledWith(REQUIRED_SCOPES)
-    expect(REQUIRED_SCOPES).toEqual(['streaming', 'user-modify-playback-state', 'user-library-modify'])
+    expect(REQUIRED_SCOPES).toEqual(['streaming', 'user-read-email', 'user-read-private', 'user-modify-playback-state', 'user-library-modify'])
   })
 
   it('flags a grant made before saving existed', async () => {

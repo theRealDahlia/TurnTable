@@ -12,7 +12,7 @@ describe('spotifyOAuthConfig', () => {
       clientId: 'abc123',
       authorizeUrl: 'https://accounts.spotify.com/authorize',
       tokenUrl: 'https://accounts.spotify.com/api/token',
-      scopes: ['user-library-read', 'streaming', 'user-modify-playback-state', 'user-library-modify'],
+      scopes: ['user-library-read', 'streaming', 'user-read-email', 'user-read-private', 'user-modify-playback-state', 'user-library-modify'],
       loopbackPort: SPOTIFY_REDIRECT_PORT
     })
   })
@@ -57,7 +57,7 @@ describe('createSpotifyProvider', () => {
     it('hands out an access token when the grant covers playback', async () => {
       session.hasScopes.mockResolvedValue(true)
       await expect(provider.getPlaybackToken()).resolves.toBe('token-123')
-      expect(session.hasScopes).toHaveBeenCalledWith(['streaming', 'user-modify-playback-state'])
+      expect(session.hasScopes).toHaveBeenCalledWith(['streaming', 'user-read-email', 'user-read-private', 'user-modify-playback-state'])
       expect(await provider.needsReauthorization?.()).toBe(false)
     })
 
