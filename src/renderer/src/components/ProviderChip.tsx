@@ -1,3 +1,4 @@
+import { QOBUZ_NOTICE } from '@shared/qobuz'
 import type { ProviderStatus } from '@shared/types'
 import { codecName } from '../lib/quality'
 import { ProviderLogo } from './ProviderLogo'
@@ -40,6 +41,7 @@ export function ProviderChip({ provider, busy, onToggle, onAddFolders }: Props):
           </span>
           <span className="chip-quality">{describeQuality(provider)}</span>
         </span>
+        {provider.id === 'qobuz' && <span className="chip-notice">{QOBUZ_NOTICE}</span>}
       </div>
       {isLocal && connected && (
         <button

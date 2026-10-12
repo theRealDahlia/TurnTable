@@ -423,6 +423,90 @@ button {
   }
 }
 
+/* Sign-in form for services that use the account's own email and password. */
+.credentials-card {
+  list-style: none;
+  margin: -4px 0 4px;
+  padding: 16px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+}
+
+.credentials-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.credentials-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.credentials-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.credentials-fields input {
+  height: 38px;
+  padding: 0 12px;
+  color: var(--text);
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.credentials-fields input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.credentials-hint {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.credentials-error {
+  margin: 0;
+  padding: 9px 12px;
+  color: var(--danger-text);
+  background: var(--danger-bg);
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.credentials-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* The sentence Qobuz's terms require, kept readable rather than tucked away. */
+.qobuz-notice {
+  margin: 14px 0 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.chip-notice {
+  display: block;
+  margin-top: 3px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
 /* ---------- Library ---------- */
 .page-wide {
   max-width: 1040px;

@@ -23,7 +23,7 @@ const ALL: ProviderStatus[] = [
   provider({ id: 'spotify', name: 'Spotify' }),
   provider({ id: 'youtubeMusic', name: 'YouTube Music' }),
   provider({ id: 'soundcloud', name: 'SoundCloud' }),
-  provider({ id: 'qobuz', name: 'Qobuz', maxQuality: lossless }),
+  provider({ id: 'qobuz', name: 'Qobuz', authKind: 'credentials', playback: 'stream', maxQuality: lossless }),
   provider({ id: 'local', name: 'Local files', authKind: 'none', maxQuality: lossless })
 ]
 
@@ -260,5 +260,165 @@ describe('ConnectionsPage', () => {
       await userEvent.click(await screen.findByRole('button', { name: 'Connect Spotify' }))
       await waitFor(() => expect(api.connectProvider).toHaveBeenCalledWith('spotify'))
     })
+  })
+})
+
+describe('ConnectionsPage signing in with an email and password', () => {
+  const NOTICE = 'This application uses the Qobuz API but is not certified by Qobuz.'
+
+  beforeEach(() => {
+    api.listProviders.mockResolvedValue(ALL)
+  })
+
+  const open = async () => {
+    render(<ConnectionsPage />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Connect Qobuz' }))
+    return screen.findByRole('form', { name: 'Sign in to Qobuz' })
+  }
+  const fill = async (email: string, password: string) => {
+    const form = screen.getByRole('form', { name: 'Sign in to Qobuz' })
+    await userEvent.type(within(form).getByLabelText('Email'), email)
+    await userEvent.type(within(form).getByLabelText('Password'), password)
+    return form
+  }
+
+  it('shows the notice Qobuz requires on its chip, whether or not anyone signs in', async () => {
+    render(<ConnectionsPage />)
+    const chip = (await screen.findByRole('img', { name: 'Qobuz logo' })).closest('li')!
+    expect(within(chip).getByText(NOTICE)).toBeTruthy()
+    expect(screen.getAllByText(NOTICE)).toHaveLength(1)
+  })
+
+  it('opens a sign-in form instead of connecting straight away', async () => {
+    const form = await open()
+    expect(api.connectProvider).not.toHaveBeenCalled()
+    expect(within(form).getByLabelText('Email')).toBeTruthy()
+    const password = within(form).getByLabelText('Password') as HTMLInputElement
+    expect(password.type).toBe('password')
+    expect(password.getAttribute('autocomplete')).toBe('current-password')
+    expect(document.activeElement).toBe(within(form).getByLabelText('Email'))
+  })
+
+  it('says where the details go, with the required notice still showing on the chip above', async () => {
+    const form = await open()
+    expect(within(form).getByText(/go only to Qobuz, once, and are not stored/)).toBeTruthy()
+    expect(screen.getAllByText(NOTICE)).toHaveLength(1)
+  })
+
+  it('does not offer to sign in until both fields are filled in', async () => {
+    const form = await open()
+    const submit = within(form).getByRole('button', { name: 'Sign in' }) as HTMLButtonElement
+    expect(submit.disabled).toBe(true)
+    await userEvent.type(within(form).getByLabelText('Email'), 'me@example.com')
+    expect(submit.disabled).toBe(true)
+    await userEvent.type(within(form).getByLabelText('Password'), 'pw')
+    expect(submit.disabled).toBe(false)
+  })
+
+  it('signs in with what was typed, then closes the form and tells the library to reload that service', async () => {
+    const onChanged = vi.fn()
+    api.connectProvider.mockResolvedValue(undefined)
+    render(<ConnectionsPage onChanged={onChanged} />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Connect Qobuz' }))
+    await fill('me@example.com', 'hunter2')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+
+    expect(api.connectProvider).toHaveBeenCalledExactlyOnceWith('qobuz', { username: 'me@example.com', password: 'hunter2' })
+    await waitFor(() => expect(screen.queryByRole('form', { name: 'Sign in to Qobuz' })).toBeNull())
+    expect(onChanged).toHaveBeenCalledExactlyOnceWith('qobuz')
+  })
+
+  it('also signs in with Enter', async () => {
+    api.connectProvider.mockResolvedValue(undefined)
+    await open()
+    await fill('me@example.com', 'hunter2')
+    await userEvent.keyboard('{Enter}')
+    expect(api.connectProvider).toHaveBeenCalledOnce()
+  })
+
+  it('clears the password as soon as it is sent, but keeps the email', async () => {
+    let finish!: () => void
+    api.connectProvider.mockReturnValue(new Promise<void>((resolve) => (finish = resolve)))
+    await open()
+    const form = await fill('me@example.com', 'hunter2')
+    await userEvent.click(within(form).getByRole('button', { name: 'Sign in' }))
+
+    expect((within(form).getByLabelText('Password') as HTMLInputElement).value).toBe('')
+    expect((within(form).getByLabelText('Email') as HTMLInputElement).value).toBe('me@example.com')
+    finish()
+  })
+
+  it('shows what Qobuz said beside the fields when it refuses, and leaves the form open for another try', async () => {
+    api.connectProvider.mockRejectedValue(new Error("Error invoking remote method 'providers:connect': Error: Qobuz: Invalid username/email and password combination"))
+    await open()
+    const form = await fill('me@example.com', 'wrong')
+    await userEvent.click(within(form).getByRole('button', { name: 'Sign in' }))
+
+    expect((await within(form).findByRole('alert')).textContent).toBe('Qobuz: Invalid username/email and password combination')
+    expect((within(form).getByLabelText('Email') as HTMLInputElement).value).toBe('me@example.com')
+    expect((within(form).getByLabelText('Password') as HTMLInputElement).value).toBe('')
+    expect(within(form).queryByText('Signing in…')).toBeNull()
+    // The page-wide banner is for everything else.
+    expect(screen.queryAllByRole('alert')).toHaveLength(1)
+  })
+
+  it('never shows the password in an error', async () => {
+    api.connectProvider.mockRejectedValue(new Error('Qobuz sign-in failed with status 503'))
+    await open()
+    const form = await fill('me@example.com', 'hunter2')
+    await userEvent.click(within(form).getByRole('button', { name: 'Sign in' }))
+    await within(form).findByRole('alert')
+    expect(document.body.textContent).not.toContain('hunter2')
+  })
+
+  it('waits while signing in', async () => {
+    api.connectProvider.mockReturnValue(new Promise(() => undefined))
+    await open()
+    const form = await fill('me@example.com', 'hunter2')
+    await userEvent.click(within(form).getByRole('button', { name: 'Sign in' }))
+    expect(await within(form).findByRole('button', { name: 'Signing in…' })).toBeTruthy()
+    expect((within(form).getByRole('button', { name: 'Cancel' }) as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('closes without signing in on Cancel or Escape, and forgets an old error when it is opened again', async () => {
+    api.connectProvider.mockRejectedValue(new Error('Qobuz did not accept that email and password.'))
+    await open()
+    const form = await fill('me@example.com', 'wrong')
+    await userEvent.click(within(form).getByRole('button', { name: 'Sign in' }))
+    await within(form).findByRole('alert')
+
+    await userEvent.click(within(form).getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByRole('form', { name: 'Sign in to Qobuz' })).toBeNull()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Connect Qobuz' }))
+    const again = await screen.findByRole('form', { name: 'Sign in to Qobuz' })
+    expect(within(again).queryByRole('alert')).toBeNull()
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('form', { name: 'Sign in to Qobuz' })).toBeNull()
+    expect(api.connectProvider).toHaveBeenCalledTimes(1)
+  })
+
+  it('closes the form when Connect is pressed a second time', async () => {
+    await open()
+    await userEvent.click(screen.getByRole('button', { name: 'Connect Qobuz' }))
+    expect(screen.queryByRole('form', { name: 'Sign in to Qobuz' })).toBeNull()
+  })
+
+  it('does not open a form for a service that signs in in a browser, and gives it no credentials', async () => {
+    api.connectProvider.mockResolvedValue(undefined)
+    render(<ConnectionsPage />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Connect Spotify' }))
+    expect(screen.queryByRole('form')).toBeNull()
+    expect(api.connectProvider).toHaveBeenCalledExactlyOnceWith('spotify')
+  })
+
+  it('disconnects a signed-in account without asking for a password', async () => {
+    api.listProviders.mockResolvedValue(ALL.map((p) => (p.id === 'qobuz' ? { ...p, connected: true } : p)))
+    api.disconnectProvider.mockResolvedValue(undefined)
+    render(<ConnectionsPage />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Disconnect Qobuz' }))
+    expect(screen.queryByRole('form')).toBeNull()
+    expect(api.disconnectProvider).toHaveBeenCalledWith('qobuz')
   })
 })
