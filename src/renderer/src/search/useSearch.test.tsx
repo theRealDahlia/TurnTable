@@ -290,7 +290,7 @@ describe('useSearch paging', () => {
 })
 
 describe('useSearch saving', () => {
-  async function searched(saved: number[] = [], onSaved?: (id: ProviderId) => void) {
+  async function searched(saved: number[] = [], onSaved?: (track: Track, saved: boolean) => void) {
     api.searchTracks.mockImplementation(async (id: ProviderId) => page(id, [1, 2], undefined, saved))
     const hook = renderHook(() => useSearch({ onSaved }))
     act(() => hook.result.current.search('foo', ['spotify', 'youtubeMusic']))
@@ -311,7 +311,7 @@ describe('useSearch saving', () => {
 
     expect(api.saveTrack).toHaveBeenCalledExactlyOnceWith('spotify', 'spotify-1')
     expect(api.unsaveTrack).not.toHaveBeenCalled()
-    expect(onSaved).toHaveBeenCalledExactlyOnceWith('spotify')
+    expect(onSaved).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ id: 'spotify-1', providerId: 'spotify' }), true)
     expect(result.current.saveError).toBeUndefined()
   })
 
@@ -324,6 +324,7 @@ describe('useSearch saving', () => {
     act(() => result.current.toggleSave(target))
     expect(savedOf(result.current.results.youtubeMusic?.tracks)).toEqual([false, false])
     await waitFor(() => expect(onSaved).toHaveBeenCalled())
+    expect(onSaved).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ id: 'youtubeMusic-1' }), false)
 
     expect(api.unsaveTrack).toHaveBeenCalledExactlyOnceWith('youtubeMusic', 'youtubeMusic-1')
     expect(api.saveTrack).not.toHaveBeenCalled()
@@ -402,7 +403,7 @@ describe('useSearch saving', () => {
     act(() => result.current.search('other', ['spotify']))
     await act(async () => slow.resolve())
 
-    expect(onSaved).toHaveBeenCalledExactlyOnceWith('spotify')
+    expect(onSaved).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ id: 'spotify-1', providerId: 'spotify' }), true)
   })
 
   it('does not reach into the new results when an old save fails', async () => {

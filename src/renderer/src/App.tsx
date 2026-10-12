@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { LegalDialog } from './components/LegalDialog'
 import { PlayerBar } from './components/PlayerBar'
 import { TermsGate } from './components/TermsGate'
@@ -15,7 +15,6 @@ import { useMediaSession } from './player/useMediaSession'
 import { usePlayer } from './player/usePlayer'
 import { useSpacebarToggle } from './player/useSpacebarToggle'
 import { useSearch } from './search/useSearch'
-import type { ProviderId } from '@shared/types'
 
 /** Nothing connects or loads until the user has agreed to the agreement and privacy policy. */
 export function App(): React.JSX.Element {
@@ -29,9 +28,9 @@ function Main(): React.JSX.Element {
   // Owned here so the library and the player survive switching pages.
   const library = useLibrary()
   const player = usePlayer()
-  // Songs saved from Search change a service's library, which the Library catches up with when it is next opened.
-  const changed = useRef(new Set<ProviderId>())
-  const search = useSearch({ onSaved: (id) => void changed.current.add(id) })
+  // A song saved or removed from Search changes the library by that one song, with no need to fetch it all again.
+  const { noteSaved } = library
+  const search = useSearch({ onSaved: noteSaved })
   useMediaSession(player)
   useMediaKeys(player)
   useSpacebarToggle(player.toggle)
@@ -43,13 +42,7 @@ function Main(): React.JSX.Element {
     if (playingFrom && library.providers.some((provider) => provider.id === playingFrom && !provider.connected)) clear()
   }, [playingFrom, library.providers, clear])
 
-  const navigate = (next: Page): void => {
-    if (next === 'library') {
-      for (const id of changed.current) library.refresh(id)
-      changed.current.clear()
-    }
-    setPage(next)
-  }
+  const navigate = (next: Page): void => setPage(next)
 
   return (
     <div className="app" data-playing={player.track !== undefined}>

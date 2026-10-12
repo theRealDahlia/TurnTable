@@ -112,7 +112,7 @@ describe('App search', () => {
     expect(nav().getByRole('button', { name: 'Search' }).getAttribute('aria-current')).toBe('page')
   })
 
-  it('searches, saves a result, and brings the new save into the Library on return', async () => {
+  it('searches, saves a result, and shows it in the Library on return without fetching the Library again', async () => {
     api.listProviders.mockResolvedValue([searchable(true)])
     api.searchTracks.mockResolvedValue(found(false))
     api.saveTrack.mockResolvedValue(undefined)
@@ -132,7 +132,29 @@ describe('App search', () => {
     expect(api.getSavedTracks).toHaveBeenCalledTimes(1)
 
     await userEvent.click(nav().getByRole('button', { name: 'Library' }))
-    await waitFor(() => expect(api.getSavedTracks).toHaveBeenCalledTimes(2))
+    expect(await screen.findByText('Everlong')).toBeTruthy()
+    expect(screen.getByText('First Song')).toBeTruthy()
+    // The saved song was added to the list already loaded; nothing was fetched.
+    expect(api.getSavedTracks).toHaveBeenCalledTimes(1)
+  })
+
+  it('takes a song out of the Library when it is removed from Search', async () => {
+    api.listProviders.mockResolvedValue([searchable(true)])
+    api.getSavedTracks.mockResolvedValue({ tracks: [{ id: SONG, providerId: 'spotify', title: 'Everlong', artists: ['Foo Fighters'], durationMs: 250_000 }, { id: 't1', providerId: 'spotify', title: 'First Song', artists: ['Someone'], durationMs: 60_000 }] })
+    api.searchTracks.mockResolvedValue(found(true))
+    api.unsaveTrack.mockResolvedValue(undefined)
+    render(<App />)
+    await screen.findByText('Everlong')
+
+    await userEvent.click(nav().getByRole('button', { name: 'Search' }))
+    await userEvent.type(await screen.findByRole('searchbox', { name: 'Search for songs' }), 'foo{Enter}')
+    await userEvent.click(await screen.findByRole('button', { name: 'Save Everlong', pressed: true }))
+    await waitFor(() => expect(api.unsaveTrack).toHaveBeenCalledExactlyOnceWith('spotify', SONG))
+    await userEvent.click(nav().getByRole('button', { name: 'Library' }))
+
+    expect(await screen.findByText('First Song')).toBeTruthy()
+    expect(within(screen.getByRole('list', { name: 'Saved tracks' })).queryByText('Everlong')).toBeNull()
+    expect(api.getSavedTracks).toHaveBeenCalledTimes(1)
   })
 
   it('does not re-read the library when nothing was saved', async () => {

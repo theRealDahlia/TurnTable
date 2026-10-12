@@ -649,6 +649,42 @@ describe('useLibrary.refresh', () => {
   })
 })
 
+describe('useLibrary noteSaved', () => {
+  const saved = (n: number): Track => ({ ...track('spotify', n), saved: true })
+
+  it("puts a song saved elsewhere at the top of that service's loaded list, once, and takes it out again when removed", async () => {
+    api.listProviders.mockResolvedValue([status('spotify', true)])
+    api.getSavedTracks.mockResolvedValue(page('spotify', [1, 2]))
+    const { result } = renderHook(() => useOpenedLibrary())
+    await waitFor(() => expect(result.current.libraries.spotify?.status).toBe('ready'))
+    api.getSavedTracks.mockClear()
+
+    act(() => result.current.noteSaved(saved(9), true))
+    act(() => result.current.noteSaved(saved(9), true))
+    expect(result.current.libraries.spotify?.tracks.map((t) => t.id)).toEqual(['spotify-9', 'spotify-1', 'spotify-2'])
+    expect(result.current.libraries.spotify?.tracks[0]).toMatchObject({ saved: undefined })
+    expect(result.current.libraries.spotify?.tracks[0]?.savedAt).toBeTruthy()
+
+    act(() => result.current.noteSaved(saved(1), false))
+    expect(result.current.libraries.spotify?.tracks.map((t) => t.id)).toEqual(['spotify-9', 'spotify-2'])
+    expect(api.getSavedTracks).not.toHaveBeenCalled()
+  })
+
+  it('leaves a service nobody has opened alone, and other services untouched', async () => {
+    api.listProviders.mockResolvedValue([status('spotify', true), status('youtubeMusic', true)])
+    api.getSavedTracks.mockImplementation(async (id: ProviderStatus['id']) => page(id, [1]))
+    const { result } = renderHook(() => useLibrary())
+    await waitFor(() => expect(result.current.listing).toBe(false))
+    act(() => result.current.ensure('youtubeMusic'))
+    await waitFor(() => expect(result.current.libraries.youtubeMusic?.status).toBe('ready'))
+
+    act(() => result.current.noteSaved(saved(9), true))
+
+    expect(result.current.libraries.spotify).toBeUndefined()
+    expect(result.current.libraries.youtubeMusic?.tracks.map((t) => t.id)).toEqual(['youtubeMusic-1'])
+  })
+})
+
 describe('useLibrary loading on demand', () => {
   const two = (): ProviderStatus[] => [status('spotify', true), status('youtubeMusic', true), status('local', true), status('qobuz', false)]
   const requested = (): string[] => api.getSavedTracks.mock.calls.map((call) => call[0] as string)

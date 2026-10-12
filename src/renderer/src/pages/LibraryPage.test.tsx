@@ -44,6 +44,7 @@ function makeLibrary(overrides: Partial<Library> = {}, tracks: Track[] = []): Li
     refresh: vi.fn(),
     refreshProvider: vi.fn(),
     ensure: vi.fn(),
+    noteSaved: vi.fn(),
     retry: vi.fn(),
     ...overrides
   }

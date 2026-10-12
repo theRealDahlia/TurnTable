@@ -30,6 +30,8 @@ type Action =
   | { type: 'pageLoaded'; id: ProviderId; tracks: Track[] }
   | { type: 'providerDone'; id: ProviderId }
   | { type: 'providerFailed'; id: ProviderId; error: string }
+  /** One track was saved to a service (`saved`) or removed from it, from outside the library. */
+  | { type: 'trackSaved'; track: Track; saved: boolean }
 
 const initialState: State = { phase: 'listing', providers: [], libraries: {}, listings: 0 }
 
@@ -67,6 +69,19 @@ function reducer(state: State, action: Action): State {
       )
     case 'providerDone':
       return update(action.id, (lib) => ({ status: 'ready', tracks: lib.incoming ?? lib.tracks }))
+    case 'trackSaved': {
+      // A library nobody has opened isn't loaded, and loads fresh when it is.
+      const own = state.libraries[action.track.providerId]
+      if (!own) return state
+      const same = (t: Track): boolean => t.id === action.track.id
+      const change = (list: Track[]): Track[] =>
+        action.saved
+          ? list.some(same)
+            ? list
+            : [{ ...action.track, saved: undefined, savedAt: new Date().toISOString() }, ...list]
+          : list.filter((t) => !same(t))
+      return update(action.track.providerId, (lib) => ({ ...lib, tracks: change(lib.tracks), ...(lib.incoming ? { incoming: change(lib.incoming) } : {}) }))
+    }
     case 'providerFailed':
       // A refresh that fails leaves the list as it was; a first load keeps whatever pages had arrived.
       return update(action.id, (lib) => ({ status: 'error', tracks: lib.tracks, error: action.error }))
@@ -106,6 +121,11 @@ export interface Library {
    * so changing one service never costs another service's API calls.
    */
   refreshProvider(id: ProviderId): void
+  /**
+   * A song was saved to a service or removed from it, e.g. from a search. Changes the list already loaded by
+   * that one track, so the library does not have to be fetched again; a service that has not been opened is left to load when it is.
+   */
+  noteSaved(track: Track, saved: boolean): void
   /** Re-fetches one service, e.g. after an error. */
   retry(id: ProviderId): void
 }
@@ -246,6 +266,7 @@ export function useLibrary(): Library {
     refresh,
     ensure,
     refreshProvider,
+    noteSaved: useCallback((track: Track, saved: boolean) => dispatch({ type: 'trackSaved', track, saved }), []),
     retry: useCallback((id: ProviderId) => void loadProvider(id), [loadProvider])
   }
 }

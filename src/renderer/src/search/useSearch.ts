@@ -148,8 +148,8 @@ export interface SearchState {
 }
 
 export interface SearchOptions {
-  /** A save or removal went through, so the service's library has changed. */
-  onSaved?: (id: ProviderId) => void
+  /** A save (`saved` true) or removal (false) went through, so the service's library has changed by that one track. */
+  onSaved?: (track: Track, saved: boolean) => void
 }
 
 /**
@@ -225,7 +225,7 @@ export function useSearch({ onSaved }: SearchOptions = {}): SearchState {
     request.then(
       () => {
         // The service's library changed whatever the screen is showing now.
-        onSavedRef.current?.(track.providerId)
+        onSavedRef.current?.(track, !wasSaved)
         if (run.current === mine) dispatch({ type: 'saved', track })
       },
       (error: unknown) => {
