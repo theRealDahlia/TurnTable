@@ -28,6 +28,8 @@ export default defineConfig({
       }
     },
     plugins: [react()],
-    resolve: { alias: { '@shared': shared } }
+    resolve: { alias: { '@shared': shared } },
+    // The legal documents are read from the repository's docs folder, which is outside the renderer's own folder.
+    server: { fs: { allow: [resolve(__dirname)] } }
   }
 })

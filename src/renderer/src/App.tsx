@@ -1,5 +1,8 @@
 import { useRef, useState } from 'react'
+import { LegalDialog } from './components/LegalDialog'
 import { PlayerBar } from './components/PlayerBar'
+import { TermsGate } from './components/TermsGate'
+import { useAcceptance } from './legal/useAcceptance'
 import { Sidebar, type Page } from './components/Sidebar'
 import { SoundCloudPanel } from './components/SoundCloudPanel'
 import { YouTubePanel } from './components/YouTubePanel'
@@ -14,8 +17,15 @@ import { useSpacebarToggle } from './player/useSpacebarToggle'
 import { useSearch } from './search/useSearch'
 import type { ProviderId } from '@shared/types'
 
+/** Nothing connects or loads until the user has agreed to the agreement and privacy policy. */
 export function App(): React.JSX.Element {
+  const { accepted, accept } = useAcceptance()
+  return accepted ? <Main /> : <TermsGate onAccept={accept} />
+}
+
+function Main(): React.JSX.Element {
   const [page, setPage] = useState<Page>('library')
+  const [legalOpen, setLegalOpen] = useState(false)
   // Owned here so the library and the player survive switching pages.
   const library = useLibrary()
   const player = usePlayer()
@@ -37,7 +47,7 @@ export function App(): React.JSX.Element {
   return (
     <div className="app" data-playing={player.track !== undefined}>
       <div className="drag-strip" aria-hidden="true" />
-      <Sidebar page={page} onNavigate={navigate}>
+      <Sidebar page={page} onNavigate={navigate} onOpenLegal={() => setLegalOpen(true)}>
         <YouTubePanel track={player.track} />
         <SoundCloudPanel track={player.track} />
       </Sidebar>
@@ -53,6 +63,7 @@ export function App(): React.JSX.Element {
           />}
       </div>
       <PlayerBar player={player} />
+      {legalOpen && <LegalDialog initial="PRIVACY.md" onClose={() => setLegalOpen(false)} />}
     </div>
   )
 }

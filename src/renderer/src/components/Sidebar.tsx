@@ -6,6 +6,8 @@ export type Page = 'library' | 'search' | 'connections'
 interface Props {
   page: Page
   onNavigate: (page: Page) => void
+  /** Opens the End-User Agreement and Privacy Policy, which must stay easy to reach. */
+  onOpenLegal?: () => void
   /** Shown at the bottom of the sidebar, e.g. the YouTube video. */
   children?: React.ReactNode
 }
@@ -51,7 +53,7 @@ const ITEMS: { page: Page; label: string; icon: React.JSX.Element }[] = [
   }
 ]
 
-export function Sidebar({ page, onNavigate, children }: Props): React.JSX.Element {
+export function Sidebar({ page, onNavigate, onOpenLegal, children }: Props): React.JSX.Element {
   return (
     <aside className="sidebar">
       <div className="brand">
@@ -72,6 +74,11 @@ export function Sidebar({ page, onNavigate, children }: Props): React.JSX.Elemen
           </button>
         ))}
       </nav>
+      {onOpenLegal && (
+        <button type="button" className="sidebar-legal" onClick={onOpenLegal}>
+          Privacy &amp; terms
+        </button>
+      )}
       {children}
     </aside>
   )

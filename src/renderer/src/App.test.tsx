@@ -5,7 +5,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { TurnTableApi } from '@shared/ipc'
 import type { SpotifyPlayerApi, SpotifyPlayerEvent } from '@shared/spotifyPlayer'
 import type { ProviderStatus } from '@shared/types'
+import { LEGAL_VERSION } from '@shared/legal'
 import { App } from './App'
+import { ACCEPTANCE_KEY } from './legal/useAcceptance'
 
 const spotify = (connected: boolean): ProviderStatus => ({
   id: 'spotify',
@@ -33,6 +35,8 @@ const localFlac = {
 let api: { [K in keyof TurnTableApi]: ReturnType<typeof vi.fn> }
 
 beforeEach(() => {
+  // The tests below are of the app itself, so the user has already agreed to the documents.
+  window.localStorage.setItem(ACCEPTANCE_KEY, LEGAL_VERSION)
   mediaPlay.mockReset().mockResolvedValue(undefined)
   api = {
     listProviders: vi.fn().mockResolvedValue([spotify(false)]),
@@ -50,6 +54,46 @@ beforeEach(() => {
 afterEach(cleanup)
 
 const nav = (): ReturnType<typeof within> => within(screen.getByRole('navigation', { name: 'Main' }))
+
+describe('App terms', () => {
+  it('shows only the agreement screen, and fetches nothing, until the user agrees', async () => {
+    window.localStorage.clear()
+    api.listProviders.mockResolvedValue([spotify(true)])
+    render(<App />)
+
+    expect(screen.getByRole('heading', { name: 'Before you start' })).toBeTruthy()
+    expect(screen.queryByRole('navigation', { name: 'Main' })).toBeNull()
+    const proceed = screen.getByRole('button', { name: 'Continue' }) as HTMLButtonElement
+    expect(proceed.disabled).toBe(true)
+    expect(api.listProviders).not.toHaveBeenCalled()
+
+    await userEvent.click(screen.getByRole('checkbox', { name: /I have read and agree/ }))
+    await userEvent.click(proceed)
+
+    expect(await screen.findByText('First Song')).toBeTruthy()
+    expect(window.localStorage.getItem(ACCEPTANCE_KEY)).toBe(LEGAL_VERSION)
+  })
+
+  it('goes straight to the app once the current version has been agreed to', () => {
+    render(<App />)
+    expect(screen.queryByRole('heading', { name: 'Before you start' })).toBeNull()
+    expect(screen.getByRole('navigation', { name: 'Main' })).toBeTruthy()
+  })
+
+  it('keeps the documents one click away from the sidebar', async () => {
+    render(<App />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Privacy & terms' }))
+    const dialog = within(screen.getByRole('dialog'))
+    expect(dialog.getByRole('heading', { level: 1, name: 'Muze: Privacy Policy' })).toBeTruthy()
+
+    await userEvent.click(dialog.getByRole('button', { name: 'End-User Agreement' }))
+    expect(dialog.getByRole('heading', { level: 1, name: 'Muze: End-User Agreement' })).toBeTruthy()
+
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+})
 
 describe('App search', () => {
   const searchable = (connected: boolean): ProviderStatus => ({ ...spotify(connected), searchable: true, savable: true })

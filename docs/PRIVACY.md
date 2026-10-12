@@ -44,7 +44,7 @@ The players of Spotify, YouTube and SoundCloud run inside Muze's window and are 
 
 ## Google API Services
 
-Muze's use and transfer to any other app of information received from Google APIs will adhere to the [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy), including the Limited Use requirements. Muze uses Google user data only to show your liked videos and search results, and to like or un-like a video when you ask. It is not transferred to anyone, used for advertising, or read by people.
+**Muze uses YouTube API Services.** Muze's use and transfer to any other app of information received from Google APIs will adhere to the [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy), including the Limited Use requirements. Muze uses Google user data only to show your liked videos and search results, and to like or un-like a video when you ask. It is not transferred to anyone, used for advertising, or read by people.
 
 ## Who we share data with
 
