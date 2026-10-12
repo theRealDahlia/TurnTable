@@ -29,6 +29,7 @@ type Action =
   | { type: 'volume'; volume: number }
   | { type: 'failed'; error: string }
   | { type: 'shuffle'; on: boolean; hasNext: boolean; hasPrevious: boolean }
+  | { type: 'cleared' }
 
 const initialState: State = { status: 'idle', currentTime: 0, duration: 0, volume: 1, hasNext: false, hasPrevious: false, shuffle: false }
 
@@ -48,6 +49,9 @@ function reducer(state: State, action: Action): State {
       return { ...state, status: 'error', error: action.error }
     case 'shuffle':
       return { ...state, shuffle: action.on, hasNext: action.hasNext, hasPrevious: action.hasPrevious }
+    case 'cleared':
+      // Back to nothing playing; the user's volume and shuffle choices stay.
+      return { ...initialState, volume: state.volume, shuffle: state.shuffle }
   }
 }
 
@@ -71,6 +75,8 @@ export interface Player extends State {
   setVolume(volume: number): void
   /** Turns shuffle on or off. The track that is playing carries on; the rest of the queue is reordered. */
   setShuffle(on: boolean): void
+  /** Stops playback and forgets the track and queue, so nothing from a service stays on screen once it is disconnected. */
+  clear(): void
 }
 
 export interface PlayerOptions {
@@ -236,6 +242,20 @@ export function usePlayer({ createAudio = createDefaultMedia, random = Math.rand
 
   const pause = useCallback(() => audioRef.current?.pause(), [])
 
+  const clear = useCallback(() => {
+    // A load still in flight must not bring the player back to life.
+    loadId.current++
+    queueRef.current = { tracks: [], index: -1 }
+    listedRef.current = []
+    const audio = audioRef.current
+    if (audio) {
+      audio.pause()
+      audio.removeAttribute('src')
+      audio.load()
+    }
+    dispatch({ type: 'cleared' })
+  }, [])
+
   const toggle = useCallback(() => {
     const audio = audioRef.current
     if (!audio || queueRef.current.index < 0) return
@@ -260,5 +280,5 @@ export function usePlayer({ createAudio = createDefaultMedia, random = Math.rand
     dispatch({ type: 'volume', volume: clamped })
   }, [])
 
-  return { ...state, play, toggle, pause, next, previous, seek, setVolume, setShuffle }
+  return { ...state, play, toggle, pause, next, previous, seek, setVolume, setShuffle, clear }
 }

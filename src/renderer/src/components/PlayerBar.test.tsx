@@ -33,6 +33,7 @@ function makePlayer(overrides: Partial<Player> = {}): Player {
     seek: vi.fn(),
     setVolume: vi.fn(),
     setShuffle: vi.fn(),
+    clear: vi.fn(),
     shuffle: false,
     ...overrides
   }

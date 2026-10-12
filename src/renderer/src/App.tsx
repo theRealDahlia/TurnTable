@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { LegalDialog } from './components/LegalDialog'
 import { PlayerBar } from './components/PlayerBar'
 import { TermsGate } from './components/TermsGate'
@@ -35,6 +35,13 @@ function Main(): React.JSX.Element {
   useMediaSession(player)
   useMediaKeys(player)
   useSpacebarToggle(player.toggle)
+
+  // A service's content must not outlive its connection, so the player lets go of a track whose service was disconnected.
+  const playingFrom = player.track?.providerId
+  const { clear } = player
+  useEffect(() => {
+    if (playingFrom && library.providers.some((provider) => provider.id === playingFrom && !provider.connected)) clear()
+  }, [playingFrom, library.providers, clear])
 
   const navigate = (next: Page): void => {
     if (next === 'library') {

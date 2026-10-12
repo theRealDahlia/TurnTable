@@ -355,6 +355,22 @@ describe('App', () => {
       expect(bar.getByText('3:20')).toBeTruthy()
     })
 
+    it("lets go of the Spotify track playing when Spotify is disconnected, so none of its content stays on screen", async () => {
+      await openLibrary()
+      await userEvent.click(screen.getByRole('button', { name: 'Play Spotify One' }))
+      emit(playingState(FIRST))
+      await screen.findByRole('contentinfo', { name: 'Player' })
+
+      api.disconnectProvider.mockImplementation(async () => {
+        api.listProviders.mockResolvedValue([{ ...spotify(false) }, { id: 'local', name: 'Local files', authKind: 'none', playback: 'file', maxQuality: { codec: 'flac', lossless: true }, connected: true }])
+      })
+      await userEvent.click(nav().getByRole('button', { name: 'Connections' }))
+      await userEvent.click(await screen.findByRole('button', { name: 'Disconnect Spotify' }))
+      await waitFor(() => expect(api.disconnectProvider).toHaveBeenCalledWith('spotify'))
+
+      await waitFor(() => expect(screen.queryByRole('contentinfo', { name: 'Player' })).toBeNull())
+    })
+
     it('pauses and resumes Spotify with Space', async () => {
       await openLibrary()
       await userEvent.click(screen.getByRole('button', { name: 'Play Spotify One' }))

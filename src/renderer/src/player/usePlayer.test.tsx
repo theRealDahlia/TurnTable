@@ -376,6 +376,42 @@ describe('usePlayer', () => {
   })
 })
 
+describe('usePlayer clear', () => {
+  it('stops playing and forgets the track and queue, keeping volume and shuffle', async () => {
+    const { result } = setup()
+    act(() => result.current.setVolume(0.4))
+    act(() => result.current.setShuffle(true))
+    act(() => result.current.play(track(1), [track(1), track(2)]))
+    await flush()
+    expect(result.current.status).toBe('playing')
+
+    act(() => result.current.clear())
+
+    expect(audio.src).toBe('')
+    expect(audio.paused).toBe(true)
+    expect(result.current).toMatchObject({ status: 'idle', hasNext: false, hasPrevious: false, volume: 0.4, shuffle: true })
+    expect(result.current.track).toBeUndefined()
+    // There is no queue left to move through, and the toggle has nothing to resume.
+    act(() => result.current.next())
+    act(() => result.current.toggle())
+    expect(result.current.track).toBeUndefined()
+    expect(audio.src).toBe('')
+  })
+
+  it('is not undone by a track that was still loading', async () => {
+    const { result } = setup()
+    let fail!: (error: Error) => void
+    audio.playResult = () => new Promise<void>((_resolve, reject) => (fail = reject))
+    act(() => result.current.play(track(1)))
+
+    act(() => result.current.clear())
+    await act(async () => fail(new Error('late failure')))
+
+    expect(result.current.status).toBe('idle')
+    expect(result.current.error).toBeUndefined()
+  })
+})
+
 describe('usePlayer shuffle', () => {
   const queue = [track(1), track(2), track(3), track(4), track(5)]
   const playing = (result: { current: ReturnType<typeof usePlayer> }): string | undefined => result.current.track?.title
