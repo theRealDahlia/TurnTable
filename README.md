@@ -63,6 +63,8 @@ SoundCloud's official API signs you in with OAuth 2.1 (Authorization Code with P
 3. Put the client ID and secret in `.env` as `MAIN_VITE_SOUNDCLOUD_CLIENT_ID` and `MAIN_VITE_SOUNDCLOUD_CLIENT_SECRET`.
 4. Restart `npm run dev`, then click Connect on the SoundCloud chip.
 
+**What it does.** Your liked tracks (`GET /me/likes/tracks`) fill the Library, and the Search page searches SoundCloud and likes or un-likes tracks. Tracks play in SoundCloud's own player, in the same square at the bottom of the sidebar that YouTube uses: it carries SoundCloud's logo and a "Playing from SoundCloud" credit with a link back to the track, as SoundCloud's attribution rules ask. Only tracks that SoundCloud streams in full are playable; previews and blocked tracks show a disabled play button with the reason. Audio quality is whatever SoundCloud streams (AAC, up to 160 kbps through the API). The player page is served by the same loopback server as YouTube's.
+
 Tokens last about an hour and each refresh token works once, so the app stores the new one each time. Disconnecting revokes the app's access on SoundCloud (`POST /disconnect`) and does not touch your own sign-in to soundcloud.com.
 
 ## Search

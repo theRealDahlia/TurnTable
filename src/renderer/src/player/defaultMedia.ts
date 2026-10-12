@@ -1,6 +1,8 @@
 import { MediaRouter } from './MediaRouter'
 import type { PlayerMedia } from './media'
 import { SpotifyAudio } from './SpotifyAudio'
+import { soundcloudBridge } from './SoundCloudBridge'
+import { SoundCloudAudio } from './SoundCloudAudio'
 import { youtubeBridge } from './YouTubeBridge'
 import { YouTubeAudio } from './YouTubeAudio'
 
@@ -8,6 +10,7 @@ import { YouTubeAudio } from './YouTubeAudio'
 export function createDefaultMedia(): PlayerMedia {
   return new MediaRouter(new Audio(), {
     spotify: new SpotifyAudio(() => window.turntableSpotify),
-    youtube: new YouTubeAudio(youtubeBridge)
+    youtube: new YouTubeAudio(youtubeBridge),
+    soundcloud: new SoundCloudAudio(soundcloudBridge)
   })
 }

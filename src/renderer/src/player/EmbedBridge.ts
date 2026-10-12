@@ -13,6 +13,15 @@ export interface FrameWindow {
   postMessage(message: unknown, targetOrigin: string): void
 }
 
+/** What the on-screen frame needs from its bridge: to be asked for, and to be attached to. */
+export interface FrameHost {
+  /** For `useSyncExternalStore`: whether the frame has been asked for (it then stays mounted). */
+  isRequested(): boolean
+  subscribe(callback: () => void): () => void
+  /** Starts talking to the player in `frame`, whose page is served from `origin`. Returns a function that stops. */
+  attach(frame: FrameWindow, origin: string): () => void
+}
+
 interface Target {
   frame: FrameWindow
   origin: string
@@ -23,7 +32,7 @@ interface Target {
  * both require their player to be visible). React mounts the frame, the engine asks for it and sends commands;
  * this holds the two together, and only believes messages that really come from that frame.
  */
-export class EmbedBridge<C extends { type: string }, E extends { type: string }> implements EmbedChannel<C, E> {
+export class EmbedBridge<C extends { type: string }, E extends { type: string }> implements EmbedChannel<C, E>, FrameHost {
   private requested = false
   private target?: Target
   private ready = false

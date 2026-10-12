@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { PlayerBar } from './components/PlayerBar'
 import { Sidebar, type Page } from './components/Sidebar'
+import { SoundCloudPanel } from './components/SoundCloudPanel'
 import { YouTubePanel } from './components/YouTubePanel'
 import { useLibrary } from './library/useLibrary'
 import { ConnectionsPage } from './pages/ConnectionsPage'
@@ -38,6 +39,7 @@ export function App(): React.JSX.Element {
       <div className="drag-strip" aria-hidden="true" />
       <Sidebar page={page} onNavigate={navigate}>
         <YouTubePanel track={player.track} />
+        <SoundCloudPanel track={player.track} />
       </Sidebar>
       <div className="content">
         {page === 'library' && <LibraryPage library={library} player={player} onOpenConnections={() => setPage('connections')} />}

@@ -25,7 +25,7 @@ beforeEach(() => {
 })
 afterEach(cleanup)
 
-const panel = (): HTMLElement | null => document.querySelector('.youtube-panel')
+const panel = (): HTMLElement | null => document.querySelector('.embed-panel')
 
 describe('YouTubePanel', () => {
   it('is a square player with no sizing controls, since the sidebar it sits in has one width', async () => {

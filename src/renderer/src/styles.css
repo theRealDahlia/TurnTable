@@ -1229,9 +1229,9 @@ html[data-platform='mac'] .drag-strip {
   }
 }
 
-/* ---------- YouTube video ---------- */
-/* YouTube requires its video to stay visible and at least 200 by 200 pixels, so YouTube Music tracks play in this square at the bottom of the sidebar. */
-.youtube-panel {
+/* ---------- Embedded players ---------- */
+/* YouTube requires its video to stay visible and at least 200 by 200 pixels, and SoundCloud's player has to be shown with its credit, so their tracks play in this square at the bottom of the sidebar. */
+.embed-panel {
   display: flex;
   flex: none;
   flex-direction: column;
@@ -1245,11 +1245,11 @@ html[data-platform='mac'] .drag-strip {
   -webkit-app-region: no-drag;
 }
 
-.youtube-panel[data-showing='false'] {
+.embed-panel[data-showing='false'] {
   display: none;
 }
 
-.youtube-frame {
+.embed-frame {
   display: block;
   width: 100%;
   aspect-ratio: 1;
@@ -1259,7 +1259,7 @@ html[data-platform='mac'] .drag-strip {
   border: 0;
 }
 
-.youtube-note {
+.embed-note {
   display: grid;
   place-items: center;
   margin: 0;
@@ -1270,7 +1270,7 @@ html[data-platform='mac'] .drag-strip {
   text-align: center;
 }
 
-.youtube-credit {
+.embed-credit {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -1280,12 +1280,12 @@ html[data-platform='mac'] .drag-strip {
   font-size: 12px;
 }
 
-.youtube-credit a {
+.embed-credit a {
   color: var(--accent);
   text-decoration: none;
 }
 
-.youtube-credit a:hover {
+.embed-credit a:hover {
   text-decoration: underline;
 }
 

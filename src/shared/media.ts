@@ -1,5 +1,8 @@
 import type { Track } from './types'
 import { YOUTUBE_VIDEO_ID } from './youtubePlayer'
+
+/** A SoundCloud track's URN, `soundcloud:tracks:<id>`; its player is addressed by the number at the end. */
+const SOUNDCLOUD_URN = /^soundcloud:tracks:(\d{1,20})$/
 import { APP_NAME } from './app'
 
 /** Custom scheme the main process serves local audio and artwork on; the renderer never sees file paths. */
@@ -35,6 +38,10 @@ export function playbackUrl(track: PlayableFacts): string | undefined {
   if (track.playable === false) return undefined
   if (track.providerId === 'spotify') return SPOTIFY_TRACK_ID.test(track.id) ? `${SPOTIFY_URI_PREFIX}${track.id}` : undefined
   if (track.providerId === 'youtubeMusic') return YOUTUBE_VIDEO_ID.test(track.id) ? `youtube:${track.id}` : undefined
+  if (track.providerId === 'soundcloud') {
+    const id = SOUNDCLOUD_URN.exec(track.id)?.[1]
+    return id ? `soundcloud:${id}` : undefined
+  }
   if (track.providerId !== 'local') return undefined
   return track.quality && PLAYABLE_LOCAL_CODECS.has(track.quality.codec) ? mediaUrl('audio', track.id) : undefined
 }
@@ -44,6 +51,7 @@ export const isPlayable = (track: PlayableFacts): boolean => playbackUrl(track) 
 /** Why a track has no Play button, for the tooltip. */
 export function unplayableReason(track: Pick<Track, 'providerId' | 'quality' | 'playable'>): string {
   if (track.providerId === 'youtubeMusic') return "The owner of this video doesn't allow it to be played outside YouTube"
+  if (track.providerId === 'soundcloud' && track.playable === false) return "SoundCloud doesn't let this track be played outside SoundCloud (it may be a preview, or blocked)"
 
   if (track.providerId === 'local') {
     return track.quality ? `${track.quality.codec.toUpperCase()} files can't be played in ${APP_NAME} yet` : "This file can't be played"
