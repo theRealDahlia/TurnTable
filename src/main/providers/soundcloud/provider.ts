@@ -8,6 +8,9 @@ const API_HOST = new URL(SOUNDCLOUD_API).host
 /** The most this endpoint returns in one page is 200; fifty keeps a page quick. */
 const PAGE_SIZE = 50
 const MAX_ERROR_MESSAGE_LENGTH = 200
+const MAX_QUERY_LENGTH = 200
+/** Results per search page. */
+const SEARCH_PAGE_SIZE = 20
 /** Cursors come back from the renderer, so only accept what SoundCloud issues (letters, digits and URL-safe punctuation). */
 const CURSOR_PATTERN = /^[A-Za-z0-9_\-.:~+/=,]{1,300}$/
 /** A track's URN: `soundcloud:tracks:<number>`. */
@@ -27,6 +30,8 @@ interface ScTrack {
   permalink_url?: string
   access?: string
   metadata_artist?: string | null
+  /** Whether the signed-in user has liked this track. */
+  user_favorite?: boolean
   user?: ScUser | null
 }
 
@@ -145,6 +150,13 @@ export function createSoundCloudProvider(session: OAuthSession, options: SoundCl
 
   const getJson = async <T>(path: string): Promise<T> => (await request(path)).json() as Promise<T>
 
+  /** Likes a track (POST) or removes the like (DELETE), which is how SoundCloud "saves" a song. */
+  async function likeTrack(method: 'POST' | 'DELETE', trackId: string): Promise<void> {
+    // The URN goes into the URL, so it must be exactly what SoundCloud issues.
+    if (!TRACK_URN.test(trackId)) throw new Error('That is not a valid SoundCloud track.')
+    await request(`/likes/tracks/${trackId}`, method)
+  }
+
   return {
     info: SOUNDCLOUD,
     isConnected: () => session.isConnected(),
@@ -161,6 +173,27 @@ export function createSoundCloudProvider(session: OAuthSession, options: SoundCl
       }
       await session.disconnect()
     },
+
+    async search(query, cursor): Promise<TrackPage> {
+      const text = query.trim()
+      if (!text || text.length > MAX_QUERY_LENGTH) throw new Error('Type something to search for.')
+      if (cursor !== undefined && !CURSOR_PATTERN.test(cursor)) throw new Error('Invalid library cursor')
+
+      // Only fully streamable tracks: previews and blocked ones can't be played here.
+      const params = new URLSearchParams({ q: text, access: 'playable', limit: String(SEARCH_PAGE_SIZE), linked_partitioning: 'true' })
+      if (cursor !== undefined) params.set('cursor', cursor)
+      const page = await getJson<TrackCollection>(`/tracks?${params.toString()}`)
+
+      // Each result says whether the user has liked it, so no second request is needed.
+      const tracks = (page.collection ?? []).flatMap((item) => {
+        const track = toTrack(item)
+        return track ? [{ ...track, saved: item?.user_favorite === true }] : []
+      })
+      return { tracks, nextCursor: cursorFromNextHref(page.next_href) }
+    },
+
+    saveTrack: (trackId) => likeTrack('POST', trackId),
+    unsaveTrack: (trackId) => likeTrack('DELETE', trackId),
 
     async getSavedTracks(cursor): Promise<TrackPage> {
       if (cursor !== undefined && !CURSOR_PATTERN.test(cursor)) throw new Error('Invalid library cursor')

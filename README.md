@@ -72,6 +72,7 @@ The **Search** page searches every connected service at once and puts each one's
 - Spotify: saving needs the `user-library-modify` scope, so an older sign-in shows **Reconnect** until you sign in again. Search returns ten results a page.
 - YouTube Music: saving needs the `youtube.force-ssl` scope (see above), so reconnect once after updating. YouTube Music has no search API of its own, so Muze searches YouTube for embeddable music and keeps only the songs YouTube Music lists (the audio tracks on each artist's "<Artist> - Topic" channel); fan uploads, live clips and other videos are left out. That means a page can show fewer results than it asked for. Google counts a search as one of 100 searches a day, so plan on that.
 - More results load by themselves as you scroll to the end of the list (a *Show more* button appears instead if that stops working, or after two pages in a row with nothing to show, so a rare search can't use up the day's YouTube quota). Each page is another search against that quota.
+- SoundCloud: search finds tracks you can stream (`GET /tracks`, `access=playable`) and each result says whether you have liked it; the heart likes or un-likes it (`POST` and `DELETE /likes/tracks/{urn}`). There are no scopes, so nothing needs reconnecting.
 - Results live in memory only and are never written to disk.
 
 ## Shuffle and media keys

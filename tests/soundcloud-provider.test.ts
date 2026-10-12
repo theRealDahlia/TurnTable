@@ -46,11 +46,10 @@ describe('SoundCloud sign-in', () => {
     expect(session.disconnect).toHaveBeenCalledOnce()
   })
 
-  it('replaces the placeholder in the registry, and says it is not set up for searching yet', async () => {
+  it('replaces the placeholder in the registry', async () => {
     const { provider } = setup()
     const registry = createDefaultRegistry({ soundcloud: provider })
     expect(registry.get('soundcloud')).toBe(provider)
-    const status = (await registry.listStatuses()).find((s) => s.id === 'soundcloud')
-    expect(status).toMatchObject({ connected: true, searchable: false, savable: false })
+    expect((await registry.listStatuses()).find((s) => s.id === 'soundcloud')).toMatchObject({ connected: true })
   })
 })
