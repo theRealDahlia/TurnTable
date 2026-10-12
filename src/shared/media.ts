@@ -50,7 +50,8 @@ export function playbackUrl(track: PlayableFacts): string | undefined {
 export const isPlayable = (track: PlayableFacts): boolean => playbackUrl(track) !== undefined
 
 /** Why a track has no Play button, for the tooltip. */
-export function unplayableReason(track: Pick<Track, 'providerId' | 'quality' | 'playable'>): string {
+export function unplayableReason(track: Pick<Track, 'providerId' | 'quality' | 'playable' | 'madeForKids'>): string {
+  if (track.providerId === 'youtubeMusic' && track.madeForKids) return `YouTube marks this video as made for kids, and ${APP_NAME} can't switch off tracking in its player, which YouTube's rules require for those videos`
   if (track.providerId === 'youtubeMusic') return "The owner of this video doesn't allow it to be played outside YouTube"
   if (track.providerId === 'qobuz' && track.playable === false) return "Qobuz doesn't stream this track to this account (it may need a streaming subscription)"
   if (track.providerId === 'soundcloud' && track.playable === false) return "SoundCloud doesn't let this track be played outside SoundCloud (it may be a preview, blocked, or not shared for embedding)"

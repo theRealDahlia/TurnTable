@@ -46,6 +46,8 @@ export interface Track {
   quality?: AudioQuality
   /** False when the service says this track can't be played in the app (for example, its owner turned off embedding). */
   playable?: boolean
+  /** YouTube marks the video as made for kids. Its rules require tracking to be off for those, which the embedded player can't promise, so they are not played. */
+  madeForKids?: boolean
   savedAt?: string
   /** In search results: whether the track is already in the user's library on its service. */
   saved?: boolean

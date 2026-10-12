@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { AuthRequiredError, type OAuthSession } from '../src/main/auth/session'
 import { artistFromChannel, createYouTubeProvider, parseIsoDuration } from '../src/main/providers/youtube/provider'
+import { isPlayable, unplayableReason } from '../src/shared/media'
 
 const json = (body: unknown, init: ResponseInit = {}): Response =>
   new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' }, ...init })
@@ -117,6 +118,22 @@ describe('YouTube getSavedTracks', () => {
 
     expect(tracks.map((track) => [track.id, track.playable])).toEqual([[ID_A, false], [ID_B, undefined], ['nostatusabc', undefined]])
     expect(tracks[1]).not.toHaveProperty('playable')
+  })
+
+  it("does not play a video YouTube marks as made for kids, and says why, since its rules need tracking off for those", async () => {
+    const { provider, fetchFn } = setup([
+      json({ items: [video(ID_A, { status: { embeddable: true, madeForKids: true } }), video(ID_B, { status: { embeddable: true, madeForKids: false } })] })
+    ])
+
+    const { tracks } = await provider.getSavedTracks()
+
+    expect(tracks[0]).toMatchObject({ id: ID_A, playable: false, madeForKids: true })
+    expect(tracks[1]).not.toHaveProperty('playable')
+    expect(tracks[1]).not.toHaveProperty('madeForKids')
+    expect(isPlayable(tracks[0]!)).toBe(false)
+    expect(unplayableReason(tracks[0]!)).toMatch(/made for kids/)
+    // The status is asked for, so the answer is YouTube's own and always fresh.
+    expect(new URL(String(fetchFn.mock.calls[0]![0])).searchParams.get('fields')).toContain('madeForKids')
   })
 
   it("follows Google's page token and stops when there is none", async () => {

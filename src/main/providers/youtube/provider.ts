@@ -13,7 +13,7 @@ const PAGE_SIZE = 50
 /** YouTube's category for music; the account's likes also include talks, gameplay and so on. */
 const MUSIC_CATEGORY_ID = '10'
 /** Only the fields the library shows, so each page stays small. */
-const FIELDS = 'nextPageToken,items(id,snippet(title,channelTitle,categoryId,thumbnails),contentDetails(duration),status(embeddable))'
+const FIELDS = 'nextPageToken,items(id,snippet(title,channelTitle,categoryId,thumbnails),contentDetails(duration),status(embeddable,madeForKids))'
 /** Artwork at least this wide looks sharp in the library without downloading the largest frame. */
 const PREFERRED_ARTWORK_WIDTH = 300
 const MAX_ERROR_MESSAGE_LENGTH = 200
@@ -46,7 +46,7 @@ interface YouTubeVideo {
     thumbnails?: Record<string, Thumbnail | undefined>
   }
   contentDetails?: { duration?: string }
-  status?: { embeddable?: boolean }
+  status?: { embeddable?: boolean; madeForKids?: boolean }
 }
 
 interface LikedVideosResponse {
@@ -129,7 +129,10 @@ function toTrack(video: YouTubeVideo): Track | undefined {
     artworkUrl: pickArtwork(snippet.thumbnails),
     url: `https://music.youtube.com/watch?v=${id}`,
     // Owners can switch off embedding, and the app can only play YouTube through the embedded player.
-    ...(video.status?.embeddable === false ? { playable: false } : {})
+    // YouTube's developer policies also require tracking to be off in the player for videos made for kids,
+    // which the embedded player has no setting for, so those are not played either.
+    ...(video.status?.embeddable === false || video.status?.madeForKids === true ? { playable: false } : {}),
+    ...(video.status?.madeForKids === true ? { madeForKids: true } : {})
     // YouTube does not say when a video was liked, so there is no save date.
   }
 }

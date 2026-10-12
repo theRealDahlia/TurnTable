@@ -32,7 +32,7 @@ Muze asks each service for the minimum permission it needs. What a service does 
 
 - **Spotify** (permissions: read your library, save and remove songs, stream, start playback on Muze's player, and read your email and account type, which Spotify's player needs to sign in). Playback runs in Spotify's own player inside Muze, which Spotify's code controls.
   Spotify Privacy Policy: https://www.spotify.com/legal/privacy-policy/
-- **YouTube** (permission: `youtube.force-ssl`, to read your liked videos, search, and like or un-like videos at your request). Videos play in YouTube's own embedded player, shown in Muze's sidebar. YouTube may set cookies and collect data when its player is used.
+- **YouTube** (permission: `youtube.force-ssl`, to read your liked videos, search, and like or un-like videos at your request). Videos play in YouTube's own embedded player, shown in Muze's sidebar. YouTube may set cookies and collect data when its player is used. Muze does not play videos YouTube marks as made for kids, because YouTube's rules require tracking to be off for those and Muze cannot switch it off in YouTube's player.
   By using Muze's YouTube features you also agree to the [YouTube Terms of Service](https://www.youtube.com/t/terms) and the [Google Privacy Policy](https://policies.google.com/privacy).
 - **SoundCloud** (no extra permissions: your likes, search, and liking or un-liking at your request). Tracks play in SoundCloud's own player, shown in Muze's sidebar.
   SoundCloud Privacy Policy: https://soundcloud.com/pages/privacy
