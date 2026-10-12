@@ -123,12 +123,21 @@ describe('startPlayerPage', () => {
 
   it.each([
     ['initialization_error', 'initialization', SPOTIFY_ERRORS.initialization],
-    ['authentication_error', 'authentication', SPOTIFY_ERRORS.authentication],
     ['account_error', 'account', SPOTIFY_ERRORS.premium]
   ])('turns %s into a %s error with a message for the user', (sdkEvent, kind, message) => {
     const { player, events } = setup()
     player.fire(sdkEvent, { message: 'raw sdk text' })
     expect(events).toEqual([{ type: 'error', kind, message }])
+  })
+
+  it('includes the SDK message for authentication errors, and copes without one', () => {
+    const { player, events } = setup()
+    player.fire('authentication_error', { message: 'Invalid token scopes.' })
+    player.fire('authentication_error', {})
+    expect(events).toEqual([
+      { type: 'error', kind: 'authentication', message: `${SPOTIFY_ERRORS.authentication} Spotify said: Invalid token scopes.` },
+      { type: 'error', kind: 'authentication', message: SPOTIFY_ERRORS.authentication }
+    ])
   })
 
   it('includes the SDK message for playback errors', () => {

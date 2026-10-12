@@ -77,7 +77,9 @@ export function startPlayerPage(bridge: PlayerPageBridge, sdk: SpotifyNamespace,
   on<{ device_id: string }>('ready', ({ device_id }) => bridge.emit({ type: 'ready', deviceId: device_id }))
   on('not_ready', () => bridge.emit({ type: 'not-ready' }))
   on('initialization_error', () => bridge.emit({ type: 'error', kind: 'initialization', message: SPOTIFY_ERRORS.initialization }))
-  on('authentication_error', () => bridge.emit({ type: 'error', kind: 'authentication', message: SPOTIFY_ERRORS.authentication }))
+  on<{ message?: string }>('authentication_error', ({ message }) =>
+    bridge.emit({ type: 'error', kind: 'authentication', message: message ? `${SPOTIFY_ERRORS.authentication} Spotify said: ${message}` : SPOTIFY_ERRORS.authentication })
+  )
   on('account_error', () => bridge.emit({ type: 'error', kind: 'account', message: SPOTIFY_ERRORS.premium }))
   on<{ message: string }>('playback_error', ({ message }) =>
     bridge.emit({ type: 'error', kind: 'playback', message: message ? `Spotify could not play this track: ${message}` : 'Spotify could not play this track.' })
