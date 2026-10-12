@@ -16,6 +16,15 @@ export const YOUTUBE_MUSIC: ProviderDescriptor = {
   maxQuality: { codec: 'opus', lossless: false, bitrateKbps: 256 }
 }
 
+/** SoundCloud's API streams AAC at up to 160 kbps; it plays in SoundCloud's own player, so it is an embed. */
+export const SOUNDCLOUD: ProviderDescriptor = {
+  id: 'soundcloud',
+  name: 'SoundCloud',
+  authKind: 'oauth-pkce',
+  playback: 'embed',
+  maxQuality: { codec: 'aac', lossless: false, bitrateKbps: 160 }
+}
+
 export const LOCAL: ProviderDescriptor = {
   id: 'local',
   name: 'Local files',
@@ -27,13 +36,7 @@ export const LOCAL: ProviderDescriptor = {
 export const PROVIDER_DESCRIPTORS: ProviderDescriptor[] = [
   SPOTIFY,
   YOUTUBE_MUSIC,
-  {
-    id: 'soundcloud',
-    name: 'SoundCloud',
-    authKind: 'oauth-pkce',
-    playback: 'stream',
-    maxQuality: { codec: 'aac', lossless: false, bitrateKbps: 256 }
-  },
+  SOUNDCLOUD,
   {
     id: 'qobuz',
     name: 'Qobuz',

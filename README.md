@@ -54,6 +54,17 @@ The default quota is 10,000 units a day and each page of 50 likes costs 1.
 
 **Playback.** YouTube only allows its videos to play in its own embedded player, and the video has to stay visible, so YouTube Music tracks play in a square video window at the bottom of the sidebar (with a link back to YouTube Music). The sidebar is about 208 pixels wide, which clears YouTube's 200-pixel minimum. The player bar's play, pause, seek and volume controls drive it. Audio quality is whatever YouTube streams. Some videos' owners turn off embedding; those tracks show a disabled play button with an explanation. In a packaged build the player page is served from a loopback server on `127.0.0.1` (YouTube needs a real web origin), which serves only that page and its scripts.
 
+## SoundCloud setup
+
+SoundCloud's official API signs you in with OAuth 2.1 (Authorization Code with PKCE) and gives your app a client ID and a client secret; SoundCloud treats every app as confidential, so both are needed. The secret stays in the main process and is never sent to a page.
+
+1. Register an app at https://soundcloud.com/you/apps (SoundCloud may need to approve new apps first).
+2. Add this redirect URI exactly: `http://127.0.0.1:43823/callback` (`SOUNDCLOUD_REDIRECT_PORT` in `src/main/providers/soundcloud/config.ts`; change both together).
+3. Put the client ID and secret in `.env` as `MAIN_VITE_SOUNDCLOUD_CLIENT_ID` and `MAIN_VITE_SOUNDCLOUD_CLIENT_SECRET`.
+4. Restart `npm run dev`, then click Connect on the SoundCloud chip.
+
+Tokens last about an hour and each refresh token works once, so the app stores the new one each time. Disconnecting revokes the app's access on SoundCloud (`POST /disconnect`) and does not touch your own sign-in to soundcloud.com.
+
 ## Search
 
 The **Search** page searches every connected service at once and puts each one's results under its own tab (a chip per service; local files are searched in the library already loaded). Press Enter or Search; results are not fetched as you type, because a YouTube search costs quota. The heart on a result saves it to your library on that service (Spotify: a saved song; YouTube Music: a like) and removes it again; the Library catches up the next time you open it.
