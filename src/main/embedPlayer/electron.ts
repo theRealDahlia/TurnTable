@@ -1,6 +1,5 @@
 import { join } from 'node:path'
 import { ipcMain } from 'electron'
-import { SOUNDCLOUD_PLAYER_PAGE, SoundCloudPlayerChannel } from '@shared/soundcloudPlayer'
 import { YOUTUBE_PLAYER_PAGE, YouTubePlayerChannel } from '@shared/youtubePlayer'
 import { startPlayerServer, type PlayerServer } from './server'
 
@@ -19,7 +18,6 @@ export function registerEmbedPlayers(): { close(): void } {
   }
 
   ipcMain.handle(YouTubePlayerChannel.playerUrl, () => urlFor(YOUTUBE_PLAYER_PAGE))
-  ipcMain.handle(SoundCloudPlayerChannel.playerUrl, () => urlFor(SOUNDCLOUD_PLAYER_PAGE))
 
   return { close: () => void server?.then((started) => started.close()) }
 }

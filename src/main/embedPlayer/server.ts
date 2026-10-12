@@ -3,11 +3,10 @@ import { stat } from 'node:fs/promises'
 import { createServer, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { extname, join, normalize, sep } from 'node:path'
-import { SOUNDCLOUD_PLAYER_PAGE } from '@shared/soundcloudPlayer'
 import { YOUTUBE_PLAYER_PAGE } from '@shared/youtubePlayer'
 
 /** The player pages this server will serve. */
-const PAGES: readonly string[] = [YOUTUBE_PLAYER_PAGE, SOUNDCLOUD_PLAYER_PAGE]
+const PAGES: readonly string[] = [YOUTUBE_PLAYER_PAGE]
 
 const CONTENT_TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -23,8 +22,7 @@ export interface PlayerServer {
 
 /**
  * YouTube only plays embedded videos for a page with a real web origin, which a `file://` page doesn't have,
- * so the packaged app serves the player pages over loopback (SoundCloud's page comes the same way, so both
- * frames have the same kind of origin). It serves those pages and their scripts and nothing else, to this
+ * so the packaged app serves the player page over loopback. It serves that page and their scripts and nothing else, to this
  * machine only.
  */
 export async function startPlayerServer(root: string): Promise<PlayerServer> {

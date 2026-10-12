@@ -21,7 +21,7 @@ interface Props {
 
 export function LibraryPage({ library, player, onOpenConnections }: Props): React.JSX.Element {
   const [query, setQuery] = useState('')
-  // Each service has its library to itself: Spotify's and SoundCloud's rules don't allow their content to be mixed with other services'.
+  // Each service has its library to itself: Spotify's rules don't allow its content to be mixed with other services'.
   const [chosenId, setChosenId] = useState<ProviderId>()
   const [sort, setSort] = useState<SortKey>('recent')
   const [limit, setLimit] = useState(PAGE_SIZE)

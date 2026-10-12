@@ -1,7 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { IpcChannel, type TurnTableApi } from '@shared/ipc'
 import { QobuzChannel, type QobuzStreamApi } from '@shared/qobuz'
-import { SoundCloudPlayerChannel, type SoundCloudPlayerHostApi } from '@shared/soundcloudPlayer'
 import { YouTubePlayerChannel, type YouTubePlayerHostApi } from '@shared/youtubePlayer'
 import { SpotifyPlayerChannel, type SpotifyPlayerApi, type SpotifyPlayerEvent } from '@shared/spotifyPlayer'
 
@@ -34,10 +33,6 @@ export function exposeAppApi(): void {
     getPlayerUrl: () => ipcRenderer.invoke(YouTubePlayerChannel.playerUrl)
   }
 
-  const soundcloud: SoundCloudPlayerHostApi = {
-    getPlayerUrl: () => ipcRenderer.invoke(SoundCloudPlayerChannel.playerUrl)
-  }
-
   const qobuz: QobuzStreamApi = {
     getStreamUrl: (trackId) => ipcRenderer.invoke(QobuzChannel.streamUrl, trackId)
   }
@@ -45,6 +40,5 @@ export function exposeAppApi(): void {
   contextBridge.exposeInMainWorld('turntable', api)
   contextBridge.exposeInMainWorld('turntableSpotify', spotify)
   contextBridge.exposeInMainWorld('turntableYouTube', youtube)
-  contextBridge.exposeInMainWorld('turntableSoundCloud', soundcloud)
   contextBridge.exposeInMainWorld('turntableQobuz', qobuz)
 }

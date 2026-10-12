@@ -208,8 +208,8 @@ describe('MediaRouter with several streaming services', () => {
 
   it('treats a source with an unknown scheme, or a URL with a scheme of its own, as local', () => {
     const { router, local, youtube } = setupThree()
-    router.src = 'soundcloud:123'
-    expect(local.src).toBe('soundcloud:123')
+    router.src = 'deezer:123'
+    expect(local.src).toBe('deezer:123')
     router.src = 'youtube://not-a-source'
     expect(youtube.src).toBe('')
     expect(local.src).toBe('youtube://not-a-source')

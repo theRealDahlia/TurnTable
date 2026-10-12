@@ -1357,7 +1357,7 @@ html[data-platform='mac'] .drag-strip {
 }
 
 /* ---------- Embedded players ---------- */
-/* YouTube requires its video to stay visible and at least 200 by 200 pixels, and SoundCloud's player has to be shown with its credit, so their tracks play in this square at the bottom of the sidebar. */
+/* YouTube requires its video to stay visible and at least 200 by 200 pixels, so its tracks play in this square at the bottom of the sidebar. */
 .embed-panel {
   display: flex;
   flex: none;

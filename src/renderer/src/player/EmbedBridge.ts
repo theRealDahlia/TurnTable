@@ -28,8 +28,8 @@ interface Target {
 }
 
 /**
- * Connects the player engine to a service's own player, which lives in a frame on screen (YouTube and SoundCloud
- * both require their player to be visible). React mounts the frame, the engine asks for it and sends commands;
+ * Connects the player engine to a service's own player, which lives in a frame on screen (YouTube requires its player
+ * to be visible). React mounts the frame, the engine asks for it and sends commands;
  * this holds the two together, and only believes messages that really come from that frame.
  */
 export class EmbedBridge<C extends { type: string }, E extends { type: string }> implements EmbedChannel<C, E>, FrameHost {

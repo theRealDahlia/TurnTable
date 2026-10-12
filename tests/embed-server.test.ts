@@ -12,7 +12,6 @@ beforeEach(async () => {
   root = await mkdtemp(join(tmpdir(), 'turntable-yt-'))
   await mkdir(join(root, 'assets'))
   await writeFile(join(root, 'youtube-player.html'), '<p>player</p>')
-  await writeFile(join(root, 'soundcloud-player.html'), '<p>soundcloud</p>')
   await writeFile(join(root, 'index.html'), '<p>app</p>')
   await writeFile(join(root, 'assets', 'player-abc123.js'), 'console.log(1)')
   await writeFile(join(root, 'assets', 'style.css'), 'p{}')
@@ -94,15 +93,6 @@ describe('player server', () => {
   it('only answers GET', async () => {
     server = await startPlayerServer(root)
     expect((await get(youtube(server), { method: 'POST' })).status).toBe(405)
-  })
-
-  it('serves SoundCloud\'s page from the same place', async () => {
-    server = await startPlayerServer(root)
-    const url = server.urlOf('soundcloud-player.html')
-    expect(url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/soundcloud-player\.html$/)
-    expect(new URL(url).origin).toBe(new URL(youtube(server)).origin)
-    const page = await get(url)
-    expect([page.status, page.type, page.body]).toEqual([200, 'text/html; charset=utf-8', '<p>soundcloud</p>'])
   })
 
   it.each(['index.html', 'other.html', '../index.html', 'youtube-player.html/../index.html', ''])('refuses to name %j as a player page', async (page) => {

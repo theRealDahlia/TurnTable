@@ -59,19 +59,6 @@ Apply these to all YouTube code (https://developers.google.com/youtube/terms/dev
 - **Never mix:** don't merge non-YouTube results into YouTube results, and don't make other sources look like YouTube (III.C.5, III.F.2.b).
 - **Quota:** stay within quota. Use more only after YouTube's compliance audit, and only for the approved use.
 
-## SoundCloud API rules
-
-Apply these to all SoundCloud code (https://developers.soundcloud.com/docs/api/terms-of-use).
-
-- **Official ways only:** sign in with SoundCloud's own OAuth flow, with each user on their own account, and play only through SoundCloud's own player (the Widget). No file saving, downloads, stream ripping or scraping, and never get around copy protection.
-- **Never mix:** no playback experience that aggregates SoundCloud content with another service's. Don't build an on-demand service that combines content from multiple users.
-- **User actions:** like, un-like or play on the user's behalf only when they deliberately ask in the app.
-- **Attribution:** credit the uploader as the creator and SoundCloud as the source, with a visible link to each sound's page on soundcloud.com. Use SoundCloud's own logos and buttons unmodified. Don't use SoundCloud marks in the app's name.
-- **Linking:** before sending the user to sign in, tell them which SoundCloud data the app will use and why (the notice in `src/shared/linkNotice.ts`).
-- **Data:** keep content in memory only, make it unplayable and gone when the session ends, and respect uploaders' removals and disabled access. On disconnect, revoke the app's access and delete the user's data within 7 days.
-- **Not allowed:** advertising or sponsorship around the content, in-app purchases that unlock SoundCloud content, and using content to train or feed AI or machine-learning models.
-- **Limits:** respect rate limits and don't get more client IDs than needed.
-
 ## Qobuz API rules
 
 Apply these to all Qobuz code. Qobuz has no public developer documentation; what follows is what its API terms and subscriber terms are known to require. If more is learned, add it here.

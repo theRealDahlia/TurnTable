@@ -73,7 +73,7 @@ export class OAuthClient {
         response_type: 'code',
         client_id: config.clientId,
         redirect_uri: loopback.redirectUri,
-        // Some services (SoundCloud) have no scopes, and an empty `scope=` could be refused.
+        // A service with no scopes must not get an empty `scope=`, which could be refused.
         ...(config.scopes.length > 0 ? { scope: config.scopes.join(' ') } : {}),
         state,
         code_challenge_method: 'S256',

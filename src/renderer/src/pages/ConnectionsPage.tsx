@@ -1,6 +1,5 @@
 import { Fragment, useEffect, useState } from 'react'
 import type { Credentials } from '@shared/ipc'
-import { LINK_NOTICES } from '@shared/linkNotice'
 import type { ProviderId, ProviderStatus } from '@shared/types'
 import { CredentialsForm } from '../components/CredentialsForm'
 import { ProviderChip } from '../components/ProviderChip'
@@ -20,8 +19,6 @@ export function ConnectionsPage({ onChanged }: Props): React.JSX.Element {
   /** The service whose sign-in form is open, for services that sign in with the user's own email and password. */
   const [signingInTo, setSigningInTo] = useState<ProviderId>()
   const [formError, setFormError] = useState<string>()
-  /** The service whose sign-in notice is showing, for services that want the user told what will be used before they link. */
-  const [noticeFor, setNoticeFor] = useState<ProviderId>()
 
   useEffect(() => {
     let cancelled = false
@@ -82,17 +79,7 @@ export function ConnectionsPage({ onChanged }: Props): React.JSX.Element {
       setSigningInTo((current) => (current === provider.id ? undefined : provider.id))
       return Promise.resolve()
     }
-    // Some services want the user told what their data is used for before they are sent to sign in.
-    if (!signedIn && LINK_NOTICES[provider.id]) {
-      setError(undefined)
-      setNoticeFor((current) => (current === provider.id ? undefined : provider.id))
-      return Promise.resolve()
-    }
     return run(provider, signedIn ? 'disconnect' : 'connect')
-  }
-  const continueAfterNotice = (provider: ProviderStatus): void => {
-    setNoticeFor(undefined)
-    void run(provider, 'connect')
   }
   const addFolders = (provider: ProviderStatus): Promise<void> => run(provider, 'connect')
 
@@ -126,19 +113,6 @@ export function ConnectionsPage({ onChanged }: Props): React.JSX.Element {
           {providers.map((provider) => (
             <Fragment key={provider.id}>
               <ProviderChip provider={provider} busy={busyId === provider.id} onToggle={toggle} onAddFolders={addFolders} />
-              {noticeFor === provider.id && (
-                <li className="credentials-card" aria-label={`Before linking ${provider.name}`}>
-                  <p className="credentials-hint">{LINK_NOTICES[provider.id]}</p>
-                  <div className="credentials-actions">
-                    <button type="button" className="chip-action" disabled={busyId === provider.id} onClick={() => continueAfterNotice(provider)}>
-                      Continue to {provider.name}
-                    </button>
-                    <button type="button" className="chip-action chip-secondary" onClick={() => setNoticeFor(undefined)}>
-                      Cancel
-                    </button>
-                  </div>
-                </li>
-              )}
               {signingInTo === provider.id && (
                 <li className="credentials-card">
                   <CredentialsForm

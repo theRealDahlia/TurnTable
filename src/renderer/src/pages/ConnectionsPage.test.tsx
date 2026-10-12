@@ -22,7 +22,6 @@ const provider = (overrides: Partial<ProviderStatus>): ProviderStatus => ({
 const ALL: ProviderStatus[] = [
   provider({ id: 'spotify', name: 'Spotify' }),
   provider({ id: 'youtubeMusic', name: 'YouTube' }),
-  provider({ id: 'soundcloud', name: 'SoundCloud' }),
   provider({ id: 'qobuz', name: 'Qobuz', authKind: 'credentials', playback: 'stream', maxQuality: lossless }),
   provider({ id: 'local', name: 'Local files', authKind: 'none', maxQuality: lossless })
 ]
@@ -49,7 +48,7 @@ describe('ConnectionsPage', () => {
     render(<ConnectionsPage />)
 
     const chips = await screen.findAllByRole('listitem')
-    expect(chips).toHaveLength(5)
+    expect(chips).toHaveLength(4)
     for (const { name } of ALL) {
       expect(screen.getByRole('img', { name: `${name} logo` })).toBeTruthy()
     }
@@ -82,46 +81,7 @@ describe('ConnectionsPage', () => {
     expect(within(qobuz).getByText(/FLAC up to 24-bit \/ 192 kHz/)).toBeTruthy()
     const spotify = screen.getByRole('img', { name: 'Spotify logo' }).closest('li')!
     expect(within(spotify).getByText(/Ogg Vorbis up to 320 kbps/)).toBeTruthy()
-    expect(screen.getByText('0 of 5 connected')).toBeTruthy()
-  })
-
-  describe('the notice before linking SoundCloud', () => {
-    it('tells the user what will be used and why, and signs in only after they continue', async () => {
-      api.listProviders
-        .mockResolvedValueOnce(ALL)
-        .mockResolvedValue(ALL.map((p) => (p.id === 'soundcloud' ? { ...p, connected: true } : p)))
-      render(<ConnectionsPage />)
-
-      await userEvent.click(await screen.findByRole('button', { name: 'Connect SoundCloud' }))
-
-      const notice = within(screen.getByRole('listitem', { name: 'Before linking SoundCloud' }))
-      expect(notice.getByText(/read the tracks you have liked and search SoundCloud/)).toBeTruthy()
-      expect(notice.getByText(/likes or un-likes a track only when you choose to/)).toBeTruthy()
-      expect(api.connectProvider).not.toHaveBeenCalled()
-
-      await userEvent.click(notice.getByRole('button', { name: 'Continue to SoundCloud' }))
-
-      expect(api.connectProvider).toHaveBeenCalledExactlyOnceWith('soundcloud')
-      expect(await screen.findByRole('button', { name: 'Disconnect SoundCloud' })).toBeTruthy()
-      expect(screen.queryByRole('listitem', { name: 'Before linking SoundCloud' })).toBeNull()
-    })
-
-    it('goes nowhere when the user cancels', async () => {
-      render(<ConnectionsPage />)
-      await userEvent.click(await screen.findByRole('button', { name: 'Connect SoundCloud' }))
-
-      await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
-
-      expect(api.connectProvider).not.toHaveBeenCalled()
-      expect(screen.queryByRole('listitem', { name: 'Before linking SoundCloud' })).toBeNull()
-    })
-
-    it('is not shown for services that did not ask for one', async () => {
-      render(<ConnectionsPage />)
-      await userEvent.click(await screen.findByRole('button', { name: 'Connect Spotify' }))
-      expect(api.connectProvider).toHaveBeenCalledWith('spotify')
-      expect(screen.queryByRole('listitem', { name: /Before linking/ })).toBeNull()
-    })
+    expect(screen.getByText('0 of 4 connected')).toBeTruthy()
   })
 
   it('connects a service and refreshes the list', async () => {
@@ -134,7 +94,7 @@ describe('ConnectionsPage', () => {
 
     expect(api.connectProvider).toHaveBeenCalledWith('spotify')
     expect(await screen.findByRole('button', { name: 'Disconnect Spotify' })).toBeTruthy()
-    expect(screen.getByText('1 of 5 connected')).toBeTruthy()
+    expect(screen.getByText('1 of 4 connected')).toBeTruthy()
   })
 
   it('disconnects a connected service', async () => {

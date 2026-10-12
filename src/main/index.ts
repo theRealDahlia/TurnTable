@@ -18,8 +18,6 @@ import { registerEmbedPlayers } from './embedPlayer/electron'
 import { createDefaultRegistry } from './providers/registry'
 import { youtubeOAuthConfig } from './providers/youtube/config'
 import { createYouTubeProvider } from './providers/youtube/provider'
-import { soundcloudOAuthConfig } from './providers/soundcloud/config'
-import { createSoundCloudProvider } from './providers/soundcloud/provider'
 import { qobuzApp } from './providers/qobuz/config'
 import { registerQobuzStreaming } from './providers/qobuz/electron'
 import { createQobuzProvider, type QobuzProvider } from './providers/qobuz/provider'
@@ -95,15 +93,6 @@ function createRegistry(): { registry: ReturnType<typeof createDefaultRegistry>;
     now: Date.now
   })
 
-  const soundcloudSession = new OAuthSession({
-    providerId: 'soundcloud',
-    serviceName: 'SoundCloud',
-    config: () => soundcloudOAuthConfig(import.meta.env.MAIN_VITE_SOUNDCLOUD_CLIENT_ID, import.meta.env.MAIN_VITE_SOUNDCLOUD_CLIENT_SECRET),
-    oauth,
-    store,
-    now: Date.now
-  })
-
   const qobuzCredentials = (): ReturnType<typeof qobuzApp> => qobuzApp(import.meta.env.MAIN_VITE_QOBUZ_APP_ID, import.meta.env.MAIN_VITE_QOBUZ_APP_SECRET)
   const qobuzSession = new QobuzSession({
     app: qobuzCredentials,
@@ -131,7 +120,7 @@ function createRegistry(): { registry: ReturnType<typeof createDefaultRegistry>;
   const spotify = createSpotifyProvider(spotifySession, { gate, minIntervalMs: 500 })
   const qobuz = createQobuzProvider(qobuzSession, { app: qobuzCredentials })
   return {
-    registry: createDefaultRegistry({ spotify, local, youtubeMusic: createYouTubeProvider(youtubeSession), soundcloud: createSoundCloudProvider(soundcloudSession), qobuz }),
+    registry: createDefaultRegistry({ spotify, local, youtubeMusic: createYouTubeProvider(youtubeSession), qobuz }),
     library,
     spotify,
     qobuz

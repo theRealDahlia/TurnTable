@@ -6,7 +6,7 @@ One app to view and play the saved tracks from all of your music streaming servi
 
 ## Goal
 
-Connect several streaming accounts (Spotify, Apple Music, YouTube, Tidal, SoundCloud, Deezer, …), pull each one's saved/liked tracks, and show each service's library on its own (they are never mixed in one list or one queue, which Spotify's and SoundCloud's rules require). Playback uses each service's official player or embed.
+Connect several streaming accounts (Spotify, Apple Music, YouTube, Tidal, Deezer, …), pull each one's saved/liked tracks, and show each service's library on its own (they are never mixed in one list or one queue, which Spotify's rules require). Playback uses each service's official player or embed.
 
 ## Planned features
 
@@ -64,19 +64,6 @@ The default quota is 10,000 units a day and each page of 50 likes costs 1.
 
 **Playback.** YouTube only allows its videos to play in its own embedded player, and the video has to stay visible, so YouTube tracks play in a square video window at the bottom of the sidebar (with a link back to YouTube). The sidebar is about 208 pixels wide, which clears YouTube's 200-pixel minimum. The player bar's play, pause, seek and volume controls drive it. Audio quality is whatever YouTube streams. Some videos' owners turn off embedding; those tracks show a disabled play button with an explanation. In a packaged build the player page is served from a loopback server on `127.0.0.1` (YouTube needs a real web origin), which serves only that page and its scripts.
 
-## SoundCloud setup
-
-SoundCloud's official API signs you in with OAuth 2.1 (Authorization Code with PKCE) and gives your app a client ID and a client secret; SoundCloud treats every app as confidential, so both are needed. The secret stays in the main process and is never sent to a page.
-
-1. Register an app at https://soundcloud.com/you/apps (SoundCloud may need to approve new apps first).
-2. Add this redirect URI exactly: `http://127.0.0.1:43823/callback` (`SOUNDCLOUD_REDIRECT_PORT` in `src/main/providers/soundcloud/config.ts`; change both together).
-3. Put the client ID and secret in `.env` as `MAIN_VITE_SOUNDCLOUD_CLIENT_ID` and `MAIN_VITE_SOUNDCLOUD_CLIENT_SECRET`.
-4. Restart `npm run dev`, then click Connect on the SoundCloud chip.
-
-**What it does.** Your liked tracks (`GET /me/likes/tracks`) fill the Library, and the Search page searches SoundCloud and likes or un-likes tracks. Tracks play in SoundCloud's own player, in the same square at the bottom of the sidebar that YouTube uses: it carries SoundCloud's logo and a "Playing from SoundCloud" credit with a link back to the track, as SoundCloud's attribution rules ask. Only tracks that SoundCloud streams in full are playable; previews and blocked tracks show a disabled play button with the reason. Audio quality is whatever SoundCloud streams (AAC, up to 160 kbps through the API). The player page is served by the same loopback server as YouTube's.
-
-Tokens last about an hour and each refresh token works once, so the app stores the new one each time. Disconnecting revokes the app's access on SoundCloud (`POST /disconnect`) and does not touch your own sign-in to soundcloud.com.
-
 ## Qobuz setup
 
 Qobuz has no public API. Its API is for partners, and the [API Terms of Use](http://static.qobuz.com/apps/api/QobuzAPI-TermsofUse.pdf) say you may not use it without an application ID and secret that Qobuz issued to you, and may not share them. Request your own from Qobuz (the usual contact given is api@qobuz.com; check Qobuz's site). Muze ships with none, and does not use ones taken from Qobuz's web player or other projects.
@@ -98,7 +85,6 @@ The **Search** page searches every connected service at once and puts each one's
 - Spotify: playback needs the `streaming`, `user-read-email` and `user-read-private` scopes (Spotify's player fails with "Invalid token scopes" without all three), and saving needs `user-library-modify`, so an older sign-in shows **Reconnect** until you sign in again. Search returns ten results a page.
 - YouTube: saving needs the `youtube.force-ssl` scope (see above), so reconnect once after updating. YouTube Music has no search API of its own, so Muze searches YouTube for embeddable music and keeps only the songs YouTube Music lists (the audio tracks on each artist's "<Artist> - Topic" channel); fan uploads, live clips and other videos are left out. That means a page can show fewer results than it asked for. Google counts a search as one of 100 searches a day, so plan on that.
 - More results load by themselves as you scroll to the end of the list (a *Show more* button appears instead if that stops working, or after two pages in a row with nothing to show, so a rare search can't use up the day's YouTube quota). Each page is another search against that quota.
-- SoundCloud: search finds tracks you can stream (`GET /tracks`, `access=playable`) and each result says whether you have liked it; the heart likes or un-likes it (`POST` and `DELETE /likes/tracks/{urn}`). There are no scopes, so nothing needs reconnecting.
 - Results live in memory only and are never written to disk.
 
 ## Shuffle and media keys

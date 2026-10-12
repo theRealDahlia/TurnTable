@@ -4,7 +4,6 @@ import { PlayerBar } from './components/PlayerBar'
 import { TermsGate } from './components/TermsGate'
 import { useAcceptance } from './legal/useAcceptance'
 import { Sidebar, type Page } from './components/Sidebar'
-import { SoundCloudPanel } from './components/SoundCloudPanel'
 import { YouTubePanel } from './components/YouTubePanel'
 import { useLibrary } from './library/useLibrary'
 import { ConnectionsPage } from './pages/ConnectionsPage'
@@ -49,7 +48,6 @@ function Main(): React.JSX.Element {
       <div className="drag-strip" aria-hidden="true" />
       <Sidebar page={page} onNavigate={navigate} onOpenLegal={() => setLegalOpen(true)}>
         <YouTubePanel track={player.track} />
-        <SoundCloudPanel track={player.track} />
       </Sidebar>
       <div className="content">
         {page === 'library' && <LibraryPage library={library} player={player} onOpenConnections={() => setPage('connections')} />}

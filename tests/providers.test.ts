@@ -9,7 +9,7 @@ describe('provider registry', () => {
   it('lists every planned service as disconnected', async () => {
     const statuses = await createDefaultRegistry().listStatuses()
 
-    expect(statuses.map((s) => s.id)).toEqual(['spotify', 'youtubeMusic', 'soundcloud', 'qobuz', 'local'])
+    expect(statuses.map((s) => s.id)).toEqual(['spotify', 'youtubeMusic', 'qobuz', 'local'])
     expect(statuses.every((s) => !s.connected)).toBe(true)
   })
 

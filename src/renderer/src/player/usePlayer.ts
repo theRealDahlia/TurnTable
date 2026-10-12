@@ -214,7 +214,7 @@ export function usePlayer({ createAudio = createDefaultMedia, random = Math.rand
         dispatch({ type: 'failed', error: `${track.title} can't be played in ${APP_NAME} yet.` })
         return
       }
-      // A queue never crosses services: Spotify's and SoundCloud's rules don't allow their tracks to be mixed with others'.
+      // A queue never crosses services: Spotify's rules don't allow its tracks to be mixed with others'.
       const playable = queue.filter((t) => t.providerId === track.providerId && isPlayable(t))
       const listedIndex = playable.findIndex((t) => sameTrack(t, track))
       const listed = listedIndex >= 0 ? playable : [track]

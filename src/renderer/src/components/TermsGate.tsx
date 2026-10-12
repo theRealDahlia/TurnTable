@@ -36,7 +36,7 @@ export function TermsGate({ onAccept }: Props): React.JSX.Element {
         <button type="button" className="chip-action" disabled={!agreed} onClick={onAccept}>
           Continue
         </button>
-        <p className="terms-note">{APP_NAME} is not affiliated with Spotify, YouTube, Google, SoundCloud or Qobuz.</p>
+        <p className="terms-note">{APP_NAME} is not affiliated with Spotify, YouTube, Google or Qobuz.</p>
       </section>
       {reading && <LegalDialog initial={reading} onClose={() => setReading(undefined)} />}
     </main>

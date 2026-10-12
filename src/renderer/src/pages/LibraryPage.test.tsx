@@ -28,7 +28,7 @@ const track = (providerId: ProviderId, n: number, overrides: Partial<Track> = {}
 })
 
 function makeLibrary(overrides: Partial<Library> = {}, tracks: Track[] = []): Library {
-  const providers = [provider('spotify', 'Spotify', true), provider('qobuz', 'Qobuz', true), provider('soundcloud', 'SoundCloud', false)]
+  const providers = [provider('spotify', 'Spotify', true), provider('qobuz', 'Qobuz', true), provider('youtubeMusic', 'YouTube', false)]
   const libraries: Partial<Record<ProviderId, ProviderLibrary>> = {}
   for (const p of providers.filter((x) => x.connected)) {
     libraries[p.id] = { status: 'ready', tracks: tracks.filter((t) => t.providerId === p.id) }
@@ -123,7 +123,7 @@ describe('LibraryPage', () => {
     const filters = within(screen.getByRole('group', { name: 'Filter by service' }))
 
     expect(filters.queryByRole('button', { name: /^All/ })).toBeNull()
-    expect(filters.queryByRole('button', { name: /SoundCloud/ })).toBeNull()
+    expect(filters.queryByRole('button', { name: /YouTube/ })).toBeNull()
     expect(filters.getByRole('button', { name: /^Spotify\s*3$/ }).getAttribute('aria-pressed')).toBe('true')
     expect(titles()).toEqual(['Café Noir', 'Song 2', 'Song 1'])
     expect(screen.getByRole('status').textContent).toBe('3 tracks')
@@ -459,7 +459,7 @@ describe('refresh button', () => {
     await userEvent.click(button())
 
     const items = within(screen.getByRole('menu', { name: 'Refresh' })).getAllByRole('menuitem')
-    // SoundCloud is not connected, so it is not offered.
+    // YouTube is not connected, so it is not offered.
     expect(items.map((item) => item.textContent)).toEqual(['Refresh all', 'Refresh Spotify', 'Refresh Qobuz'])
     expect(library.refresh).not.toHaveBeenCalled()
   })

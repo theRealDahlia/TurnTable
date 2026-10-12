@@ -49,9 +49,9 @@ describe('TokenStore', () => {
 
   it('does not lose updates when writes happen concurrently', async () => {
     const store = new TokenStore(file, fakeEncryptor())
-    await Promise.all([store.set('spotify', tokens), store.set('qobuz', tokens), store.set('soundcloud', tokens)])
+    await Promise.all([store.set('spotify', tokens), store.set('qobuz', tokens), store.set('youtubeMusic', tokens)])
 
-    for (const id of ['spotify', 'qobuz', 'soundcloud'] as const) {
+    for (const id of ['spotify', 'qobuz', 'youtubeMusic'] as const) {
       await expect(store.get(id)).resolves.toEqual(tokens)
     }
   })
