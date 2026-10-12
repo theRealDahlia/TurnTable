@@ -14,7 +14,7 @@ export const YOUTUBE_SCOPES = ['https://www.googleapis.com/auth/youtube.force-ss
 export function youtubeOAuthConfig(clientId: string | undefined, clientSecret?: string): OAuthConfig {
   if (!clientId) {
     throw new Error(
-      'YouTube Music is not set up: add your Google OAuth client ID to .env as MAIN_VITE_YOUTUBE_CLIENT_ID (see README).'
+      'YouTube is not set up: add your Google OAuth client ID to .env as MAIN_VITE_YOUTUBE_CLIENT_ID (see README).'
     )
   }
   return {

@@ -10,7 +10,7 @@ export const SPOTIFY: ProviderDescriptor = {
 
 export const YOUTUBE_MUSIC: ProviderDescriptor = {
   id: 'youtubeMusic',
-  name: 'YouTube Music',
+  name: 'YouTube',
   authKind: 'oauth-pkce',
   playback: 'embed',
   maxQuality: { codec: 'opus', lossless: false, bitrateKbps: 256 }

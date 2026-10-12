@@ -3,7 +3,7 @@ import { youtubeBridge, type YouTubeBridge } from '../player/YouTubeBridge'
 import { EmbedPanel } from './EmbedPanel'
 
 interface Props {
-  /** What is playing; the panel shows while it is a YouTube Music track. */
+  /** What is playing; the panel shows while it is a YouTube track. */
   track?: Track
   bridge?: YouTubeBridge
 }
@@ -22,7 +22,7 @@ export function YouTubePanel({ track, bridge = youtubeBridge }: Props): React.JS
       frameTitle="YouTube player"
       loadingText="Loading YouTube…"
       credit="Video from YouTube"
-      linkLabel="Open on YouTube Music"
+      linkLabel="Open on YouTube"
     />
   )
 }

@@ -94,7 +94,7 @@ describe('YouTubePanel', () => {
 
     expect(panel()?.getAttribute('data-showing')).toBe('true')
     expect(screen.getByText('Video from YouTube')).toBeTruthy()
-    const link = screen.getByRole('link', { name: 'Open on YouTube Music' })
+    const link = screen.getByRole('link', { name: 'Open on YouTube' })
     expect(link.getAttribute('href')).toBe(youtubeTrack.url)
     expect(link.getAttribute('target')).toBe('_blank')
     expect(link.getAttribute('rel')).toContain('noreferrer')
@@ -109,7 +109,7 @@ describe('YouTubePanel', () => {
     rerender(<YouTubePanel track={localTrack} bridge={bridge} />)
 
     expect(panel()?.getAttribute('data-showing')).toBe('false')
-    expect(screen.queryByRole('link', { name: 'Open on YouTube Music' })).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Open on YouTube' })).toBeNull()
     expect(document.contains(frame)).toBe(true)
     rerender(<YouTubePanel bridge={bridge} />)
     expect(panel()?.getAttribute('data-showing')).toBe('false')

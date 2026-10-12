@@ -49,7 +49,7 @@ const urlOf = (fetchFn: ReturnType<typeof vi.fn>, call: number): URL => new URL(
 const methodOf = (fetchFn: ReturnType<typeof vi.fn>, call: number): string => (fetchFn.mock.calls[call] as [string, RequestInit])[1].method!
 const pathsOf = (fetchFn: ReturnType<typeof vi.fn>): string[] => fetchFn.mock.calls.map((call) => new URL((call as [string])[0]).pathname)
 
-describe('YouTube Music search', () => {
+describe('YouTube search', () => {
   it('searches embeddable music videos for the query', async () => {
     const { provider, fetchFn } = setup(answers([ID_A]))
 
@@ -70,7 +70,7 @@ describe('YouTube Music search', () => {
     expect(methodOf(fetchFn, 0)).toBe('GET')
   })
 
-  describe('only YouTube Music songs', () => {
+  describe('only YouTube songs', () => {
     it('keeps the audio tracks from artist "Topic" channels and drops everything else', async () => {
       const { provider, fetchFn } = setup([
         json({
@@ -245,7 +245,7 @@ describe('YouTube Music search', () => {
   })
 })
 
-describe('YouTube Music saving songs', () => {
+describe('YouTube saving songs', () => {
   it('likes a video with videos.rate', async () => {
     const { provider, fetchFn } = setup([new Response(null, { status: 204 })])
 
@@ -277,7 +277,7 @@ describe('YouTube Music saving songs', () => {
 
     const failure = provider.saveTrack!(ID_A)
     await expect(failure).rejects.toBeInstanceOf(RatingPermissionError)
-    await expect(failure).rejects.toThrow('Reconnect YouTube Music to allow saving songs')
+    await expect(failure).rejects.toThrow('Reconnect YouTube to allow saving songs')
     await expect(provider.unsaveTrack!(ID_A)).rejects.toBeInstanceOf(RatingPermissionError)
     expect(session.hasScopes).toHaveBeenCalledWith(['https://www.googleapis.com/auth/youtube.force-ssl'])
     expect(fetchFn).not.toHaveBeenCalled()
@@ -300,7 +300,7 @@ describe('YouTube Music saving songs', () => {
   })
 })
 
-describe('YouTube Music grants', () => {
+describe('YouTube grants', () => {
   it('flags a sign-in made with the older, read-only permission', async () => {
     expect(await setup([], { scopes: false }).provider.needsReauthorization?.()).toBe(true)
     expect(await setup([]).provider.needsReauthorization?.()).toBe(false)

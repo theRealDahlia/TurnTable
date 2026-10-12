@@ -6,7 +6,7 @@ import { RefreshMenu } from './RefreshMenu'
 
 const providers = [
   { id: 'spotify' as const, name: 'Spotify' },
-  { id: 'youtubeMusic' as const, name: 'YouTube Music' },
+  { id: 'youtubeMusic' as const, name: 'YouTube' },
   { id: 'local' as const, name: 'Local files' }
 ]
 
@@ -39,7 +39,7 @@ describe('RefreshMenu', () => {
     await userEvent.click(trigger())
 
     expect(trigger().getAttribute('aria-expanded')).toBe('true')
-    expect(items().map((item) => item.textContent)).toEqual(['Refresh all', 'Refresh Spotify', 'Refresh YouTube Music', 'Refresh Local files'])
+    expect(items().map((item) => item.textContent)).toEqual(['Refresh all', 'Refresh Spotify', 'Refresh YouTube', 'Refresh Local files'])
     expect(screen.getByRole('separator')).toBeTruthy()
     expect(trigger().getAttribute('aria-controls')).toBe(screen.getByRole('menu').id)
   })
@@ -63,7 +63,7 @@ describe('RefreshMenu', () => {
   it('refreshes one service by its id', async () => {
     const { trigger, onRefresh } = setup()
     await userEvent.click(trigger())
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Refresh YouTube Music' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Refresh YouTube' }))
     expect(onRefresh).toHaveBeenCalledExactlyOnceWith('youtubeMusic')
   })
 

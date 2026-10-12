@@ -13,9 +13,9 @@ function setup(options: { fetchResult?: () => Promise<Response>; token?: () => P
   return { session, fetchFn, provider: createYouTubeProvider(session as unknown as OAuthSession, { fetch: fetchFn as unknown as typeof fetch }) }
 }
 
-describe('YouTube Music sign-in', () => {
-  it('describes itself as YouTube Music', () => {
-    expect(setup().provider.info).toMatchObject({ id: 'youtubeMusic', name: 'YouTube Music', authKind: 'oauth-pkce' })
+describe('YouTube sign-in', () => {
+  it('describes itself as YouTube', () => {
+    expect(setup().provider.info).toMatchObject({ id: 'youtubeMusic', name: 'YouTube', authKind: 'oauth-pkce' })
   })
 
   it('hands sign-in, sign-out and connection state to its session', async () => {
@@ -45,7 +45,7 @@ describe('YouTube Music sign-in', () => {
   it.each([
     ['Google cannot be reached', { fetchResult: () => Promise.reject(new Error('offline')) }],
     ['Google refuses', { fetchResult: async () => new Response('no', { status: 400 }) }],
-    ['the token cannot be had', { token: () => Promise.reject(new Error('YouTube Music session expired')) }]
+    ['the token cannot be had', { token: () => Promise.reject(new Error('YouTube session expired')) }]
   ])('still disconnects when %s', async (_label, options) => {
     const { session, provider } = setup(options)
     await expect(provider.disconnect()).resolves.toBeUndefined()

@@ -1,4 +1,4 @@
-import { siSoundcloud, siSpotify, siYoutubemusic } from 'simple-icons'
+import { siSoundcloud, siSpotify, siYoutube } from 'simple-icons'
 import type { ProviderId } from '@shared/types'
 import qobuzLogo from '../assets/logos/qobuz.svg'
 
@@ -10,7 +10,7 @@ interface BrandIcon {
 /** Official marks from Simple Icons (CC0 data; the marks remain their owners' trademarks). */
 const BRAND_ICONS: Partial<Record<ProviderId, BrandIcon>> = {
   spotify: siSpotify,
-  youtubeMusic: siYoutubemusic,
+  youtubeMusic: siYoutube,
   soundcloud: siSoundcloud
 }
 

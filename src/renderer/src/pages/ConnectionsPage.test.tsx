@@ -21,7 +21,7 @@ const provider = (overrides: Partial<ProviderStatus>): ProviderStatus => ({
 
 const ALL: ProviderStatus[] = [
   provider({ id: 'spotify', name: 'Spotify' }),
-  provider({ id: 'youtubeMusic', name: 'YouTube Music' }),
+  provider({ id: 'youtubeMusic', name: 'YouTube' }),
   provider({ id: 'soundcloud', name: 'SoundCloud' }),
   provider({ id: 'qobuz', name: 'Qobuz', authKind: 'credentials', playback: 'stream', maxQuality: lossless }),
   provider({ id: 'local', name: 'Local files', authKind: 'none', maxQuality: lossless })

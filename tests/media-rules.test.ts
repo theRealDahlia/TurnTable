@@ -26,7 +26,7 @@ describe('playbackUrl', () => {
     expect(playbackUrl({ id: LOCAL_ID, providerId: 'local', quality: { codec: 'flac', lossless: true } })).toBe(`turntable-media://audio/${LOCAL_ID}`)
   })
 
-  it('plays a YouTube Music track through its video id', () => {
+  it('plays a YouTube track through its video id', () => {
     expect(playbackUrl({ id: 'abcdefghijk', providerId: 'youtubeMusic', quality: undefined })).toBe('youtube:abcdefghijk')
   })
 

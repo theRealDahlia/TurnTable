@@ -73,7 +73,7 @@ describe('artistFromChannel', () => {
   })
 })
 
-describe('YouTube Music getSavedTracks', () => {
+describe('YouTube getSavedTracks', () => {
   it("asks for the account's liked videos with the access token, and only the fields it shows", async () => {
     const { provider, fetchFn } = setup([json({ items: [video(ID_A)] })])
 
@@ -181,7 +181,7 @@ describe('YouTube Music getSavedTracks', () => {
   })
 })
 
-describe('YouTube Music errors', () => {
+describe('YouTube errors', () => {
   it('retries once with a refreshed token after a 401', async () => {
     const { provider, session, fetchFn } = setup([new Response(null, { status: 401 }), json({ items: [video(ID_A)] })])
 
@@ -197,7 +197,7 @@ describe('YouTube Music errors', () => {
 
     const failure = provider.getSavedTracks()
     await expect(failure).rejects.toBeInstanceOf(AuthRequiredError)
-    await expect(failure).rejects.toThrow(/YouTube Music session expired/)
+    await expect(failure).rejects.toThrow(/YouTube session expired/)
     expect(session.disconnect).toHaveBeenCalledOnce()
   })
 

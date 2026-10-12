@@ -21,7 +21,7 @@ const provider = (id: ProviderId, name: string, extra: Partial<ProviderStatus> =
 })
 
 const SPOTIFY = provider('spotify', 'Spotify')
-const YOUTUBE = provider('youtubeMusic', 'YouTube Music')
+const YOUTUBE = provider('youtubeMusic', 'YouTube')
 const LOCAL = provider('local', 'Local files', { authKind: 'none', playback: 'file' })
 const QOBUZ = provider('qobuz', 'Qobuz', { connected: false, searchable: false, savable: false })
 
@@ -160,14 +160,14 @@ describe('SearchPage tabs', () => {
 
   it('has one chip for each connected service, with its result count', () => {
     searched()
-    expect(tabs().map((tab) => tab.textContent)).toEqual(['Spotify3', 'YouTube Music1', 'Local files1'])
+    expect(tabs().map((tab) => tab.textContent)).toEqual(['Spotify3', 'YouTube1', 'Local files1'])
     // Qobuz is not connected.
     expect(screen.queryByRole('tab', { name: /Qobuz/ })).toBeNull()
   })
 
   it('shows no count while a service is still searching, or if it failed', () => {
     searched({ results: { spotify: { status: 'loading', tracks: [], loadingMore: false }, youtubeMusic: { status: 'error', tracks: [], error: 'x', loadingMore: false } } })
-    expect(tabs().map((tab) => tab.textContent).slice(0, 2)).toEqual(['Spotify', 'YouTube Music'])
+    expect(tabs().map((tab) => tab.textContent).slice(0, 2)).toEqual(['Spotify', 'YouTube'])
   })
 
   it('marks the chosen tab, and only that one can be reached with Tab', () => {
@@ -184,7 +184,7 @@ describe('SearchPage tabs', () => {
 
   it('switches tab when a chip is clicked', async () => {
     const { search } = searched()
-    await userEvent.click(screen.getByRole('tab', { name: /YouTube Music/ }))
+    await userEvent.click(screen.getByRole('tab', { name: /YouTube/ }))
     expect(search.selectTab).toHaveBeenCalledExactlyOnceWith('youtubeMusic')
   })
 
@@ -205,7 +205,7 @@ describe('SearchPage tabs', () => {
   it('shows only the chosen tab\'s results', () => {
     searched({ tab: 'youtubeMusic' })
     expect(rows().map((row) => row.querySelector('.track-title')?.textContent)).toEqual(['Everlong 1'])
-    expect(within(screen.getByRole('tabpanel')).getByRole('list', { name: 'YouTube Music results' })).toBeTruthy()
+    expect(within(screen.getByRole('tabpanel')).getByRole('list', { name: 'YouTube results' })).toBeTruthy()
   })
 })
 

@@ -76,7 +76,7 @@ interface RatingResponse {
 /** The user signed in with the older, read-only permission, which can't like videos. */
 export class RatingPermissionError extends Error {
   constructor() {
-    super(`Reconnect YouTube Music to allow saving songs in ${APP_NAME}.`)
+    super(`Reconnect YouTube to allow saving songs in ${APP_NAME}.`)
     this.name = 'RatingPermissionError'
   }
 }

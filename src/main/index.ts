@@ -88,7 +88,7 @@ function createRegistry(): { registry: ReturnType<typeof createDefaultRegistry>;
   })
   const youtubeSession = new OAuthSession({
     providerId: 'youtubeMusic',
-    serviceName: 'YouTube Music',
+    serviceName: 'YouTube',
     config: () => youtubeOAuthConfig(import.meta.env.MAIN_VITE_YOUTUBE_CLIENT_ID, import.meta.env.MAIN_VITE_YOUTUBE_CLIENT_SECRET),
     oauth,
     store,
