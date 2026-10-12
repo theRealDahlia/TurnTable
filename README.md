@@ -64,6 +64,21 @@ The default quota is 10,000 units a day and each page of 50 likes costs 1.
 
 **Playback.** YouTube only allows its videos to play in its own embedded player, and the video has to stay visible, so YouTube tracks play in a square video window at the bottom of the sidebar (with a link back to YouTube). The sidebar is about 208 pixels wide, which clears YouTube's 200-pixel minimum. The player bar's play, pause, seek and volume controls drive it. Audio quality is whatever YouTube streams. Some videos' owners turn off embedding; those tracks show a disabled play button with an explanation. In a packaged build the player page is served from a loopback server on `127.0.0.1` (YouTube needs a real web origin), which serves only that page and its scripts.
 
+## TIDAL setup
+
+TIDAL has a public developer platform (https://developer.tidal.com) with a JSON:API web API at `https://openapi.tidal.com/v2`. Apps sign users in with OAuth 2.0 Authorization Code with PKCE at `login.tidal.com`, and ask only for the permissions (scopes) they need. Muze uses `collection.read` and `collection.write` (your saved tracks, and saving or removing one) and `search.read` (searching the catalog); none of the internal-tier scopes. It needs no client secret.
+
+1. Register an app in the TIDAL developer dashboard (https://developer.tidal.com) and give it those three scopes.
+2. Add this redirect URI exactly: `http://127.0.0.1:43824/callback` (`TIDAL_REDIRECT_PORT` in `src/main/providers/tidal/config.ts`; change both together). I don't know whether TIDAL's dashboard accepts a loopback address like this; if it refuses, say so, and the sign-in will need another way to receive the answer.
+3. Put the app's client ID in `.env` as `MAIN_VITE_TIDAL_CLIENT_ID`.
+4. Restart `npm run dev`, then click Connect on the TIDAL chip.
+
+**What it does.** Your saved tracks (`GET /userCollectionTracks/me/relationships/items`) fill the Library, newest first, with their artists, albums and cover art fetched along with each page. The Search page searches TIDAL (`GET /searchResults`) and saves or removes tracks (`POST` and `DELETE` on the same collection). TIDAL has no way to ask which search results are already saved, so a result's heart starts empty; saving one that is already saved is not an error. Requests are 300 ms apart, and the first "too many requests" answer from TIDAL stops all requests until the time it gave has passed.
+
+**Not done yet.** Playing TIDAL tracks. TIDAL only lets its own player SDK play its audio, which has to be added to Muze before the Play buttons work; they say so for now.
+
+**Not checked.** The requests are written from TIDAL's published API description (https://tidal-music.github.io/tidal-api-reference/), and have not been tried against the live service, because the sign-in needs your own app's client ID. TIDAL's developer terms, which cover things like how its content may be shown, could not be read by the tools used to build this; read them before release.
+
 ## Qobuz setup
 
 Qobuz has no public API. Its API is for partners, and the [API Terms of Use](http://static.qobuz.com/apps/api/QobuzAPI-TermsofUse.pdf) say you may not use it without an application ID and secret that Qobuz issued to you, and may not share them. Request your own from Qobuz (the usual contact given is api@qobuz.com; check Qobuz's site). Muze ships with none, and does not use ones taken from Qobuz's web player or other projects.

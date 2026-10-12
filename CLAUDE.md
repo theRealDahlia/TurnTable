@@ -71,6 +71,20 @@ Apply these to all Qobuz code. Qobuz has no public developer documentation; what
 - **Data:** keep content in memory only, and delete the token on disconnect.
 - **Risk:** the app isn't certified by Qobuz and may be refused at any time. Treat Qobuz as a personal-use, at-your-own-risk connection, and say so wherever it is described.
 
+## TIDAL API rules
+
+Apply these to all TIDAL code. TIDAL's developer terms (at https://developer.tidal.com) could not be read when this was written, so check them before release and record here what they require.
+
+- **Official API only:** use the public API at `https://openapi.tidal.com/v2` described by https://tidal-music.github.io/tidal-api-reference/tidal-api-oas.json. Never use the private endpoints that unofficial libraries call, which TIDAL's terms may forbid and which can be switched off.
+- **Sign-in:** Authorization Code with PKCE (`login.tidal.com/authorize`, `auth.tidal.com/v1/oauth2/token`) only. No client secret in the app. Loopback redirect only on the registered port.
+- **Scopes:** only third-party-tier scopes the feature needs. Never `r_usr` or `w_usr` (internal tier) or ones not yet used. Today: `collection.read`, `collection.write`, `search.read`. Add `playback` only when playback is built.
+- **Ids are opaque:** never build, parse or infer anything from a TIDAL id. They are only checked to be plain (letters, digits, `-`, `_`) before going into a URL or body.
+- **Responses are untrusted:** read JSON:API documents defensively (`src/main/providers/tidal/jsonapi.ts`), only keep https artwork and `https://tidal.com/` links, and show TIDAL's own error text, cleaned and cut short.
+- **Playback:** TIDAL's audio is played only through its official player SDK (`@tidal-music/player`), never by fetching manifests and decoding them in our own code, and never downloaded, recorded or saved. A TIDAL subscription is needed to play.
+- **Never mix:** the same one-service-at-a-time rule as the others, until TIDAL's terms say otherwise.
+- **Rate limits:** stop at the first 429 until Retry-After has passed, with no retry in between, and keep requests spaced out.
+- **Data:** keep TIDAL data in memory only, and delete the token on disconnect.
+
 ## Legal documents and user agreement
 
 - The documents in `docs/PRIVACY.md` and `docs/EULA.md` are drafts and mock-ups, not reviewed legal documents. The README says so, and it must keep saying so until a lawyer has reviewed them.

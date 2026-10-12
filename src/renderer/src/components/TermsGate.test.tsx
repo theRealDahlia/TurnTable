@@ -48,6 +48,6 @@ describe('TermsGate', () => {
 
   it("says it is not affiliated with the services it works with", () => {
     render(<TermsGate onAccept={vi.fn()} />)
-    expect(screen.getByText(/not affiliated with Spotify, YouTube, Google or Qobuz/)).toBeTruthy()
+    expect(screen.getByText(/not affiliated with Spotify, YouTube, Google, TIDAL or Qobuz/)).toBeTruthy()
   })
 })

@@ -10,7 +10,7 @@ By installing or using Muze ("the app") you agree to this agreement and to the [
 
 ## 1. What Muze is
 
-Muze is a desktop app that lets you browse, search and play your own music from services you already have an account with (Spotify, YouTube, Qobuz) and from music files on your computer. Muze is not affiliated with, endorsed by or certified by Spotify, YouTube, Google or Qobuz. All their names and logos belong to them.
+Muze is a desktop app that lets you browse, search and play your own music from services you already have an account with (Spotify, YouTube, TIDAL, Qobuz) and from music files on your computer. Muze is not affiliated with, endorsed by or certified by Spotify, YouTube, Google, TIDAL or Qobuz. All their names and logos belong to them.
 
 ## 2. Licence
 
@@ -19,7 +19,7 @@ We give you a personal, non-exclusive, non-transferable, revocable licence to in
 ## 3. Your accounts and the services' terms
 
 - Muze only works with accounts you already have. Each service remains your agreement with that service, and you must follow its terms while using Muze. Muze does not change, replace or override them.
-- Spotify playback needs a Spotify Premium account. Qobuz playback needs a Qobuz subscription.
+- Spotify playback needs a Spotify Premium account. TIDAL playback needs a TIDAL subscription. Qobuz playback needs a Qobuz subscription.
 - You may only connect your own accounts, and you are responsible for keeping them and your computer secure.
 - A service can limit, change or end access at any time, and then Muze may stop working with it. We are not responsible for that.
 
@@ -35,7 +35,7 @@ We give you a personal, non-exclusive, non-transferable, revocable licence to in
 ## 5. Third-party services and content (including Spotify)
 
 - **Spotify.** Spotify's service and content are not ours. You may not modify the Spotify platform, service or content, or create derivative works from them. You may not decompile, reverse-engineer or disassemble them to the full extent the law allows. Spotify is a third-party beneficiary of this agreement and of the Privacy Policy and may enforce this agreement directly against you.
-- **No warranties for the services.** Neither we nor Spotify, YouTube, Google or Qobuz give you any warranty or representation about the services or their content. We disclaim, for ourselves and on behalf of Spotify, all implied warranties, including merchantability, fitness for a particular purpose and non-infringement.
+- **No warranties for the services.** Neither we nor Spotify, YouTube, Google, TIDAL or Qobuz give you any warranty or representation about the services or their content. We disclaim, for ourselves and on behalf of Spotify, all implied warranties, including merchantability, fitness for a particular purpose and non-infringement.
 - **Content belongs to its owners.** Music, videos, artwork and metadata remain the property of their owners and the services. Muze gives you no rights in them.
 
 ## 6. YouTube
@@ -61,7 +61,7 @@ You may stop at any time by uninstalling Muze and disconnecting your services. W
 ## 11. Disclaimers and responsibility
 
 - **Muze is provided "as is" and "as available", without warranties of any kind**, express or implied, including merchantability, fitness for a particular purpose and non-infringement. We do not promise that Muze will work without errors or interruption, or with any particular service.
-- **We are responsible for Muze. Spotify, YouTube, Google and Qobuz are not.** None of them is responsible for Muze or for what we do, and you may not hold them liable for any claim relating to Muze, including claims about its availability, accuracy or any loss it causes.
+- **We are responsible for Muze. Spotify, YouTube, Google, TIDAL and Qobuz are not.** None of them is responsible for Muze or for what we do, and you may not hold them liable for any claim relating to Muze, including claims about its availability, accuracy or any loss it causes.
 - **Limit of liability.** To the fullest extent the law allows, we are not liable for indirect, incidental, special, consequential or punitive losses, or for lost data, profits or music access, arising from your use of Muze. Where the law does not allow a limit, our total liability is limited to the amount you paid for Muze, or [amount, for example 0] if you paid nothing. Nothing in this agreement limits liability that the law does not allow to be limited.
 
 ## 12. General

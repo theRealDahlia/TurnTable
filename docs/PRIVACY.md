@@ -1,6 +1,6 @@
 # Muze Privacy Policy
 
-> **Draft.** Fill in the three `[bracketed]` items, have someone qualified review it, and re-check it against what the app does each time that changes. It describes the app as built in this repository. Muze is not affiliated with Spotify, YouTube, Google or Qobuz.
+> **Draft.** Fill in the three `[bracketed]` items, have someone qualified review it, and re-check it against what the app does each time that changes. It describes the app as built in this repository. Muze is not affiliated with Spotify, YouTube, Google, TIDAL or Qobuz.
 
 **Effective date:** [date you publish it]
 **Who we are:** [your name or organization] ("we"), the developer of Muze, a desktop app that lets you browse and play your own music from the services you connect.
@@ -9,7 +9,7 @@
 ## The short version
 
 - Muze runs on your computer. We run no servers for it, and **we do not receive, collect or store any of your data.**
-- Muze talks directly from your computer to the services you connect (Spotify, YouTube, Qobuz), using your own accounts.
+- Muze talks directly from your computer to the services you connect (Spotify, YouTube, TIDAL, Qobuz), using your own accounts.
 - Your sign-in tokens are kept on your computer, encrypted. Everything else from those services is held in memory and gone when you quit.
 - There is no advertising, analytics, tracking or crash reporting in Muze. We never sell or share your data, and we never use it to train machine-learning models.
 - You can disconnect any service in the app at any time.
@@ -18,7 +18,7 @@
 
 | What | Where it comes from | Why | Where it lives |
 | --- | --- | --- | --- |
-| Sign-in tokens (access and refresh tokens) | Spotify and Google (for YouTube), after you sign in in your browser; Qobuz, after you sign in in Muze | To act for your account without asking you to sign in every time | A file on your computer, encrypted with your operating system's secure storage (on macOS, the Keychain). Never sent anywhere except back to the service that issued it. |
+| Sign-in tokens (access and refresh tokens) | Spotify, Google (for YouTube) and TIDAL, after you sign in in your browser; Qobuz, after you sign in in Muze | To act for your account without asking you to sign in every time | A file on your computer, encrypted with your operating system's secure storage (on macOS, the Keychain). Never sent anywhere except back to the service that issued it. |
 | Your Qobuz email and password | You, in Muze's Qobuz sign-in form | Qobuz has no browser sign-in for apps, so the form is the only way to sign in | Sent once to Qobuz over HTTPS to get a token. **Not stored, logged or shown.** Only the token Qobuz returns is kept. |
 | Your saved tracks, likes and search results | The service's own interface, on request | To show your library and your searches, and to save or un-save a song when you ask | In memory only. Not written to disk; gone when you quit, and dropped for a service when you disconnect it. |
 | Track details (title, artist, album, artwork, length) | The service | To display tracks and play them | In memory only, as above. |
@@ -34,6 +34,8 @@ Muze asks each service for the minimum permission it needs. What a service does 
   Spotify Privacy Policy: https://www.spotify.com/legal/privacy-policy/
 - **YouTube** (permission: `youtube.force-ssl`, to read your liked videos, search, and like or un-like videos at your request). Videos play in YouTube's own embedded player, shown in Muze's sidebar. YouTube may set cookies and collect data when its player is used. Muze does not play videos YouTube marks as made for kids, because YouTube's rules require tracking to be off for those and Muze cannot switch it off in YouTube's player.
   By using Muze's YouTube features you also agree to the [YouTube Terms of Service](https://www.youtube.com/t/terms) and the [Google Privacy Policy](https://policies.google.com/privacy).
+- **TIDAL** (permissions: read your saved tracks, save and remove tracks, and search the catalog). Playback is not part of Muze yet; when it is, it will run in TIDAL's own player.
+  TIDAL's terms: https://tidal.com/terms
 - **Qobuz** (your account, via the sign-in form: your favorites, search and the streaming address of tracks you play).
   Qobuz's terms and privacy information: https://www.qobuz.com
 - **Local files** involve no service.
@@ -50,7 +52,7 @@ Nobody. We do not have your data to share. Muze sends your requests directly to 
 
 ## How long data is kept, and how to delete it
 
-- **Disconnect** a service on the Connections page. Muze deletes that service's tokens from your computer at once and removes its tracks and search results from the app. For Google (YouTube) it also asks Google to revoke Muze's access. Muze does not ask Spotify or Qobuz to revoke its access when you disconnect (Spotify's Web API has no such request, and Muze does not send one to Qobuz), so also remove Muze at https://www.spotify.com/account/apps/ (Spotify), or change your Qobuz password, if you want its access ended on their side too.
+- **Disconnect** a service on the Connections page. Muze deletes that service's tokens from your computer at once and removes its tracks and search results from the app. For Google (YouTube) it also asks Google to revoke Muze's access. Muze does not ask Spotify, TIDAL or Qobuz to revoke its access when you disconnect (Spotify's Web API has no such request, and Muze does not send one to TIDAL or Qobuz), so also remove Muze at https://www.spotify.com/account/apps/ (Spotify), look for a way to remove Muze in your TIDAL account settings, or change your Qobuz password, if you want its access ended on their side too.
 - **Google data and permissions:** you can also review and remove Muze's access to your Google account at https://myaccount.google.com/permissions. Anything we hold for your Google account is deleted within 7 days of your request, and because Muze stores nothing off your computer, disconnecting deletes it immediately.
 - **Everything else** held in memory disappears when you quit Muze. Anything still showing from a service (such as the track in the player bar) disappears at that point at the latest.
 - **Remove all local data:** quit Muze and delete its data folder (on macOS, `~/Library/Application Support/turntable` today; if the app is renamed when packaged, the new name replaces `turntable`). That removes tokens, folder paths, the rate-limit time and any cookies or cache the services' players stored.
