@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ProviderId, ProviderStatus, Track } from '@shared/types'
 import { BrandMark, ClockIcon, SearchIcon } from '../components/icons'
 import { ProviderLogo } from '../components/ProviderLogo'
+import { SpotifyFullLogo } from '../components/SpotifyFullLogo'
 import { QobuzNotice } from '../components/QobuzNotice'
 import { TrackRow } from '../components/TrackRow'
 import { TrackSkeleton } from '../components/TrackSkeleton'
@@ -237,6 +238,15 @@ export function SearchPage({ library, player, search, onOpenConnections }: Props
             )}
 
             {active.id === 'qobuz' && <QobuzNotice />}
+
+            {active.id === 'spotify' && results?.status === 'ready' && results.tracks.length > 0 && (
+              <p className="spotify-credit">
+                <SpotifyFullLogo />
+                <a href="https://open.spotify.com" target="_blank" rel="noreferrer">
+                  Open Spotify
+                </a>
+              </p>
+            )}
 
             {results?.nextCursor && !autoLoad && (
               <button type="button" className="show-more" disabled={results.loadingMore} onClick={() => search.loadMore(active.id)}>

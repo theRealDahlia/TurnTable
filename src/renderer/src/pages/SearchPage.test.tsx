@@ -231,6 +231,17 @@ describe('SearchPage results', () => {
     expect(player.play).not.toHaveBeenCalled()
   })
 
+  it("credits Spotify with its full logo and a link back under Spotify's results, and only there", () => {
+    show(makeSearch({ query: 'e', tab: 'spotify', results: { spotify: ready([track('spotify', 1)]), youtubeMusic: ready([track('youtubeMusic', 1)]) } }))
+    const panel = screen.getByRole('tabpanel')
+    expect(panel.querySelector('.spotify-credit img[alt="Spotify logo"]')).toBeTruthy()
+    expect(within(panel).getByRole('link', { name: 'Open Spotify' }).getAttribute('href')).toBe('https://open.spotify.com')
+
+    cleanup()
+    show(makeSearch({ query: 'e', tab: 'youtubeMusic', results: { spotify: ready([track('spotify', 1)]), youtubeMusic: ready([track('youtubeMusic', 1)]) } }))
+    expect(within(screen.getByRole('tabpanel')).queryByRole('link', { name: 'Open Spotify' })).toBeNull()
+  })
+
   it('has a Save button on each result of a service that can save, pressed when it is saved', () => {
     show(makeSearch({ query: 'e', tab: 'spotify', results: { spotify: ready([track('spotify', 1, { saved: true }), track('spotify', 2)]) } }))
     expect(screen.getByRole('button', { name: 'Save Everlong 1', pressed: true })).toBeTruthy()

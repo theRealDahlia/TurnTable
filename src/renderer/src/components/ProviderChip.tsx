@@ -2,6 +2,7 @@ import { QOBUZ_NOTICE } from '@shared/qobuz'
 import type { ProviderStatus } from '@shared/types'
 import { codecName } from '../lib/quality'
 import { ProviderLogo } from './ProviderLogo'
+import { SpotifyFullLogo } from './SpotifyFullLogo'
 
 interface Props {
   provider: ProviderStatus
@@ -30,9 +31,10 @@ export function ProviderChip({ provider, busy, onToggle, onAddFolders }: Props):
 
   return (
     <li className="chip" data-connected={connected}>
-      <ProviderLogo id={provider.id} name={name} />
+      {/* Spotify asks for its full logo, which already has its icon and name in it. */}
+      {provider.id !== 'spotify' && <ProviderLogo id={provider.id} name={name} />}
       <div className="chip-text">
-        <span className="chip-name">{name}</span>
+        <span className="chip-name">{provider.id === 'spotify' ? <SpotifyFullLogo /> : name}</span>
         <span className="chip-meta">
           <span className="status-dot" aria-hidden="true" />
           <span className="chip-status">{reconnect ? 'Reconnect to enable playback' : connected ? 'Connected' : 'Not connected'}</span>
