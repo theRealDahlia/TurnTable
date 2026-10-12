@@ -60,6 +60,95 @@ afterEach(() => {
   delete (window as { turntableSpotify?: unknown }).turntableSpotify
 })
 
+describe('useMediaKeys F7 and F9', () => {
+  it('F7 does what the Previous button does', () => {
+    const player = makePlayer()
+    renderHook(() => useMediaKeys(player))
+    const event = press('F7')
+    expect(player.previous).toHaveBeenCalledOnce()
+    expect(player.next).not.toHaveBeenCalled()
+    expect(event.defaultPrevented).toBe(true)
+  })
+
+  it('F9 does what the Next button does', () => {
+    const player = makePlayer()
+    renderHook(() => useMediaKeys(player))
+    const event = press('F9')
+    expect(player.next).toHaveBeenCalledOnce()
+    expect(player.previous).not.toHaveBeenCalled()
+    expect(event.defaultPrevented).toBe(true)
+  })
+
+  it('F9 does nothing where the Next button is greyed out, and F7 always has the Previous button', () => {
+    const player = makePlayer({ hasNext: false, hasPrevious: false })
+    renderHook(() => useMediaKeys(player))
+    press('F9')
+    expect(player.next).not.toHaveBeenCalled()
+    press('F7')
+    expect(player.previous).toHaveBeenCalledOnce()
+  })
+
+  it('does nothing before anything has been played, when there is no player bar to click', () => {
+    const player = makePlayer({ track: undefined, hasNext: false, hasPrevious: false })
+    renderHook(() => useMediaKeys(player))
+    press('F7')
+    press('F9')
+    expect(player.previous).not.toHaveBeenCalled()
+    expect(player.next).not.toHaveBeenCalled()
+  })
+
+  it('counts a held key as one press, so holding F9 does not skip through the whole queue', () => {
+    const player = makePlayer()
+    renderHook(() => useMediaKeys(player))
+    press('F9')
+    press('F9', { repeat: true })
+    press('F9', { repeat: true })
+    expect(player.next).toHaveBeenCalledOnce()
+  })
+
+  it.each([
+    ['Cmd', { metaKey: true }],
+    ['Ctrl', { ctrlKey: true }],
+    ['Option', { altKey: true }],
+    ['Shift', { shiftKey: true }]
+  ])('leaves %s+F7 and %s+F9 to whatever else uses them', (_name, modifier) => {
+    const player = makePlayer()
+    renderHook(() => useMediaKeys(player))
+    expect(press('F7', modifier).defaultPrevented).toBe(false)
+    expect(press('F9', modifier).defaultPrevented).toBe(false)
+    expect(player.previous).not.toHaveBeenCalled()
+    expect(player.next).not.toHaveBeenCalled()
+  })
+
+  it('leaves the neighbouring function keys alone', () => {
+    const player = makePlayer()
+    renderHook(() => useMediaKeys(player))
+    for (const key of ['F6', 'F8', 'F10', 'F1']) expect(press(key).defaultPrevented).toBe(false)
+    expect(player.toggle).not.toHaveBeenCalled()
+    expect(player.next).not.toHaveBeenCalled()
+    expect(player.previous).not.toHaveBeenCalled()
+  })
+
+  it('works with shuffle on, because it is the same Next and Previous', () => {
+    const player = makePlayer({ shuffle: true })
+    renderHook(() => useMediaKeys(player))
+    press('F9')
+    press('F7')
+    expect(player.next).toHaveBeenCalledOnce()
+    expect(player.previous).toHaveBeenCalledOnce()
+  })
+
+  it('works while typing in a search box, since these keys type nothing', () => {
+    const player = makePlayer()
+    renderHook(() => useMediaKeys(player))
+    const input = document.body.appendChild(document.createElement('input'))
+    input.focus()
+    act(() => void input.dispatchEvent(new KeyboardEvent('keydown', { key: 'F9', bubbles: true, cancelable: true })))
+    expect(player.next).toHaveBeenCalledOnce()
+    input.remove()
+  })
+})
+
 describe('useMediaKeys keyboard keys', () => {
   it('skips forward with the next-track key', () => {
     const player = makePlayer()
