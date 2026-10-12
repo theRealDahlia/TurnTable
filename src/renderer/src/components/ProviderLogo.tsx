@@ -1,4 +1,4 @@
-import { siYoutube } from 'simple-icons'
+import { siTidal, siYoutube } from 'simple-icons'
 import type { ProviderId } from '@shared/types'
 import qobuzLogo from '../assets/logos/qobuz.svg'
 import spotifyIconBlack from '../assets/logos/spotify-icon-black.svg'
@@ -11,7 +11,8 @@ interface BrandIcon {
 
 /** Official marks from Simple Icons (CC0 data; the marks remain their owners' trademarks). */
 const BRAND_ICONS: Partial<Record<ProviderId, BrandIcon>> = {
-  youtubeMusic: siYoutube
+  youtubeMusic: siYoutube,
+  tidal: siTidal
 }
 
 /** Brand marks Simple Icons doesn't carry, shipped as image files. */
@@ -44,7 +45,7 @@ export function ProviderLogo({ id, name, size = 'md' }: Props): React.JSX.Elemen
       ) : image ? (
         <img src={image} alt={`${name} logo`} />
       ) : brand ? (
-        <svg viewBox="0 0 24 24" role="img" aria-label={`${name} logo`} fill={`#${brand.hex}`}>
+        <svg viewBox="0 0 24 24" role="img" aria-label={`${name} logo`} fill={brand.hex === '000000' ? 'currentColor' : `#${brand.hex}`}>
           <path d={brand.path} />
         </svg>
       ) : (

@@ -1,4 +1,4 @@
-export type ProviderId = 'spotify' | 'youtubeMusic' | 'qobuz' | 'local'
+export type ProviderId = 'spotify' | 'youtubeMusic' | 'tidal' | 'qobuz' | 'local'
 
 export type AuthKind = 'oauth-pkce' | 'credentials' | 'none'
 

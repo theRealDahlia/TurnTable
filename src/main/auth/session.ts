@@ -35,7 +35,8 @@ export class OAuthSession {
 
   /** Whether the stored grant includes every scope in `required`. */
   async hasScopes(required: string[]): Promise<boolean> {
-    const granted = new Set((await this.deps.store.get(this.deps.providerId))?.scope?.split(/\s+/))
+    // Scopes come back separated by spaces (RFC 6749), though some services use commas.
+    const granted = new Set((await this.deps.store.get(this.deps.providerId))?.scope?.split(/[\s,]+/))
     return required.every((scope) => granted.has(scope))
   }
 

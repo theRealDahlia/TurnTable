@@ -18,6 +18,8 @@ import { registerEmbedPlayers } from './embedPlayer/electron'
 import { createDefaultRegistry } from './providers/registry'
 import { youtubeOAuthConfig } from './providers/youtube/config'
 import { createYouTubeProvider } from './providers/youtube/provider'
+import { tidalOAuthConfig } from './providers/tidal/config'
+import { createTidalProvider } from './providers/tidal/provider'
 import { qobuzApp } from './providers/qobuz/config'
 import { registerQobuzStreaming } from './providers/qobuz/electron'
 import { createQobuzProvider, type QobuzProvider } from './providers/qobuz/provider'
@@ -93,6 +95,15 @@ function createRegistry(): { registry: ReturnType<typeof createDefaultRegistry>;
     now: Date.now
   })
 
+  const tidalSession = new OAuthSession({
+    providerId: 'tidal',
+    serviceName: 'TIDAL',
+    config: () => tidalOAuthConfig(import.meta.env.MAIN_VITE_TIDAL_CLIENT_ID),
+    oauth,
+    store,
+    now: Date.now
+  })
+
   const qobuzCredentials = (): ReturnType<typeof qobuzApp> => qobuzApp(import.meta.env.MAIN_VITE_QOBUZ_APP_ID, import.meta.env.MAIN_VITE_QOBUZ_APP_SECRET)
   const qobuzSession = new QobuzSession({
     app: qobuzCredentials,
@@ -120,7 +131,7 @@ function createRegistry(): { registry: ReturnType<typeof createDefaultRegistry>;
   const spotify = createSpotifyProvider(spotifySession, { gate, minIntervalMs: 500 })
   const qobuz = createQobuzProvider(qobuzSession, { app: qobuzCredentials })
   return {
-    registry: createDefaultRegistry({ spotify, local, youtubeMusic: createYouTubeProvider(youtubeSession), qobuz }),
+    registry: createDefaultRegistry({ spotify, local, youtubeMusic: createYouTubeProvider(youtubeSession), tidal: createTidalProvider(tidalSession), qobuz }),
     library,
     spotify,
     qobuz
