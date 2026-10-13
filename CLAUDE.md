@@ -77,7 +77,7 @@ Apply these to all TIDAL code. TIDAL's developer terms (at https://developer.tid
 
 - **Official API only:** use the public API at `https://openapi.tidal.com/v2` described by https://tidal-music.github.io/tidal-api-reference/tidal-api-oas.json. Never use the private endpoints that unofficial libraries call, which TIDAL's terms may forbid and which can be switched off.
 - **Sign-in:** Authorization Code with PKCE (`login.tidal.com/authorize`, `auth.tidal.com/v1/oauth2/token`) only. No client secret in the app. Loopback redirect only on the registered port.
-- **Scopes:** only third-party-tier scopes the feature needs. Never `r_usr` or `w_usr` (internal tier) or ones not yet used. Today: `collection.read`, `collection.write`, `search.read`. Add `playback` only when playback is built.
+- **Scopes:** only third-party-tier scopes the feature needs. Never `r_usr` or `w_usr` (internal tier) or ones not yet used. Today: `collection.read`, `collection.write`, `search.read`, `playback`.
 - **Ids are opaque:** never build, parse or infer anything from a TIDAL id. They are only checked to be plain (letters, digits, `-`, `_`) before going into a URL or body.
 - **Responses are untrusted:** read JSON:API documents defensively (`src/main/providers/tidal/jsonapi.ts`), only keep https artwork and `https://tidal.com/` links, and show TIDAL's own error text, cleaned and cut short.
 - **Playback:** TIDAL's audio is played only through its official player SDK (`@tidal-music/player`), never by fetching manifests and decoding them in our own code, and never downloaded, recorded or saved. A TIDAL subscription is needed to play.

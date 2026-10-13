@@ -34,13 +34,13 @@ Muze asks each service for the minimum permission it needs. What a service does 
   Spotify Privacy Policy: https://www.spotify.com/legal/privacy-policy/
 - **YouTube** (permission: `youtube.force-ssl`, to read your liked videos, search, and like or un-like videos at your request). Videos play in YouTube's own embedded player, shown in Muze's sidebar. YouTube may set cookies and collect data when its player is used. Muze does not play videos YouTube marks as made for kids, because YouTube's rules require tracking to be off for those and Muze cannot switch it off in YouTube's player.
   By using Muze's YouTube features you also agree to the [YouTube Terms of Service](https://www.youtube.com/t/terms) and the [Google Privacy Policy](https://policies.google.com/privacy).
-- **TIDAL** (permissions: read your saved tracks, save and remove tracks, and search the catalog). Playback is not part of Muze yet; when it is, it will run in TIDAL's own player.
+- **TIDAL** (permissions: read your saved tracks, save and remove tracks, search the catalog, and play audio). Playback runs in TIDAL's own player inside a hidden Muze window, which receives your TIDAL access token from Muze to play audio; that player is TIDAL's code, and Muze does not control what it sends to TIDAL.
   TIDAL's terms: https://tidal.com/terms
 - **Qobuz** (your account, via the sign-in form: your favorites, search and the streaming address of tracks you play).
   Qobuz's terms and privacy information: https://www.qobuz.com
 - **Local files** involve no service.
 
-The players of Spotify and YouTube run inside Muze's window and are not controlled by us. They may store cookies or cache files in Muze's data folder on your computer.
+The players of Spotify, TIDAL and YouTube run inside Muze's window and are not controlled by us. They may store cookies or cache files in Muze's data folder on your computer.
 
 ## Google API Services
 
