@@ -81,6 +81,7 @@ Apply these to all TIDAL code. TIDAL's developer terms (at https://developer.tid
 - **Ids are opaque:** never build, parse or infer anything from a TIDAL id. They are only checked to be plain (letters, digits, `-`, `_`) before going into a URL or body.
 - **Responses are untrusted:** read JSON:API documents defensively (`src/main/providers/tidal/jsonapi.ts`), only keep https artwork and `https://tidal.com/` links, and show TIDAL's own error text, cleaned and cut short.
 - **Playback:** TIDAL's audio is played only through its official player SDK (`@tidal-music/player`), never by fetching manifests and decoding them in our own code, and never downloaded, recorded or saved. A TIDAL subscription is needed to play.
+- **Play reports:** the player SDK will not play without an event sender. Muze's is a stand-in that discards the reports (`startTidalPage`), so TIDAL gets none. Before release, learn from TIDAL's terms or developer contact how third-party apps should report plays, and do it.
 - **Never mix:** the same one-service-at-a-time rule as the others, until TIDAL's terms say otherwise.
 - **Rate limits:** stop at the first 429 until Retry-After has passed, with no retry in between, and keep requests spaced out.
 - **Data:** keep TIDAL data in memory only, and delete the token on disconnect.

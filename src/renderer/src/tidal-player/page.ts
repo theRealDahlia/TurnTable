@@ -10,6 +10,8 @@ export interface SdkCredentialsProvider {
 /** The slice of TIDAL's player SDK (`@tidal-music/player`) this page uses. */
 export interface TidalSdk {
   setCredentialsProvider(provider: SdkCredentialsProvider): void
+  /** Where the SDK sends the play reports TIDAL's own apps produce. It refuses to play until something is set. */
+  setEventSender(sender: { sendEvent(event: unknown): void }): void
   setStreamingWifiAudioQuality(quality: 'LOW' | 'HIGH' | 'LOSSLESS' | 'HI_RES_LOSSLESS'): void
   load(product: { productId: string; productType: 'track'; sourceId: string; sourceType: string }, assetPosition?: number): Promise<void>
   play(): Promise<void>
@@ -82,6 +84,10 @@ export function startTidalPage(bridge: TidalPageBridge, sdk: TidalSdk, options: 
         }
       }
     })
+    // The SDK will not play without an event sender. TIDAL's real one (`@tidal-music/event-producer`) is for TIDAL's
+    // own apps and needs TIDAL's internal endpoints, so this takes the events and sends them nowhere, as the SDK's own
+    // demo does. That means TIDAL gets no play reports from Muze: see the README before releasing it.
+    sdk.setEventSender({ sendEvent: () => undefined })
     // Muze exists for high fidelity, so ask for the best TIDAL will give this account.
     sdk.setStreamingWifiAudioQuality('HI_RES_LOSSLESS')
   } catch {

@@ -16,6 +16,7 @@ function setup(options: { auth?: () => Promise<{ clientId: string; token: string
   const target = new EventTarget()
   const sdk: TidalSdk = {
     setCredentialsProvider: vi.fn((p: SdkCredentialsProvider) => void (provider = p)),
+    setEventSender: vi.fn(),
     setStreamingWifiAudioQuality: vi.fn(),
     load: vi.fn().mockResolvedValue(undefined),
     play: vi.fn().mockResolvedValue(undefined),
@@ -53,6 +54,13 @@ describe('TIDAL player page', () => {
     expect(t.sdk.setStreamingWifiAudioQuality).toHaveBeenCalledWith('HI_RES_LOSSLESS')
     expect(t.events).toEqual([{ type: 'ready' }])
     expect(await t.credentials()).toEqual({ clientId: 'client-1', token: 'token-1', requestedScopes: ['playback'] })
+  })
+
+  it('gives the SDK an event sender, which it insists on, that takes events and sends them nowhere', () => {
+    const t = setup()
+    expect(t.sdk.setEventSender).toHaveBeenCalledOnce()
+    const sender = vi.mocked(t.sdk.setEventSender).mock.calls[0]![0]
+    expect(sender.sendEvent({ name: 'anything' })).toBeUndefined()
   })
 
   it('gets a fresh token every time the SDK asks, and tells the app when it cannot have one', async () => {
