@@ -28,6 +28,17 @@ function createPlayerWindow(onCreated: (contents: WebContents) => void): PlayerW
   window.webContents.on('will-navigate', (event) => event.preventDefault())
   onCreated(window.webContents)
 
+  // While developing, the hidden page's problems are otherwise invisible: show its errors and refused requests.
+  if (process.env['ELECTRON_RENDERER_URL']) {
+    window.webContents.on('console-message', (event) => {
+      const { level, message } = event as unknown as { level?: string | number; message?: string }
+      if (level === 'error' || level === 'warning' || level === 2 || level === 3) console.warn('[tidal-player page]', message)
+    })
+    window.webContents.session.webRequest.onCompleted({ urls: ['https://*/*'] }, (details) => {
+      if (details.statusCode >= 400) console.warn(`[tidal-player request] ${details.statusCode} ${details.method} ${details.url.split('?')[0]}`)
+    })
+  }
+
   return {
     load: async () => {
       if (process.env['ELECTRON_RENDERER_URL']) await window.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/tidal-player.html`)
