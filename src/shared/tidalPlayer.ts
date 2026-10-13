@@ -1,4 +1,5 @@
 import { APP_NAME } from './app'
+import { MEDIA_KEY_ACTIONS, type MediaKeyAction } from './spotifyPlayer'
 
 /** IPC channels. `page*` ones connect the hidden player page to the main process; the rest serve the app window. */
 export const TidalPlayerChannel = {
@@ -28,6 +29,8 @@ export type TidalPlayerEvent =
       ended: boolean
     }
   | { type: 'error'; kind: TidalErrorKind; message: string }
+  /** A keyboard media key (or Control Center button) was pressed while the hidden player held the system's media controls. */
+  | { type: 'media-key'; action: MediaKeyAction }
 
 /** What the main process can ask the player page to do. */
 export type TidalPlayerCommand =
@@ -93,6 +96,8 @@ export function isTidalPlayerEvent(value: unknown): value is TidalPlayerEvent {
       )
     case 'error':
       return typeof value.kind === 'string' && ERROR_KINDS.includes(value.kind) && typeof value.message === 'string' && value.message.length <= MAX_MESSAGE_LENGTH
+    case 'media-key':
+      return typeof value.action === 'string' && MEDIA_KEY_ACTIONS.includes(value.action)
     default:
       return false
   }

@@ -2,6 +2,7 @@
 import { act, cleanup, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SpotifyPlayerApi, SpotifyPlayerEvent } from '@shared/spotifyPlayer'
+import type { TidalPlayerApi, TidalPlayerEvent } from '@shared/tidalPlayer'
 import type { Track } from '@shared/types'
 import type { Player } from './usePlayer'
 import { useMediaKeys } from './useMediaKeys'
@@ -59,6 +60,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup()
   delete (window as { turntableSpotify?: unknown }).turntableSpotify
+  delete (window as { turntableTidal?: unknown }).turntableTidal
 })
 
 describe('useMediaKeys F7 and F9', () => {
@@ -253,6 +255,56 @@ describe('useMediaKeys keyboard keys', () => {
     press('MediaTrackNext')
     expect(player.next).not.toHaveBeenCalled()
     expect(unsubscribe).toHaveBeenCalledOnce()
+  })
+})
+
+describe('useMediaKeys keys that reach TIDAL', () => {
+  let tidalListener: ((event: TidalPlayerEvent) => void) | undefined
+  const tidalUnsubscribe = vi.fn()
+
+  beforeEach(() => {
+    tidalListener = undefined
+    tidalUnsubscribe.mockReset()
+    const tidal: TidalPlayerApi = {
+      play: vi.fn(),
+      pause: vi.fn(),
+      resume: vi.fn(),
+      seek: vi.fn(),
+      setVolume: vi.fn(),
+      onEvent: (cb) => {
+        tidalListener = cb
+        return tidalUnsubscribe as () => void
+      }
+    }
+    Object.assign(window, { turntableTidal: tidal })
+  })
+
+  it.each([
+    ['next', 'next'],
+    ['previous', 'previous'],
+    ['toggle', 'toggle']
+  ] as const)('does what a "%s" key from the TIDAL player asks', (action, method) => {
+    const player = makePlayer()
+    renderHook(() => useMediaKeys(player))
+    act(() => tidalListener!({ type: 'media-key', action }))
+    expect(player[method]).toHaveBeenCalledOnce()
+  })
+
+  it("ignores TIDAL's other events, and stops listening when it unmounts", () => {
+    const player = makePlayer()
+    const { unmount } = renderHook(() => useMediaKeys(player))
+    act(() => tidalListener!({ type: 'ready' }))
+    act(() => tidalListener!({ type: 'state', trackId: 'x', paused: false, positionMs: 0, durationMs: 1, ended: false }))
+    expect(player.next).not.toHaveBeenCalled()
+    expect(player.toggle).not.toHaveBeenCalled()
+
+    unmount()
+    expect(tidalUnsubscribe).toHaveBeenCalledOnce()
+  })
+
+  it('works where there is no TIDAL bridge', () => {
+    delete (window as { turntableTidal?: unknown }).turntableTidal
+    expect(() => renderHook(() => useMediaKeys(makePlayer()))).not.toThrow()
   })
 })
 

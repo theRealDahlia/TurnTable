@@ -9,12 +9,15 @@ describe('isTidalPlayerEvent', () => {
     expect(isTidalPlayerEvent(state)).toBe(true)
     expect(isTidalPlayerEvent({ ...state, trackId: null })).toBe(true)
     expect(isTidalPlayerEvent({ type: 'error', kind: 'playback', message: 'No' })).toBe(true)
+    for (const action of ['next', 'previous', 'toggle']) expect(isTidalPlayerEvent({ type: 'media-key', action })).toBe(true)
   })
 
   it.each([
     ['nothing', undefined],
     ['text', 'ready'],
-    ['an unknown type', { type: 'media-key', action: 'next' }],
+    ['an unknown type', { type: 'not-ready' }],
+    ['a media key that is not one of ours', { type: 'media-key', action: 'stop' }],
+    ['a media key with no action', { type: 'media-key' }],
     ['a state with a missing field', { type: 'state', trackId: 'a', paused: true }],
     ['a state with a negative position', { ...state, positionMs: -1 }],
     ['a state with a position that is not a number', { ...state, positionMs: '10' }],

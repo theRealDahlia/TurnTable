@@ -17,8 +17,8 @@ const KEYS: Record<string, MediaKeyAction> = {
  * Makes the keyboard's skip and play/pause keys drive the player, however the music is playing: F7 does what the
  * Previous button does and F9 what the Next button does, and the media keys do the same where they are delivered.
  * The browser's Media Session (see `useMediaSession`) covers the system's own routing of media keys; this adds
- * the key events that reach the page directly, and the keys that reach Spotify's hidden player when it holds the
- * media controls.
+ * the key events that reach the page directly, and the keys that reach Spotify's or TIDAL's hidden player when it holds
+ * the media controls.
  */
 export function useMediaKeys(player: Player): void {
   const { track, hasNext, next, previous, toggle, pause } = player
@@ -45,14 +45,18 @@ export function useMediaKeys(player: Player): void {
     }
     window.addEventListener('keydown', onKeyDown)
 
-    // Optional, because the bridge only exists in the real app window.
-    const stopListening = (window.turntableSpotify as typeof window.turntableSpotify | undefined)?.onEvent((event) => {
+    // Optional, because the bridges only exist in the real app window.
+    const stopSpotify = (window.turntableSpotify as typeof window.turntableSpotify | undefined)?.onEvent((event) => {
+      if (event.type === 'media-key') run(event.action)
+    })
+    const stopTidal = (window.turntableTidal as typeof window.turntableTidal | undefined)?.onEvent((event) => {
       if (event.type === 'media-key') run(event.action)
     })
 
     return () => {
       window.removeEventListener('keydown', onKeyDown)
-      stopListening?.()
+      stopSpotify?.()
+      stopTidal?.()
     }
   }, [track, hasNext, next, previous, toggle, pause])
 }

@@ -1,4 +1,5 @@
 import { describeError } from '@shared/errors'
+import type { MediaKeyAction } from '@shared/spotifyPlayer'
 import { TIDAL_ERRORS, type TidalPageBridge, type TidalPlayerCommand } from '@shared/tidalPlayer'
 
 /** What TIDAL's player asks of whoever supplies its credentials (`CredentialsProvider` in `@tidal-music/common`). */
@@ -22,7 +23,14 @@ export interface TidalSdk {
   events: EventTarget
 }
 
+/** The slice of the browser's Media Session this page uses. */
+export interface MediaSessionLike {
+  setActionHandler(action: 'nexttrack' | 'previoustrack' | 'play' | 'pause', handler: (() => void) | null): void
+}
+
 export interface PageOptions {
+  /** Where the system's media keys are routed; the browser's own by default. */
+  mediaSession?: MediaSessionLike
   pollMs?: number
   setInterval?: (callback: () => void, ms: number) => unknown
   clearInterval?: (handle: unknown) => void
@@ -95,9 +103,24 @@ export function startTidalPage(bridge: TidalPageBridge, sdk: TidalSdk, options: 
     return
   }
 
+  // While this page is the one playing, the system sends the media keys here, so pass them on to the app. The SDK
+  // may take the handlers for itself when playback starts, so they are claimed again whenever the state changes.
+  const session = options.mediaSession ?? (typeof navigator !== 'undefined' && 'mediaSession' in navigator ? navigator.mediaSession : undefined)
+  const keys: ['nexttrack' | 'previoustrack' | 'play' | 'pause', MediaKeyAction][] = [
+    ['nexttrack', 'next'],
+    ['previoustrack', 'previous'],
+    ['play', 'toggle'],
+    ['pause', 'toggle']
+  ]
+  const claimMediaKeys = (): void => {
+    for (const [action, key] of keys) session?.setActionHandler(action, () => bridge.emit({ type: 'media-key', action: key }))
+  }
+  claimMediaKeys()
+
   sdk.events.addEventListener('playback-state-change', (event) => {
     const next = detailOf(event).state
     if (typeof next !== 'string') return
+    claimMediaKeys()
     state = next
     syncTimer()
     report()

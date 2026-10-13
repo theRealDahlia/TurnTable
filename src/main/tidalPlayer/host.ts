@@ -50,6 +50,7 @@ export class TidalPlayerHost {
         }
         break
       case 'state':
+      case 'media-key':
         break
     }
     this.deps.emit(event)

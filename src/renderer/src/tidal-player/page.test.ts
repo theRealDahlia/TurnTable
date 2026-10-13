@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { TidalPageBridge, TidalPlayerCommand, TidalPlayerEvent } from '@shared/tidalPlayer'
 import { TIDAL_ERRORS } from '@shared/tidalPlayer'
-import { startTidalPage, type SdkCredentialsProvider, type TidalSdk } from './page'
+import { startTidalPage, type MediaSessionLike, type SdkCredentialsProvider, type TidalSdk } from './page'
 
 function setup(options: { auth?: () => Promise<{ clientId: string; token: string }>; sdkOverrides?: Partial<TidalSdk> } = {}) {
   const events: TidalPlayerEvent[] = []
@@ -29,7 +29,9 @@ function setup(options: { auth?: () => Promise<{ clientId: string; token: string
   }
   let tick: (() => void) | undefined
   let stopped = 0
-  startTidalPage(bridge, sdk, { setInterval: (cb) => ((tick = cb), 1), clearInterval: () => void stopped++ })
+  const handlers: Record<string, (() => void) | null> = {}
+  const mediaSession: MediaSessionLike = { setActionHandler: vi.fn((action, handler) => void (handlers[action] = handler)) }
+  startTidalPage(bridge, sdk, { mediaSession, setInterval: (cb) => ((tick = cb), 1), clearInterval: () => void stopped++ })
   const fire = (name: string, detail?: unknown): void => void target.dispatchEvent(new CustomEvent(name, { detail }))
   return {
     events,
@@ -37,6 +39,8 @@ function setup(options: { auth?: () => Promise<{ clientId: string; token: string
     send: (c: TidalPlayerCommand) => command?.(c),
     fire,
     credentials: () => provider!.getCredentials(),
+    mediaSession,
+    handlers,
     setPosition: (seconds: number) => void (position = seconds),
     tick: () => tick?.(),
     stopped: () => stopped
@@ -61,6 +65,25 @@ describe('TIDAL player page', () => {
     expect(t.sdk.setEventSender).toHaveBeenCalledOnce()
     const sender = vi.mocked(t.sdk.setEventSender).mock.calls[0]![0]
     expect(sender.sendEvent({ name: 'anything' })).toBeUndefined()
+  })
+
+  it('passes the keyboard media keys on to the app, and claims them again whenever the player changes state', () => {
+    const t = setup()
+    t.handlers['nexttrack']!()
+    t.handlers['previoustrack']!()
+    t.handlers['play']!()
+    t.handlers['pause']!()
+    expect(t.events.filter((e) => e.type === 'media-key')).toEqual([
+      { type: 'media-key', action: 'next' },
+      { type: 'media-key', action: 'previous' },
+      { type: 'media-key', action: 'toggle' },
+      { type: 'media-key', action: 'toggle' }
+    ])
+
+    // The SDK took the handlers for itself; the next state change takes them back.
+    for (const action of ['nexttrack', 'previoustrack', 'play', 'pause']) t.handlers[action] = null
+    t.fire('playback-state-change', { state: 'PLAYING' })
+    expect(Object.values(t.handlers).every((handler) => typeof handler === 'function')).toBe(true)
   })
 
   it('gets a fresh token every time the SDK asks, and tells the app when it cannot have one', async () => {

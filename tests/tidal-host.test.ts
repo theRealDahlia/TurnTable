@@ -68,7 +68,7 @@ describe('TidalPlayerHost', () => {
 
   it('relays every event the player reports to the app', async () => {
     const { host, emitted } = setup()
-    const events: TidalPlayerEvent[] = [{ type: 'ready' }, { type: 'state', trackId: 'a', paused: false, positionMs: 1, durationMs: 2, ended: false }, { type: 'error', kind: 'playback', message: 'x' }]
+    const events: TidalPlayerEvent[] = [{ type: 'ready' }, { type: 'media-key', action: 'next' }, { type: 'state', trackId: 'a', paused: false, positionMs: 1, durationMs: 2, ended: false }, { type: 'error', kind: 'playback', message: 'x' }]
     for (const event of events) host.handleEvent(event)
     expect(emitted).toEqual(events)
   })
