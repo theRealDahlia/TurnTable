@@ -73,7 +73,16 @@ Apply these to all Qobuz code. Qobuz has no public developer documentation; what
 
 ## TIDAL API rules
 
-Apply these to all TIDAL code. TIDAL's developer terms (at https://developer.tidal.com) could not be read when this was written, so check them before release and record here what they require.
+Apply these to all TIDAL code. They come from the TIDAL Developer Terms of Service, version 3.0 as of May 6, 2024 (a copy was pasted in by the developer, since the portal can't be read by the tools used here); the Developer Guidelines and Design Guidelines they refer to (https://developer.tidal.com/documentation/guidelines/) have NOT been read. Re-check against the current terms before any release.
+
+- **Non-commercial only:** the Developer Tools are for "non-commercial applications" (I.1). Never charge for Muze or add ads. Distribution beyond the developer needs TIDAL's "Production Mode" approval, which includes a review of the source code and the specific use case (IV), and later material changes must be submitted first.
+- **Playback is the open question:** the terms say full-length "Playbacks" are available "solely with respect to TIDAL Embeds" and only to subscribers, and that Playbacks come only through "an official, unmodified version of the TIDAL Player module" (I.3, I.4). Muze plays full tracks through the Player SDK in an app, which those words may not cover. Do not release until TIDAL confirms, or move playback to the TIDAL Embeds player.
+- **Don't block TIDAL's usage monitoring:** TIDAL may collect usage data and the developer agrees "not to block or interfere with such efforts" (IV). Muze's discard-everything event sender may do exactly that. Do not ship it; resolve it with TIDAL first.
+- **Don't compete:** no product that "functions substantially the same as, or competes with" a TIDAL product (II.1.2). Keep the TIDAL view limited to what a connection needs.
+- **Content:** keep TIDAL content in memory only, never as a stored database; temporary caching is allowed for metadata and cover art only; show current data (II.1.5, II.1.6). Never alter content, facilitate stream-ripping or downloads, or use it with AI (II.1.8, II.1.19, II.1.20, I.3).
+- **Marks:** use TIDAL logos only as the Design Guidelines say (III). The icon from `simple-icons` has not been checked against them.
+- **Personal data (Annex 1):** a privacy notice that is public, linked, and shown before sign-up (3.3); only the permissions in use (3.4); an easy way to disconnect, with deletion of that user's data when they do (3.5); never sell or share personal data (3.7); keep it secure in transit and at rest (3.9); tell TIDAL of a breach within 24 hours (3.11).
+- **Identity:** never imply Muze is a TIDAL product or endorsed by TIDAL (II.1.9).
 
 - **Official API only:** use the public API at `https://openapi.tidal.com/v2` described by https://tidal-music.github.io/tidal-api-reference/tidal-api-oas.json. Never use the private endpoints that unofficial libraries call, which TIDAL's terms may forbid and which can be switched off.
 - **Sign-in:** Authorization Code with PKCE (`login.tidal.com/authorize`, `auth.tidal.com/v1/oauth2/token`) only. No client secret in the app. Loopback redirect only on the registered port.
@@ -81,7 +90,7 @@ Apply these to all TIDAL code. TIDAL's developer terms (at https://developer.tid
 - **Ids are opaque:** never build, parse or infer anything from a TIDAL id. They are only checked to be plain (letters, digits, `-`, `_`) before going into a URL or body.
 - **Responses are untrusted:** read JSON:API documents defensively (`src/main/providers/tidal/jsonapi.ts`), only keep https artwork and `https://tidal.com/` links, and show TIDAL's own error text, cleaned and cut short.
 - **Playback:** TIDAL's audio is played only through its official player SDK (`@tidal-music/player`), never by fetching manifests and decoding them in our own code, and never downloaded, recorded or saved. A TIDAL subscription is needed to play.
-- **Play reports:** the player SDK will not play without an event sender. Muze's is a stand-in that discards the reports (`startTidalPage`), so TIDAL gets none. Before release, learn from TIDAL's terms or developer contact how third-party apps should report plays, and do it.
+- **Play reports:** the player SDK will not play without an event sender. Muze's is a stand-in that discards the reports (`startTidalPage`), so TIDAL gets none, which conflicts with the usage-monitoring term above. It is acceptable only for the developer's own testing.
 - **Never mix:** the same one-service-at-a-time rule as the others, until TIDAL's terms say otherwise.
 - **Rate limits:** stop at the first 429 until Retry-After has passed, with no retry in between, and keep requests spaced out.
 - **Data:** keep TIDAL data in memory only, and delete the token on disconnect.
