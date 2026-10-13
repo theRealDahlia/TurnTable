@@ -12,11 +12,14 @@ export const TIDAL_API = 'https://openapi.tidal.com/v2'
 /** Reading the user's saved tracks, and saving or removing one. Nothing broader is asked for. */
 export const COLLECTION_SCOPES = ['collection.read', 'collection.write']
 
+/** Playing TIDAL's audio, which TIDAL's own player does on the user's behalf. */
+export const PLAYBACK_SCOPES = ['playback']
+
 /** Searching the catalog on the user's behalf. */
 export const SEARCH_SCOPES = ['search.read']
 
 /** What the app needs; a grant without all of these must be renewed. */
-export const TIDAL_SCOPES = [...COLLECTION_SCOPES, ...SEARCH_SCOPES]
+export const TIDAL_SCOPES = [...COLLECTION_SCOPES, ...SEARCH_SCOPES, ...PLAYBACK_SCOPES]
 
 export function tidalOAuthConfig(clientId: string | undefined): OAuthConfig {
   if (!clientId) {

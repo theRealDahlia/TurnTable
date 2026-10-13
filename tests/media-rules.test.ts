@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isPlayable, playbackUrl, spotifyTrackIdFromUri, unplayableReason } from '../src/shared/media'
+import { isPlayable, playbackUrl, spotifyTrackIdFromUri, tidalTrackIdFromSource, unplayableReason } from '../src/shared/media'
 
 const SPOTIFY_ID = '4iV5W9uYEdYUVa79Axb7Rh'
 const LOCAL_ID = 'a'.repeat(24)
@@ -7,6 +7,16 @@ const LOCAL_ID = 'a'.repeat(24)
 describe('spotifyTrackIdFromUri', () => {
   it('extracts the id from a track URI', () => {
     expect(spotifyTrackIdFromUri(`spotify:track:${SPOTIFY_ID}`)).toBe(SPOTIFY_ID)
+  })
+
+  it('plays a TIDAL track through its id, and nothing that could alter a command', () => {
+    expect(playbackUrl({ id: '4321', providerId: 'tidal', quality: undefined })).toBe('tidal:4321')
+    for (const id of ['', 'a/b', 'a b', 'x'.repeat(65), 'a:b']) expect(playbackUrl({ id, providerId: 'tidal', quality: undefined })).toBeUndefined()
+    expect(playbackUrl({ id: '4321', providerId: 'tidal', quality: undefined, playable: false })).toBeUndefined()
+    expect(tidalTrackIdFromSource('tidal:4321')).toBe('4321')
+    expect(tidalTrackIdFromSource('spotify:track:4321')).toBeUndefined()
+    expect(tidalTrackIdFromSource('tidal:')).toBeUndefined()
+    expect(unplayableReason({ providerId: 'tidal', quality: undefined, playable: false })).toMatch(/TIDAL doesn't stream this track/)
   })
 
   it.each(['', 'spotify:track:', 'spotify:track:short', `spotify:album:${SPOTIFY_ID}`, `spotify:track:${SPOTIFY_ID}x`, `spotify:track:${SPOTIFY_ID}\n`, SPOTIFY_ID, `turntable-media://audio/${LOCAL_ID}`])(

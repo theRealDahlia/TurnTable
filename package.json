@@ -17,6 +17,7 @@
     "check": "npm run typecheck && npm run lint && npm test"
   },
   "dependencies": {
+    "@tidal-music/player": "^0.20.1",
     "music-metadata": "^12.1.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"

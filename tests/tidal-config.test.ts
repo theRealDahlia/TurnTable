@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { COLLECTION_SCOPES, SEARCH_SCOPES, TIDAL_API, TIDAL_REDIRECT_PORT, TIDAL_SCOPES, tidalOAuthConfig } from '../src/main/providers/tidal/config'
+import { COLLECTION_SCOPES, PLAYBACK_SCOPES, SEARCH_SCOPES, TIDAL_API, TIDAL_REDIRECT_PORT, TIDAL_SCOPES, tidalOAuthConfig } from '../src/main/providers/tidal/config'
 
 describe('TIDAL sign-in configuration', () => {
   it('signs in with PKCE at TIDAL, on one fixed loopback port that is registered with the app', () => {
@@ -8,7 +8,7 @@ describe('TIDAL sign-in configuration', () => {
       clientId: 'client-123',
       authorizeUrl: 'https://login.tidal.com/authorize',
       tokenUrl: 'https://auth.tidal.com/v1/oauth2/token',
-      scopes: ['collection.read', 'collection.write', 'search.read'],
+      scopes: ['collection.read', 'collection.write', 'search.read', 'playback'],
       loopbackPort: TIDAL_REDIRECT_PORT
     })
     expect(config).not.toHaveProperty('clientSecret')
@@ -16,7 +16,7 @@ describe('TIDAL sign-in configuration', () => {
   })
 
   it('asks only for what saving, reading and searching need, and nothing from the internal tier', () => {
-    expect(TIDAL_SCOPES).toEqual([...COLLECTION_SCOPES, ...SEARCH_SCOPES])
+    expect(TIDAL_SCOPES).toEqual([...COLLECTION_SCOPES, ...SEARCH_SCOPES, ...PLAYBACK_SCOPES])
     for (const scope of TIDAL_SCOPES) expect(['r_usr', 'w_usr']).not.toContain(scope)
   })
 

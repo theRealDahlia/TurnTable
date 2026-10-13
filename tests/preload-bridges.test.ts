@@ -28,11 +28,12 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('preload role separation', () => {
-  it('gives the app window the library API, Spotify controls and the YouTube page lookup, and nothing from the player page', async () => {
+  it('gives the app window the library API, the Spotify and TIDAL controls and the YouTube page lookup, and nothing from the player pages', async () => {
     await loadPreloadFor('/app/out/renderer/index.html')
-    expect(Object.keys(exposed).sort()).toEqual(['turntable', 'turntableQobuz', 'turntableSpotify', 'turntableYouTube'])
+    expect(Object.keys(exposed).sort()).toEqual(['turntable', 'turntableQobuz', 'turntableSpotify', 'turntableTidal', 'turntableYouTube'])
     expect(Object.keys(exposed.turntable as object).sort()).toEqual(['connectProvider', 'disconnectProvider', 'getSavedTracks', 'listProviders', 'saveTrack', 'searchTracks', 'unsaveTrack'])
     expect(Object.keys(exposed.turntableSpotify as object).sort()).toEqual(['onEvent', 'pause', 'play', 'resume', 'seek', 'setVolume'])
+    expect(Object.keys(exposed.turntableTidal as object).sort()).toEqual(['onEvent', 'pause', 'play', 'resume', 'seek', 'setVolume'])
     expect(Object.keys(exposed.turntableYouTube as object)).toEqual(['getPlayerUrl'])
     expect(Object.keys(exposed.turntableQobuz as object)).toEqual(['getStreamUrl'])
   })
@@ -43,9 +44,20 @@ describe('preload role separation', () => {
     expect(Object.keys(exposed.turntableSpotifyPage as object).sort()).toEqual(['emit', 'getToken', 'onCommand'])
   })
 
+  it('gives the hidden TIDAL page only its narrow bridge, and no other page gets that bridge', async () => {
+    await loadPreloadFor('/app/out/renderer/tidal-player.html')
+    expect(Object.keys(exposed)).toEqual(['turntableTidalPage'])
+    expect(Object.keys(exposed.turntableTidalPage as object).sort()).toEqual(['emit', 'getAuth', 'onCommand'])
+
+    for (const key of Object.keys(exposed)) delete exposed[key]
+    await loadPreloadFor('/app/out/renderer/spotify-player.html')
+    expect(exposed.turntableTidalPage).toBeUndefined()
+    expect(exposed.turntableTidal).toBeUndefined()
+  })
+
   it('falls back to the app role for any other page', async () => {
     await loadPreloadFor('/somewhere/else.html')
-    expect(Object.keys(exposed).sort()).toEqual(['turntable', 'turntableQobuz', 'turntableSpotify', 'turntableYouTube'])
+    expect(Object.keys(exposed).sort()).toEqual(['turntable', 'turntableQobuz', 'turntableSpotify', 'turntableTidal', 'turntableYouTube'])
   })
 })
 
@@ -61,6 +73,39 @@ describe('YouTube player lookup', () => {
     await loadPreloadFor('/app/out/renderer/spotify-player.html')
     expect(exposed.turntableYouTube).toBeUndefined()
     expect(exposed.turntableQobuz).toBeUndefined()
+  })
+})
+
+describe('TIDAL player controls and page bridge', () => {
+  it('sends the app window\'s commands to the main process', async () => {
+    await loadPreloadFor('/app/out/renderer/index.html')
+    const tidal = exposed.turntableTidal as { play(id: string): Promise<void>; pause(): Promise<void>; seek(ms: number): Promise<void> }
+    await tidal.play('abc')
+    await tidal.pause()
+    await tidal.seek(5000)
+    expect(invoke.mock.calls).toEqual([['tidal:play', 'abc'], ['tidal:pause'], ['tidal:seek', 5000]])
+  })
+
+  it('lets the page ask for its credentials and report events, and hears commands', async () => {
+    invoke.mockResolvedValue({ clientId: 'c', token: 't' })
+    await loadPreloadFor('/x/tidal-player.html')
+    const page = exposed.turntableTidalPage as { getAuth(): Promise<unknown>; emit(e: unknown): void; onCommand(cb: (c: unknown) => void): void }
+
+    expect(await page.getAuth()).toEqual({ clientId: 'c', token: 't' })
+    expect(invoke).toHaveBeenCalledWith('tidal-player:get-auth')
+    page.emit({ type: 'ready' })
+    expect(send).toHaveBeenCalledWith('tidal-player:event', { type: 'ready' })
+    const heard = vi.fn()
+    page.onCommand(heard)
+    const handler = on.mock.calls.find((call) => call[0] === 'tidal-player:command')![1] as (e: unknown, c: unknown) => void
+    handler({}, { type: 'pause' })
+    expect(heard).toHaveBeenCalledWith({ type: 'pause' })
+  })
+
+  it('shows the page a plain message when the main process refuses', async () => {
+    invoke.mockRejectedValue(new Error("Error invoking remote method 'tidal-player:get-auth': Error: Reconnect TIDAL to allow playback in Muze."))
+    await loadPreloadFor('/x/tidal-player.html')
+    await expect((exposed.turntableTidalPage as { getAuth(): Promise<unknown> }).getAuth()).rejects.toThrow(/^Reconnect TIDAL to allow playback in Muze\.$/)
   })
 })
 

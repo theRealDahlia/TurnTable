@@ -29,6 +29,16 @@ export function spotifyTrackIdFromUri(uri: string): string | undefined {
   return SPOTIFY_TRACK_ID.test(id) ? id : undefined
 }
 
+/** TIDAL's ids are opaque, so only the plain ones that are safe to put in a URL or a command are accepted. */
+const TIDAL_TRACK_ID = /^[A-Za-z0-9_-]{1,64}$/
+
+/** The id inside a `tidal:<id>` source, or undefined if the text is anything else. */
+export function tidalTrackIdFromSource(src: string): string | undefined {
+  if (!src.startsWith('tidal:')) return undefined
+  const id = src.slice('tidal:'.length)
+  return TIDAL_TRACK_ID.test(id) ? id : undefined
+}
+
 type PlayableFacts = Pick<Track, 'id' | 'providerId' | 'quality' | 'playable'>
 
 /** What the player should load for a track, or undefined if the app can't play it (yet). */
@@ -36,6 +46,7 @@ export function playbackUrl(track: PlayableFacts): string | undefined {
   if (track.playable === false) return undefined
   if (track.providerId === 'spotify') return SPOTIFY_TRACK_ID.test(track.id) ? `${SPOTIFY_URI_PREFIX}${track.id}` : undefined
   if (track.providerId === 'youtubeMusic') return YOUTUBE_VIDEO_ID.test(track.id) ? `youtube:${track.id}` : undefined
+  if (track.providerId === 'tidal') return TIDAL_TRACK_ID.test(track.id) ? `tidal:${track.id}` : undefined
   if (track.providerId === 'qobuz') return /^\d{1,12}$/.test(track.id) ? `qobuz:${track.id}` : undefined
   if (track.providerId !== 'local') return undefined
   return track.quality && PLAYABLE_LOCAL_CODECS.has(track.quality.codec) ? mediaUrl('audio', track.id) : undefined
@@ -47,6 +58,7 @@ export const isPlayable = (track: PlayableFacts): boolean => playbackUrl(track) 
 export function unplayableReason(track: Pick<Track, 'providerId' | 'quality' | 'playable' | 'madeForKids'>): string {
   if (track.providerId === 'youtubeMusic' && track.madeForKids) return `YouTube marks this video as made for kids, and ${APP_NAME} can't switch off tracking in its player, which YouTube's rules require for those videos`
   if (track.providerId === 'youtubeMusic') return "The owner of this video doesn't allow it to be played outside YouTube"
+  if (track.providerId === 'tidal' && track.playable === false) return "TIDAL doesn't stream this track (it may not be available for streaming in your country)"
   if (track.providerId === 'qobuz' && track.playable === false) return "Qobuz doesn't stream this track to this account (it may need a streaming subscription)"
 
   if (track.providerId === 'local') {

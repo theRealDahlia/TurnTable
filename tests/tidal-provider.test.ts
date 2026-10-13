@@ -4,7 +4,7 @@ import { createDefaultRegistry } from '../src/main/providers/registry'
 import { TIDAL_SCOPES } from '../src/main/providers/tidal/config'
 import { createTidalProvider } from '../src/main/providers/tidal/provider'
 
-function setup(options: { granted?: boolean } = {}) {
+function setup(options: { granted?: boolean; clientId?: string | undefined } = {}) {
   const session = {
     isConnected: vi.fn().mockResolvedValue(true),
     connect: vi.fn().mockResolvedValue(undefined),
@@ -12,7 +12,7 @@ function setup(options: { granted?: boolean } = {}) {
     hasScopes: vi.fn().mockResolvedValue(options.granted ?? true),
     getAccessToken: vi.fn().mockResolvedValue('token-1')
   }
-  return { session, provider: createTidalProvider(session as unknown as OAuthSession) }
+  return { session, provider: createTidalProvider(session as unknown as OAuthSession, { clientId: () => ('clientId' in options ? options.clientId : 'client-1') }) }
 }
 
 describe('TIDAL sign-in', () => {
@@ -48,5 +48,24 @@ describe('TIDAL sign-in', () => {
     const registry = createDefaultRegistry({ tidal: provider })
     expect(registry.get('tidal')).toBe(provider)
     expect((await registry.listStatuses()).find((s) => s.id === 'tidal')).toMatchObject({ connected: true, needsReauthorization: false })
+  })
+
+  describe('playback sign-in for TIDAL\'s own player', () => {
+    it('gives its player the app\'s client ID and a current token', async () => {
+      const { provider, session } = setup()
+      await expect(provider.getPlaybackAuth()).resolves.toEqual({ clientId: 'client-1', token: 'token-1' })
+      expect(session.hasScopes).toHaveBeenCalledWith(['playback'])
+    })
+
+    it('asks to reconnect, and hands out no token, when the grant predates playback', async () => {
+      const { provider, session } = setup({ granted: false })
+      await expect(provider.getPlaybackAuth()).rejects.toThrow('Reconnect TIDAL to allow playback in Muze.')
+      expect(session.getAccessToken).not.toHaveBeenCalled()
+    })
+
+    it('says how to set it up when there is no client ID', async () => {
+      const { provider } = setup({ clientId: undefined })
+      await expect(provider.getPlaybackAuth()).rejects.toThrow('MAIN_VITE_TIDAL_CLIENT_ID')
+    })
   })
 })

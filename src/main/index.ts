@@ -14,12 +14,13 @@ import { createLocalProvider } from './providers/local/provider'
 import { createSpotifyProvider, type SpotifyProvider } from './providers/spotify/provider'
 import { FileRateLimitStore, RateLimitGate } from './providers/spotify/rateLimit'
 import { denyAllPermissions, registerSpotifyPlayback } from './spotifyPlayer/electron'
+import { registerTidalPlayback } from './tidalPlayer/electron'
 import { registerEmbedPlayers } from './embedPlayer/electron'
 import { createDefaultRegistry } from './providers/registry'
 import { youtubeOAuthConfig } from './providers/youtube/config'
 import { createYouTubeProvider } from './providers/youtube/provider'
 import { tidalOAuthConfig } from './providers/tidal/config'
-import { createTidalProvider } from './providers/tidal/provider'
+import { createTidalProvider, type TidalProvider } from './providers/tidal/provider'
 import { qobuzApp } from './providers/qobuz/config'
 import { registerQobuzStreaming } from './providers/qobuz/electron'
 import { createQobuzProvider, type QobuzProvider } from './providers/qobuz/provider'
@@ -64,7 +65,7 @@ protocol.registerSchemesAsPrivileged([
   { scheme: MEDIA_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } }
 ])
 
-function createRegistry(): { registry: ReturnType<typeof createDefaultRegistry>; library: LocalLibrary; spotify: SpotifyProvider; qobuz: QobuzProvider } {
+function createRegistry(): { registry: ReturnType<typeof createDefaultRegistry>; library: LocalLibrary; spotify: SpotifyProvider; tidal: TidalProvider; qobuz: QobuzProvider } {
   const store = new TokenStore(join(app.getPath('userData'), 'tokens.bin'), {
     isAvailable: () => safeStorage.isEncryptionAvailable(),
     encrypt: (plain) => safeStorage.encryptString(plain),
@@ -130,10 +131,12 @@ function createRegistry(): { registry: ReturnType<typeof createDefaultRegistry>;
   // Half a second between requests: a library of thousands is fetched at a steady pace, never in a burst.
   const spotify = createSpotifyProvider(spotifySession, { gate, minIntervalMs: 500 })
   const qobuz = createQobuzProvider(qobuzSession, { app: qobuzCredentials })
+  const tidal = createTidalProvider(tidalSession, { minIntervalMs: 300, clientId: () => import.meta.env.MAIN_VITE_TIDAL_CLIENT_ID })
   return {
-    registry: createDefaultRegistry({ spotify, local, youtubeMusic: createYouTubeProvider(youtubeSession), tidal: createTidalProvider(tidalSession, { minIntervalMs: 300 }), qobuz }),
+    registry: createDefaultRegistry({ spotify, local, youtubeMusic: createYouTubeProvider(youtubeSession), tidal, qobuz }),
     library,
     spotify,
+    tidal,
     qobuz
   }
 }
@@ -143,8 +146,9 @@ app.whenReady().then(async () => {
   await components.whenReady().catch((error: unknown) => console.warn('Widevine is not available:', error))
   denyAllPermissions(session.defaultSession)
 
-  const { registry, library, spotify, qobuz } = createRegistry()
+  const { registry, library, spotify, tidal, qobuz } = createRegistry()
   registerSpotifyPlayback(spotify)
+  registerTidalPlayback(tidal)
   registerQobuzStreaming(qobuz)
   const embedPlayers = registerEmbedPlayers()
   app.on('will-quit', embedPlayers.close)

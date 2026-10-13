@@ -2,6 +2,7 @@ import { MediaRouter } from './MediaRouter'
 import type { PlayerMedia } from './media'
 import { QobuzAudio } from './QobuzAudio'
 import { SpotifyAudio } from './SpotifyAudio'
+import { TidalAudio } from './TidalAudio'
 import { youtubeBridge } from './YouTubeBridge'
 import { YouTubeAudio } from './YouTubeAudio'
 
@@ -9,6 +10,7 @@ import { YouTubeAudio } from './YouTubeAudio'
 export function createDefaultMedia(): PlayerMedia {
   return new MediaRouter(new Audio(), {
     spotify: new SpotifyAudio(() => window.turntableSpotify),
+    tidal: new TidalAudio(() => window.turntableTidal),
     youtube: new YouTubeAudio(youtubeBridge),
     qobuz: new QobuzAudio((trackId) => window.turntableQobuz.getStreamUrl(trackId))
   })

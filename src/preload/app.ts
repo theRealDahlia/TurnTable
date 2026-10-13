@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { IpcChannel, type TurnTableApi } from '@shared/ipc'
 import { QobuzChannel, type QobuzStreamApi } from '@shared/qobuz'
 import { YouTubePlayerChannel, type YouTubePlayerHostApi } from '@shared/youtubePlayer'
+import { TidalPlayerChannel, type TidalPlayerApi, type TidalPlayerEvent } from '@shared/tidalPlayer'
 import { SpotifyPlayerChannel, type SpotifyPlayerApi, type SpotifyPlayerEvent } from '@shared/spotifyPlayer'
 
 /** What the app window gets: the library API, the Spotify playback controls, and where each embedded player's page lives. */
@@ -29,6 +30,19 @@ export function exposeAppApi(): void {
     }
   }
 
+  const tidal: TidalPlayerApi = {
+    play: (trackId) => ipcRenderer.invoke(TidalPlayerChannel.play, trackId),
+    pause: () => ipcRenderer.invoke(TidalPlayerChannel.pause),
+    resume: () => ipcRenderer.invoke(TidalPlayerChannel.resume),
+    seek: (positionMs) => ipcRenderer.invoke(TidalPlayerChannel.seek, positionMs),
+    setVolume: (volume) => ipcRenderer.invoke(TidalPlayerChannel.setVolume, volume),
+    onEvent: (listener) => {
+      const handler = (_event: unknown, payload: TidalPlayerEvent): void => listener(payload)
+      ipcRenderer.on(TidalPlayerChannel.event, handler)
+      return () => void ipcRenderer.removeListener(TidalPlayerChannel.event, handler)
+    }
+  }
+
   const youtube: YouTubePlayerHostApi = {
     getPlayerUrl: () => ipcRenderer.invoke(YouTubePlayerChannel.playerUrl)
   }
@@ -39,6 +53,7 @@ export function exposeAppApi(): void {
 
   contextBridge.exposeInMainWorld('turntable', api)
   contextBridge.exposeInMainWorld('turntableSpotify', spotify)
+  contextBridge.exposeInMainWorld('turntableTidal', tidal)
   contextBridge.exposeInMainWorld('turntableYouTube', youtube)
   contextBridge.exposeInMainWorld('turntableQobuz', qobuz)
 }

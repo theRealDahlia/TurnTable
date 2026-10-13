@@ -4,7 +4,8 @@ import { AuthRequiredError, type OAuthSession } from '../../auth/session'
 import { TIDAL } from '../descriptors'
 import { describeWait } from '../spotify/rateLimit'
 import type { MusicProvider } from '../types'
-import { COLLECTION_SCOPES, SEARCH_SCOPES, TIDAL_API, TIDAL_SCOPES } from './config'
+import type { TidalPlayerAuth } from '@shared/tidalPlayer'
+import { COLLECTION_SCOPES, PLAYBACK_SCOPES, SEARCH_SCOPES, TIDAL_API, TIDAL_SCOPES } from './config'
 import { ID_PATTERN, Included, identifiers, nextCursorOf, toTrack, type Document } from './jsonapi'
 
 const MAX_ERROR_MESSAGE_LENGTH = 200
@@ -42,7 +43,22 @@ export class TidalRateLimitedError extends Error {
   }
 }
 
+/** The user signed in before playback was added, so their grant doesn't cover it. */
+export class TidalPlaybackPermissionError extends Error {
+  constructor() {
+    super(`Reconnect TIDAL to allow playback in ${APP_NAME}.`)
+    this.name = 'TidalPlaybackPermissionError'
+  }
+}
+
+export interface TidalProvider extends MusicProvider {
+  /** What TIDAL's own player needs: this app's client ID and a current token, or an error asking the user to reconnect. */
+  getPlaybackAuth(): Promise<TidalPlayerAuth>
+}
+
 export interface TidalProviderOptions {
+  /** This app's client ID, which TIDAL's player sends along with every request. */
+  clientId?: () => string | undefined
   fetch?: typeof fetch
   sleep?: (ms: number) => Promise<void>
   now?: () => number
@@ -101,7 +117,7 @@ async function toApiError(response: Response): Promise<TidalApiError> {
   }
 }
 
-export function createTidalProvider(session: OAuthSession, options: TidalProviderOptions = {}): MusicProvider {
+export function createTidalProvider(session: OAuthSession, options: TidalProviderOptions = {}): TidalProvider {
   const { fetch: fetchFn = fetch, now = Date.now, minIntervalMs = 0 } = options
   const sleep = options.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)))
   let nextSlot = 0
@@ -203,6 +219,13 @@ export function createTidalProvider(session: OAuthSession, options: TidalProvide
     isConnected: () => session.isConnected(),
     connect: () => session.connect(),
     disconnect: () => session.disconnect(),
+
+    async getPlaybackAuth() {
+      const clientId = options.clientId?.()
+      if (!clientId) throw new Error('TIDAL is not set up: add your TIDAL app\'s client ID to .env as MAIN_VITE_TIDAL_CLIENT_ID (see README).')
+      if (!(await session.hasScopes(PLAYBACK_SCOPES))) throw new TidalPlaybackPermissionError()
+      return { clientId, token: await session.getAccessToken() }
+    },
 
     async needsReauthorization() {
       return (await session.isConnected()) && !(await session.hasScopes(TIDAL_SCOPES))
