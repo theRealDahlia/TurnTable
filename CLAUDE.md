@@ -16,7 +16,7 @@ Example: given 2 features and 1 task, build feature 1, test and fix it until it 
 
 ## Commit and push each finished feature
 
-After each feature is added and its tests pass, commit it and push it to the GitHub repo TurnTable.
+After each feature is added and its tests pass, commit it and push it to the GitHub repo TurnTable. Commit straight to `main` and push `main`; there is no separate working branch (`dev` was merged and deleted).
 
 ## Spotify Web API rules
 
