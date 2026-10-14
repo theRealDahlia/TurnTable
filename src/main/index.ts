@@ -16,15 +16,12 @@ import { FileRateLimitStore, RateLimitGate } from './providers/spotify/rateLimit
 import { denyAllPermissions, registerSpotifyPlayback } from './spotifyPlayer/electron'
 import { registerTidalPlayback } from './tidalPlayer/electron'
 import { registerEmbedPlayers } from './embedPlayer/electron'
+import { PROVIDER_DESCRIPTORS } from './providers/descriptors'
 import { createDefaultRegistry } from './providers/registry'
 import { youtubeOAuthConfig } from './providers/youtube/config'
 import { createYouTubeProvider } from './providers/youtube/provider'
 import { tidalOAuthConfig } from './providers/tidal/config'
 import { createTidalProvider, type TidalProvider } from './providers/tidal/provider'
-import { qobuzApp } from './providers/qobuz/config'
-import { registerQobuzStreaming } from './providers/qobuz/electron'
-import { createQobuzProvider, type QobuzProvider } from './providers/qobuz/provider'
-import { QobuzSession } from './providers/qobuz/session'
 import { APP_NAME } from '@shared/app'
 
 function createWindow(): void {
@@ -65,12 +62,14 @@ protocol.registerSchemesAsPrivileged([
   { scheme: MEDIA_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } }
 ])
 
-function createRegistry(): { registry: ReturnType<typeof createDefaultRegistry>; library: LocalLibrary; spotify: SpotifyProvider; tidal: TidalProvider; qobuz: QobuzProvider } {
+function createRegistry(): { registry: ReturnType<typeof createDefaultRegistry>; library: LocalLibrary; spotify: SpotifyProvider; tidal: TidalProvider } {
   const store = new TokenStore(join(app.getPath('userData'), 'tokens.bin'), {
     isAvailable: () => safeStorage.isEncryptionAvailable(),
     encrypt: (plain) => safeStorage.encryptString(plain),
     decrypt: (data) => safeStorage.decryptString(data)
   })
+  // Sign-ins kept for services the app no longer has (SoundCloud, Qobuz) are deleted rather than left on disk.
+  void store.retainOnly(PROVIDER_DESCRIPTORS.map((descriptor) => descriptor.id)).catch((error: unknown) => console.warn('Could not tidy stored sign-ins:', error))
   const oauth = new OAuthClient({
     openUrl: async (url) => {
       if (!url.startsWith('https://')) throw new Error('Refusing to open a non-https sign-in URL')
@@ -105,14 +104,6 @@ function createRegistry(): { registry: ReturnType<typeof createDefaultRegistry>;
     now: Date.now
   })
 
-  const qobuzCredentials = (): ReturnType<typeof qobuzApp> => qobuzApp(import.meta.env.MAIN_VITE_QOBUZ_APP_ID, import.meta.env.MAIN_VITE_QOBUZ_APP_SECRET)
-  const qobuzSession = new QobuzSession({
-    app: qobuzCredentials,
-    store,
-    fetch,
-    now: Date.now
-  })
-
   const folders = new FolderStore(join(app.getPath('userData'), 'local-folders.json'))
   const library = new LocalLibrary({ folders, readMetadata: readFileMetadata })
   const local = createLocalProvider({
@@ -130,14 +121,12 @@ function createRegistry(): { registry: ReturnType<typeof createDefaultRegistry>;
   const gate = new RateLimitGate({ store: new FileRateLimitStore(join(app.getPath('userData'), 'spotify-rate-limit.json')), now: Date.now })
   // Half a second between requests: a library of thousands is fetched at a steady pace, never in a burst.
   const spotify = createSpotifyProvider(spotifySession, { gate, minIntervalMs: 500 })
-  const qobuz = createQobuzProvider(qobuzSession, { app: qobuzCredentials })
   const tidal = createTidalProvider(tidalSession, { minIntervalMs: 300, clientId: () => import.meta.env.MAIN_VITE_TIDAL_CLIENT_ID })
   return {
-    registry: createDefaultRegistry({ spotify, local, youtubeMusic: createYouTubeProvider(youtubeSession), tidal, qobuz }),
+    registry: createDefaultRegistry({ spotify, local, youtubeMusic: createYouTubeProvider(youtubeSession), tidal }),
     library,
     spotify,
-    tidal,
-    qobuz
+    tidal
   }
 }
 
@@ -146,10 +135,9 @@ app.whenReady().then(async () => {
   await components.whenReady().catch((error: unknown) => console.warn('Widevine is not available:', error))
   denyAllPermissions(session.defaultSession)
 
-  const { registry, library, spotify, tidal, qobuz } = createRegistry()
+  const { registry, library, spotify, tidal } = createRegistry()
   registerSpotifyPlayback(spotify)
   registerTidalPlayback(tidal)
-  registerQobuzStreaming(qobuz)
   const embedPlayers = registerEmbedPlayers()
   app.on('will-quit', embedPlayers.close)
   protocol.handle(MEDIA_SCHEME, createMediaHandler({ resolve: (id) => library.resolve(id), readArtwork }))

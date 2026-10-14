@@ -40,18 +40,6 @@ describe('playbackUrl', () => {
     expect(playbackUrl({ id: 'abcdefghijk', providerId: 'youtubeMusic', quality: undefined })).toBe('youtube:abcdefghijk')
   })
 
-  it('plays a Qobuz track through its number', () => {
-    expect(playbackUrl({ id: '12345', providerId: 'qobuz', quality: undefined })).toBe('qobuz:12345')
-  })
-
-  it.each([
-    ['a Qobuz track with a malformed id', { id: 'abc', providerId: 'qobuz' as const, quality: undefined }],
-    ['a Qobuz id that could alter a request', { id: '1&format_id=5', providerId: 'qobuz' as const, quality: undefined }],
-    ['a Qobuz track the account cannot stream', { id: '12345', providerId: 'qobuz' as const, quality: undefined, playable: false }]
-  ])('has nothing to play for %s', (_label, track) => {
-    expect(playbackUrl(track)).toBeUndefined()
-  })
-
   it.each([
     ['a YouTube track with a malformed id', { id: 'short', providerId: 'youtubeMusic' as const, quality: undefined }],
     ['a YouTube id that could alter a URL', { id: 'abc/def?ghi', providerId: 'youtubeMusic' as const, quality: undefined }],
@@ -60,8 +48,7 @@ describe('playbackUrl', () => {
     ['a Spotify track with a malformed id', { id: 'spotify-1', providerId: 'spotify' as const, quality: undefined }],
     ['a Spotify id that could alter a URI', { id: `${SPOTIFY_ID.slice(0, 18)}:../`, providerId: 'spotify' as const, quality: undefined }],
     ['an ALAC file', { id: LOCAL_ID, providerId: 'local' as const, quality: { codec: 'alac', lossless: true } }],
-    ['a local file of unknown format', { id: LOCAL_ID, providerId: 'local' as const, quality: undefined }],
-    ['a track from a service without playback', { id: LOCAL_ID, providerId: 'qobuz' as const, quality: { codec: 'flac', lossless: true } }]
+    ['a local file of unknown format', { id: LOCAL_ID, providerId: 'local' as const, quality: undefined }]
   ])('has nothing to play for %s', (_label, track) => {
     expect(playbackUrl(track)).toBeUndefined()
     expect(isPlayable(track)).toBe(false)
@@ -73,8 +60,7 @@ describe('unplayableReason', () => {
     expect(unplayableReason({ providerId: 'local', quality: { codec: 'alac', lossless: true } })).toMatch(/ALAC files can't be played/)
     expect(unplayableReason({ providerId: 'local', quality: undefined })).toMatch(/can't be played/)
     expect(unplayableReason({ providerId: 'spotify', quality: undefined })).toMatch(/Spotify track can't be played/)
-    expect(unplayableReason({ providerId: 'qobuz', quality: undefined })).toMatch(/not available yet/)
     expect(unplayableReason({ providerId: 'youtubeMusic', quality: undefined, playable: false })).toMatch(/owner .* outside YouTube/)
-    expect(unplayableReason({ providerId: 'qobuz', quality: undefined, playable: false })).toMatch(/Qobuz doesn't stream this track to this account/)
+    expect(unplayableReason({ providerId: 'tidal', quality: undefined, playable: false })).toMatch(/TIDAL doesn't stream this track/)
   })
 })

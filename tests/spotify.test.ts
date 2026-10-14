@@ -49,7 +49,7 @@ describe('createSpotifyProvider', () => {
     const registry = createDefaultRegistry({ spotify: provider })
 
     expect(registry.get('spotify')).toBe(provider)
-    await expect(registry.get('qobuz').connect()).rejects.toThrow('not implemented')
+    await expect(registry.get('youtubeMusic').connect()).rejects.toThrow('not implemented')
     expect((await registry.listStatuses()).find((s) => s.id === 'spotify')?.connected).toBe(true)
   })
 
@@ -82,7 +82,7 @@ describe('createSpotifyProvider', () => {
       const statuses = await registry.listStatuses()
 
       expect(statuses.find((s) => s.id === 'spotify')?.needsReauthorization).toBe(true)
-      expect(statuses.find((s) => s.id === 'qobuz')?.needsReauthorization).toBe(false)
+      expect(statuses.find((s) => s.id === 'youtubeMusic')?.needsReauthorization).toBe(false)
     })
   })
 })

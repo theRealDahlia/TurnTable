@@ -1,5 +1,5 @@
 import { ipcMain } from 'electron'
-import { IpcChannel, type Credentials, type TurnTableApi } from '@shared/ipc'
+import { IpcChannel, type TurnTableApi } from '@shared/ipc'
 import type { ProviderId, TrackPage } from '@shared/types'
 import type { ProviderRegistry } from '../providers/registry'
 import { shareInFlight } from './singleFlight'
@@ -27,18 +27,6 @@ function checkCatalogId(value: unknown, what: 'artist' | 'album'): string {
   return value
 }
 
-const MAX_CREDENTIAL_LENGTH = 256
-
-/** The user's own sign-in details arrive from the renderer, so check their shape, and never put them in a message. */
-function checkCredentials(name: string, value: unknown): Credentials {
-  const entry = typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {}
-  const { username, password } = entry
-  if (typeof username !== 'string' || typeof password !== 'string' || !username.trim() || !password) {
-    throw new Error(`Enter your ${name} email and password.`)
-  }
-  if (username.length > MAX_CREDENTIAL_LENGTH || password.length > MAX_CREDENTIAL_LENGTH) throw new Error(`That ${name} email or password is too long.`)
-  return { username: username.trim(), password }
-}
 
 function checkCursor(cursor: unknown): string | undefined {
   if (cursor === undefined) return undefined
@@ -59,12 +47,7 @@ export function createApi(registry: ProviderRegistry): TurnTableApi {
 
   return {
     listProviders: async () => registry.listStatuses(),
-    connectProvider: async (id, credentials) => {
-      const provider = registry.get(id)
-      // Only a service that signs in with the user's own details is given them; the others sign in in a browser.
-      if (provider.info.authKind === 'credentials') await provider.connect(checkCredentials(provider.info.name, credentials))
-      else await provider.connect()
-    },
+    connectProvider: async (id) => registry.get(id).connect(),
     disconnectProvider: async (id) => registry.get(id).disconnect(),
     getSavedTracks: (id, cursor) =>
       shareInFlight(pagesInFlight, `${id}\u0000${cursor ?? ''}`, async () => registry.get(id).getSavedTracks(cursor)),
@@ -107,7 +90,7 @@ export function createApi(registry: ProviderRegistry): TurnTableApi {
 export function registerIpc(registry: ProviderRegistry): void {
   const api = createApi(registry)
   ipcMain.handle(IpcChannel.listProviders, () => api.listProviders())
-  ipcMain.handle(IpcChannel.connectProvider, (_event, id: string, credentials?: Credentials) => api.connectProvider(id as ProviderId, credentials))
+  ipcMain.handle(IpcChannel.connectProvider, (_event, id: string) => api.connectProvider(id as ProviderId))
   ipcMain.handle(IpcChannel.disconnectProvider, (_event, id: string) => api.disconnectProvider(id as ProviderId))
   ipcMain.handle(IpcChannel.savedTracks, (_event, id: string, cursor?: string) =>
     api.getSavedTracks(id as ProviderId, cursor)

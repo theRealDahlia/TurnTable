@@ -23,7 +23,7 @@ const provider = (id: ProviderId, name: string, extra: Partial<ProviderStatus> =
 const SPOTIFY = provider('spotify', 'Spotify')
 const YOUTUBE = provider('youtubeMusic', 'YouTube')
 const LOCAL = provider('local', 'Local files', { authKind: 'none', playback: 'file' })
-const QOBUZ = provider('qobuz', 'Qobuz', { connected: false, searchable: false, savable: false })
+const TIDAL = provider('tidal', 'TIDAL', { connected: false, searchable: false, savable: false })
 
 const track = (providerId: ProviderId, n: number, overrides: Partial<Track> = {}): Track => ({
   // Spotify ids are 22 letters and digits; anything else can't be played.
@@ -39,7 +39,7 @@ const track = (providerId: ProviderId, n: number, overrides: Partial<Track> = {}
 
 const ready = (tracks: Track[], extra: Partial<ProviderResults> = {}): ProviderResults => ({ status: 'ready', tracks, loadingMore: false, ...extra })
 
-function makeLibrary(providers: ProviderStatus[] = [SPOTIFY, YOUTUBE, QOBUZ], tracks: Track[] = [], overrides: Partial<Library> = {}): Library {
+function makeLibrary(providers: ProviderStatus[] = [SPOTIFY, YOUTUBE, TIDAL], tracks: Track[] = [], overrides: Partial<Library> = {}): Library {
   return {
     listing: false,
     providers,
@@ -123,7 +123,7 @@ describe('SearchPage before searching', () => {
   })
 
   it('searches the services that can be searched, plus local files, from one form', async () => {
-    const { search } = show(makeSearch(), makeLibrary([SPOTIFY, YOUTUBE, LOCAL, QOBUZ]))
+    const { search } = show(makeSearch(), makeLibrary([SPOTIFY, YOUTUBE, LOCAL, TIDAL]))
     await userEvent.type(screen.getByRole('searchbox', { name: 'Search for songs' }), 'foo fighters{Enter}')
     expect(search.search).toHaveBeenCalledExactlyOnceWith('foo fighters', ['spotify', 'youtubeMusic'], ['spotify', 'youtubeMusic', 'local'])
   })
@@ -141,7 +141,7 @@ describe('SearchPage before searching', () => {
   })
 
   it('points to Connections when nothing is connected', async () => {
-    const { onOpenConnections } = show(makeSearch(), makeLibrary([{ ...SPOTIFY, connected: false }, QOBUZ]))
+    const { onOpenConnections } = show(makeSearch(), makeLibrary([{ ...SPOTIFY, connected: false }, TIDAL]))
     expect(screen.getByRole('heading', { name: 'No services connected' })).toBeTruthy()
     expect((screen.getByRole('button', { name: 'Search' }) as HTMLButtonElement).disabled).toBe(true)
     await userEvent.click(screen.getByRole('button', { name: 'Go to Connections' }))
@@ -150,7 +150,7 @@ describe('SearchPage before searching', () => {
 })
 
 describe('SearchPage tabs', () => {
-  const searched = (overrides: Partial<SearchState> = {}, library = makeLibrary([SPOTIFY, YOUTUBE, LOCAL, QOBUZ], [track('local', 1), track('local', 2, { title: 'Other' })]) ) =>
+  const searched = (overrides: Partial<SearchState> = {}, library = makeLibrary([SPOTIFY, YOUTUBE, LOCAL, TIDAL], [track('local', 1), track('local', 2, { title: 'Other' })]) ) =>
     show(
       makeSearch({
         query: 'everlong',
@@ -164,8 +164,8 @@ describe('SearchPage tabs', () => {
   it('has one chip for each connected service, with its result count', () => {
     searched()
     expect(tabs().map((tab) => tab.textContent)).toEqual(['Spotify3', 'YouTube1', 'Local files1'])
-    // Qobuz is not connected.
-    expect(screen.queryByRole('tab', { name: /Qobuz/ })).toBeNull()
+    // TIDAL is not connected.
+    expect(screen.queryByRole('tab', { name: /TIDAL/ })).toBeNull()
   })
 
   it('shows no count while a service is still searching, or if it failed', () => {
@@ -181,7 +181,7 @@ describe('SearchPage tabs', () => {
   })
 
   it('falls back to the first tab when the chosen one is not available', () => {
-    searched({ tab: 'qobuz' })
+    searched({ tab: 'tidal' })
     expect(tabs()[0]?.getAttribute('aria-selected')).toBe('true')
   })
 
@@ -563,20 +563,5 @@ describe('SearchPage loading more by itself', () => {
   it('does not watch the local files tab, which has everything already', () => {
     show(withMore({}, [track('spotify', 1)], 'local'), makeLibrary([SPOTIFY, YOUTUBE, LOCAL]))
     expect(FakeObserver.live).toHaveLength(0)
-  })
-})
-
-describe('SearchPage Qobuz notice', () => {
-  const NOTICE = 'This application uses the Qobuz API but is not certified by Qobuz.'
-  const QOBUZ_CONNECTED = provider('qobuz', 'Qobuz', { authKind: 'credentials', playback: 'stream', searchable: true, savable: true })
-
-  it('is shown under Qobuz\'s results, as its terms require, and only there', () => {
-    const search = makeSearch({ query: 'e', tab: 'qobuz', results: { spotify: ready([track('spotify', 1)]), qobuz: ready([track('qobuz', 1)]) } })
-    show(search, makeLibrary([SPOTIFY, QOBUZ_CONNECTED]))
-    expect(screen.getByText(NOTICE)).toBeTruthy()
-
-    cleanup()
-    show({ ...search, tab: 'spotify' }, makeLibrary([SPOTIFY, QOBUZ_CONNECTED]))
-    expect(screen.queryByText(NOTICE)).toBeNull()
   })
 })

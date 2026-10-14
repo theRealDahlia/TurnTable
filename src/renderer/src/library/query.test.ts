@@ -13,7 +13,7 @@ const track = (overrides: Partial<Track>): Track => ({
 
 const tracks: Track[] = [
   track({ id: '1', title: 'Blue in Green', artists: ['Miles Davis'], album: 'Kind of Blue', savedAt: '2026-01-01T00:00:00Z' }),
-  track({ id: '2', title: 'Café del Mar', artists: ['Energy 52'], providerId: 'qobuz', savedAt: '2026-03-01T00:00:00Z' }),
+  track({ id: '2', title: 'Café del Mar', artists: ['Energy 52'], providerId: 'tidal', savedAt: '2026-03-01T00:00:00Z' }),
   track({ id: '3', title: 'Autumn Leaves', artists: ['Bill Evans', 'Scott LaFaro'], album: 'Portrait in Jazz' }),
   track({ id: '4', title: 'Track 10', artists: ['Zed'], savedAt: '2026-02-01T00:00:00Z' }),
   track({ id: '5', title: 'Track 2', artists: ['Zed'], savedAt: '2026-02-01T00:00:00Z' })
@@ -44,8 +44,8 @@ describe('filterTracks', () => {
   })
 
   it('filters by service, alone or with a query', () => {
-    expect(ids(filterTracks(tracks, { query: '', providerId: 'qobuz' }))).toEqual(['2'])
-    expect(filterTracks(tracks, { query: 'blue', providerId: 'qobuz' })).toEqual([])
+    expect(ids(filterTracks(tracks, { query: '', providerId: 'tidal' }))).toEqual(['2'])
+    expect(filterTracks(tracks, { query: 'blue', providerId: 'tidal' })).toEqual([])
   })
 
   it('treats regex characters in the query literally', () => {

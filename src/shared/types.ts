@@ -1,9 +1,9 @@
-export type ProviderId = 'spotify' | 'youtubeMusic' | 'tidal' | 'qobuz' | 'local'
+export type ProviderId = 'spotify' | 'youtubeMusic' | 'tidal' | 'local'
 
-export type AuthKind = 'oauth-pkce' | 'credentials' | 'none'
+export type AuthKind = 'oauth-pkce' | 'none'
 
 /** How audio reaches the speakers for a provider. */
-export type PlaybackKind = 'sdk' | 'embed' | 'stream' | 'file'
+export type PlaybackKind = 'sdk' | 'embed' | 'file'
 
 export interface AudioQuality {
   codec: string

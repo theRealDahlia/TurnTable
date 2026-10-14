@@ -59,18 +59,6 @@ Apply these to all YouTube code (https://developers.google.com/youtube/terms/dev
 - **Never mix:** don't merge non-YouTube results into YouTube results, and don't make other sources look like YouTube (III.C.5, III.F.2.b).
 - **Quota:** stay within quota. Use more only after YouTube's compliance audit, and only for the approved use.
 
-## Qobuz API rules
-
-Apply these to all Qobuz code. Qobuz has no public developer documentation; what follows is what its API terms and subscriber terms are known to require. If more is learned, add it here.
-
-- **Credentials:** the app ID and secret come from Qobuz and are the user's or developer's own, never copied from another project and never committed. Use only the official, approved route to the API, and apply for access if the app is to be shared.
-- **Notice:** wherever the API is used, show "This application uses the Qobuz API but is not certified by Qobuz." (`QOBUZ_NOTICE`).
-- **Sign-in:** the user's email and password go to Qobuz once, over HTTPS, in a request body (never a URL), and are never stored, logged or shown. Only the token is kept, encrypted.
-- **Streaming:** personal, non-commercial, real-time listening only, on one device at a time unless their plan allows more. Never download, record or save audio, and never get around Qobuz's protection measures or software (subscriber terms, articles 4, 7, 17, 21.8.3).
-- **Never artificially inflate streams,** by hand or by automation. Don't use content to train or feed AI.
-- **Data:** keep content in memory only, and delete the token on disconnect.
-- **Risk:** the app isn't certified by Qobuz and may be refused at any time. Treat Qobuz as a personal-use, at-your-own-risk connection, and say so wherever it is described.
-
 ## TIDAL API rules
 
 Apply these to all TIDAL code. They come from the TIDAL Developer Terms of Service, version 3.0 as of May 6, 2024 (a copy was pasted in by the developer, since the portal can't be read by the tools used here); the Developer Guidelines and Design Guidelines they refer to (https://developer.tidal.com/documentation/guidelines/) have NOT been read. Re-check against the current terms before any release.

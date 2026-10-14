@@ -9,7 +9,7 @@ describe('provider registry', () => {
   it('lists every planned service as disconnected', async () => {
     const statuses = await createDefaultRegistry().listStatuses()
 
-    expect(statuses.map((s) => s.id)).toEqual(['spotify', 'youtubeMusic', 'tidal', 'qobuz', 'local'])
+    expect(statuses.map((s) => s.id)).toEqual(['spotify', 'youtubeMusic', 'tidal', 'local'])
     expect(statuses.every((s) => !s.connected)).toBe(true)
   })
 
@@ -23,7 +23,7 @@ describe('api', () => {
     const api = createApi(createDefaultRegistry())
 
     await expect(api.connectProvider('spotify')).rejects.toThrow('not implemented')
-    await expect(api.getSavedTracks('qobuz')).rejects.toThrow('not implemented')
+    await expect(api.getSavedTracks('tidal')).rejects.toThrow('not implemented')
   })
 
   it('rejects ids that did not come from the known set', async () => {
@@ -88,9 +88,9 @@ describe('api: search and saving', () => {
 
   it('says plainly when a service cannot do it, instead of failing with a TypeError', async () => {
     const api = createApi(createDefaultRegistry())
-    await expect(api.searchTracks('qobuz', 'foo')).rejects.toThrow("Qobuz doesn't support search")
-    await expect(api.saveTrack('qobuz', 'x')).rejects.toThrow("Qobuz doesn't support saving songs")
-    await expect(api.unsaveTrack('qobuz', 'x')).rejects.toThrow("Qobuz doesn't support removing saved songs")
+    await expect(api.searchTracks('tidal', 'foo')).rejects.toThrow("TIDAL doesn't support search")
+    await expect(api.saveTrack('tidal', 'x')).rejects.toThrow("TIDAL doesn't support saving songs")
+    await expect(api.unsaveTrack('tidal', 'x')).rejects.toThrow("TIDAL doesn't support removing saved songs")
   })
 
   it('rejects unknown services', async () => {
@@ -103,7 +103,7 @@ describe('api: search and saving', () => {
     const { provider } = fake()
     const statuses = await createDefaultRegistry({ spotify: provider as never }).listStatuses()
     expect(statuses.find((s) => s.id === 'spotify')).toMatchObject({ searchable: true, savable: true })
-    expect(statuses.find((s) => s.id === 'qobuz')).toMatchObject({ searchable: false, savable: false })
+    expect(statuses.find((s) => s.id === 'tidal')).toMatchObject({ searchable: false, savable: false })
   })
 
   it('does not call a service that can save but not remove savable', async () => {
@@ -151,63 +151,18 @@ describe('api: albums', () => {
 
   it('says plainly when a service has no albums, and reports which do', async () => {
     const { provider } = fake()
-    await expect(createApi(createDefaultRegistry()).getArtistAlbums('qobuz', 'x')).rejects.toThrow("Qobuz doesn't support albums")
+    await expect(createApi(createDefaultRegistry()).getArtistAlbums('tidal', 'x')).rejects.toThrow("TIDAL doesn't support albums")
     const statuses = await createDefaultRegistry({ spotify: provider as never }).listStatuses()
     expect(statuses.find((s) => s.id === 'spotify')?.albums).toBe(true)
-    expect(statuses.find((s) => s.id === 'qobuz')?.albums).toBe(false)
+    expect(statuses.find((s) => s.id === 'tidal')?.albums).toBe(false)
   })
 })
 
-describe('api: signing in with credentials', () => {
-  const fake = () => {
-    const connect = vi.fn().mockResolvedValue(undefined)
-    const provider = {
-      info: { id: 'qobuz', name: 'Qobuz', authKind: 'credentials' },
-      isConnected: async () => false,
-      connect,
-      disconnect: async () => undefined,
-      getSavedTracks: async () => ({ tracks: [] })
-    }
-    return { connect, api: createApi(createDefaultRegistry({ qobuz: provider as never })) }
-  }
-
-  it('passes the account\'s details on to a service that signs in with them, trimming the email only', async () => {
-    const { connect, api } = fake()
-    await api.connectProvider('qobuz', { username: '  me@example.com ', password: ' p w ' })
-    expect(connect).toHaveBeenCalledExactlyOnceWith({ username: 'me@example.com', password: ' p w ' })
-  })
-
-  it.each([
-    ['nothing', undefined],
-    ['no password', { username: 'me@example.com' }],
-    ['no email', { password: 'pw' }],
-    ['a blank email', { username: '   ', password: 'pw' }],
-    ['an empty password', { username: 'me@example.com', password: '' }],
-    ['details that are not text', { username: 5, password: {} }],
-    ['something that is not an object', 'me@example.com:pw']
-  ])('asks for the email and password when given %s, without calling the service', async (_label, credentials) => {
-    const { connect, api } = fake()
-    await expect(api.connectProvider('qobuz', credentials as never)).rejects.toThrow('Enter your Qobuz email and password.')
-    expect(connect).not.toHaveBeenCalled()
-  })
-
-  it('refuses absurdly long details', async () => {
-    const { connect, api } = fake()
-    await expect(api.connectProvider('qobuz', { username: 'x'.repeat(257), password: 'pw' })).rejects.toThrow('too long')
-    await expect(api.connectProvider('qobuz', { username: 'a@b.c', password: 'x'.repeat(257) })).rejects.toThrow('too long')
-    expect(connect).not.toHaveBeenCalled()
-  })
-
-  it('never repeats the password in an error', async () => {
-    const { api } = fake()
-    const error = (await api.connectProvider('qobuz', { username: 'x'.repeat(257), password: 'secret-pw' }).catch((e: unknown) => e)) as Error
-    expect(error.message).not.toContain('secret-pw')
-  })
-
-  it('does not hand credentials to a service that signs in in a browser', async () => {
+describe('api: signing in', () => {
+  it('signs in with the service itself, passing it nothing from the window', async () => {
     const connect = vi.fn().mockResolvedValue(undefined)
     const provider = { info: { id: 'spotify', name: 'Spotify', authKind: 'oauth-pkce' }, isConnected: async () => false, connect, disconnect: async () => undefined, getSavedTracks: async () => ({ tracks: [] }) }
-    await createApi(createDefaultRegistry({ spotify: provider as never })).connectProvider('spotify', { username: 'a@b.c', password: 'pw' })
+    await (createApi(createDefaultRegistry({ spotify: provider as never })).connectProvider as (id: string, extra?: unknown) => Promise<void>)('spotify', { username: 'a@b.c', password: 'pw' })
     expect(connect).toHaveBeenCalledExactlyOnceWith()
   })
 })

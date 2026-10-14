@@ -263,7 +263,7 @@ describe('usePlayer', () => {
       ['a format Chromium cannot decode', track(1, { quality: { codec: 'alac', lossless: true } })],
       ['a track with unknown format', track(2, { quality: undefined })],
       ['a Spotify track with a malformed id', track(3, { providerId: 'spotify', id: 'not-a-spotify-id' })],
-      ['a track from a service without playback', track(4, { providerId: 'qobuz' })]
+      ['a TIDAL track TIDAL does not stream', track(4, { providerId: 'tidal', playable: false })]
     ])('refuses %s without touching the audio element', (_label, t) => {
       const { result } = setup()
       act(() => result.current.play(t))

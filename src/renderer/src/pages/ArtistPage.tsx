@@ -6,7 +6,6 @@ import { AlbumShelf } from '../components/AlbumShelf'
 import { useArtistSongs, type Artist } from '../artist/useArtistSongs'
 import { ChevronLeftIcon, ClockIcon, SearchIcon } from '../components/icons'
 import { ProviderLogo } from '../components/ProviderLogo'
-import { QobuzNotice } from '../components/QobuzNotice'
 import { SpotifyFullLogo } from '../components/SpotifyFullLogo'
 import { TrackRow } from '../components/TrackRow'
 import { TrackSkeleton } from '../components/TrackSkeleton'
@@ -209,8 +208,6 @@ export function ArtistPage({ artist, provider, library, player, backLabel, onBac
           </p>
         </section>
       )}
-
-      {artist.providerId === 'qobuz' && <QobuzNotice />}
 
       {artist.providerId === 'spotify' && shown > 0 && (
         <p className="spotify-credit">

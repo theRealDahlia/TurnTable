@@ -20,19 +20,18 @@ The window runs with `contextIsolation`, `sandbox`, and no Node integration, and
 
 ## Auth
 
-- `auth/oauth.ts`: authorization-code flow with PKCE using a system-browser loopback redirect (RFC 8252), plus refresh. Services with no OAuth (e.g. Qobuz) use the `credentials` auth kind instead.
-- `auth/tokenStore.ts`: tokens are encrypted with the OS keychain via Electron `safeStorage`. It refuses to write when encryption is unavailable.
+- `auth/oauth.ts`: authorization-code flow with PKCE using a system-browser loopback redirect (RFC 8252), plus refresh. Every streaming service signs in this way; local files need no sign-in.
+- `auth/tokenStore.ts`: tokens are encrypted with the OS keychain via Electron `safeStorage`. It refuses to write when encryption is unavailable. At startup it deletes the tokens of services the app no longer has.
 
 ## Providers
 
-Every service implements `MusicProvider` (`connect`, `disconnect`, `getSavedTracks`). All five are placeholders that throw `NotImplementedError`; each gets replaced by a real integration as its feature lands.
+Every service implements `MusicProvider` (`connect`, `disconnect`, `getSavedTracks`, and optionally search, saving and albums). Spotify, YouTube, TIDAL and local files are real integrations; a service without one would be a placeholder that throws `NotImplementedError`.
 
 ## Audio fidelity
 
 - Local files and lossless streams should play through a plain `<audio>` element or a decoded buffer with no resampling, EQ, or normalization in the path by default, so what is sent to the device is what was decoded.
 - Quality is capped by the service, not by Muze. `maxQuality` on each provider records the ceiling.
 - Spotify (SDK playback needs Widevine, so the stock Electron binary must be swapped for the castLabs Widevine build) and YouTube (embed only, no public API) are lossy.
-- Qobuz lossless needs an app id the service may not grant to third parties; confirm access before building it.
 
 ## Open questions
 

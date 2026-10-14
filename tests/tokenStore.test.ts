@@ -30,28 +30,54 @@ describe('TokenStore', () => {
   it('round-trips tokens per provider without storing plaintext', async () => {
     const store = new TokenStore(file, fakeEncryptor())
     await store.set('spotify', tokens)
-    await store.set('qobuz', { ...tokens, accessToken: 'q' })
+    await store.set('tidal', { ...tokens, accessToken: 'q' })
 
     await expect(store.get('spotify')).resolves.toEqual(tokens)
-    await expect(store.get('qobuz')).resolves.toMatchObject({ accessToken: 'q' })
+    await expect(store.get('tidal')).resolves.toMatchObject({ accessToken: 'q' })
     expect(await readFile(file, 'utf8')).not.toContain('secret-access')
   })
 
   it('deletes one provider and leaves the others', async () => {
     const store = new TokenStore(file, fakeEncryptor())
     await store.set('spotify', tokens)
-    await store.set('qobuz', tokens)
+    await store.set('tidal', tokens)
     await store.delete('spotify')
 
     await expect(store.get('spotify')).resolves.toBeUndefined()
-    await expect(store.get('qobuz')).resolves.toEqual(tokens)
+    await expect(store.get('tidal')).resolves.toEqual(tokens)
+  })
+
+  it('deletes the sign-ins of services the app no longer has, and keeps the rest', async () => {
+    const store = new TokenStore(file, fakeEncryptor())
+    await store.set('spotify', tokens)
+    await store.set('tidal', tokens)
+    // A sign-in left behind by a service since removed from the app.
+    await store.set('qobuz' as never, tokens)
+
+    await store.retainOnly(['spotify', 'tidal', 'youtubeMusic', 'local'])
+
+    await expect(store.get('qobuz' as never)).resolves.toBeUndefined()
+    await expect(store.get('spotify')).resolves.toEqual(tokens)
+    await expect(store.get('tidal')).resolves.toEqual(tokens)
+    expect(await readFile(file, 'utf8')).not.toContain('qobuz')
+  })
+
+  it('writes nothing when there is nothing to delete, or no file yet', async () => {
+    const store = new TokenStore(file, fakeEncryptor())
+    await store.retainOnly(['spotify'])
+    await expect(readFile(file)).rejects.toThrow()
+
+    await store.set('spotify', tokens)
+    const before = await readFile(file)
+    await store.retainOnly(['spotify', 'tidal'])
+    expect(await readFile(file)).toEqual(before)
   })
 
   it('does not lose updates when writes happen concurrently', async () => {
     const store = new TokenStore(file, fakeEncryptor())
-    await Promise.all([store.set('spotify', tokens), store.set('qobuz', tokens), store.set('youtubeMusic', tokens)])
+    await Promise.all([store.set('spotify', tokens), store.set('tidal', tokens), store.set('youtubeMusic', tokens)])
 
-    for (const id of ['spotify', 'qobuz', 'youtubeMusic'] as const) {
+    for (const id of ['spotify', 'tidal', 'youtubeMusic'] as const) {
       await expect(store.get(id)).resolves.toEqual(tokens)
     }
   })

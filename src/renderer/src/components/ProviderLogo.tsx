@@ -1,6 +1,5 @@
 import { siTidal, siYoutube } from 'simple-icons'
 import type { ProviderId } from '@shared/types'
-import qobuzLogo from '../assets/logos/qobuz.svg'
 import spotifyIconBlack from '../assets/logos/spotify-icon-black.svg'
 import spotifyIconWhite from '../assets/logos/spotify-icon-white.svg'
 
@@ -15,11 +14,6 @@ const BRAND_ICONS: Partial<Record<ProviderId, BrandIcon>> = {
   tidal: siTidal
 }
 
-/** Brand marks Simple Icons doesn't carry, shipped as image files. */
-const BRAND_IMAGES: Partial<Record<ProviderId, string>> = {
-  qobuz: qobuzLogo
-}
-
 /** Generic music-note glyph for local files. */
 const NOTE_PATH = 'M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm12-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z'
 
@@ -31,7 +25,6 @@ interface Props {
 
 export function ProviderLogo({ id, name, size = 'md' }: Props): React.JSX.Element {
   const brand = BRAND_ICONS[id]
-  const image = BRAND_IMAGES[id]
 
   return (
     <span className={size === 'sm' ? 'logo logo-sm' : 'logo'} data-provider={id}>
@@ -42,8 +35,6 @@ export function ProviderLogo({ id, name, size = 'md' }: Props): React.JSX.Elemen
           <img className="spotify-icon-on-dark" src={spotifyIconWhite} alt={`${name} logo`} />
           <img className="spotify-icon-on-light" src={spotifyIconBlack} alt="" aria-hidden="true" />
         </>
-      ) : image ? (
-        <img src={image} alt={`${name} logo`} />
       ) : brand ? (
         <svg viewBox="0 0 24 24" role="img" aria-label={`${name} logo`} fill={brand.hex === '000000' ? 'currentColor' : `#${brand.hex}`}>
           <path d={brand.path} />

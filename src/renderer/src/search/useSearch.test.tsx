@@ -79,7 +79,7 @@ describe('useSearch forgetting a service', () => {
   it('does nothing for a service that was never searched', () => {
     const { result } = renderHook(() => useSearch())
     const before = result.current.results
-    act(() => result.current.forget('qobuz'))
+    act(() => result.current.forget('tidal'))
     expect(result.current.results).toBe(before)
   })
 })

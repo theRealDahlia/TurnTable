@@ -32,7 +32,7 @@ let api: { [K in keyof TurnTableApi]: ReturnType<typeof vi.fn> }
 
 beforeEach(() => {
   api = {
-    listProviders: vi.fn().mockResolvedValue([status('spotify', true), status('qobuz', false)]),
+    listProviders: vi.fn().mockResolvedValue([status('spotify', true), status('tidal', false)]),
     connectProvider: vi.fn(),
     disconnectProvider: vi.fn(),
     getSavedTracks: vi.fn().mockResolvedValue(page('spotify', [1])),
@@ -139,7 +139,7 @@ describe('useLibrary', () => {
     const { result } = renderHook(() => useOpenedLibrary())
     await waitFor(() => expect(result.current.loading).toBe(false))
 
-    api.listProviders.mockResolvedValue([status('spotify', false), status('qobuz', false)])
+    api.listProviders.mockResolvedValue([status('spotify', false), status('tidal', false)])
     act(() => result.current.reload())
 
     await waitFor(() => expect(result.current.tracks).toHaveLength(0))
@@ -323,7 +323,7 @@ describe('useLibrary.refreshProvider', () => {
 
     act(() => result.current.refreshProvider('spotify'))
     await waitFor(() => expect(result.current.libraries.spotify?.status).toBe('ready'))
-    await act(async () => firstCheck.resolve([status('spotify', true), status('qobuz', false)]))
+    await act(async () => firstCheck.resolve([status('spotify', true), status('tidal', false)]))
 
     expect(api.listProviders).toHaveBeenCalledTimes(2)
     expect(requestedServices()).toEqual(['spotify'])
@@ -688,7 +688,7 @@ describe('useLibrary noteSaved', () => {
 })
 
 describe('useLibrary loading on demand', () => {
-  const two = (): ProviderStatus[] => [status('spotify', true), status('youtubeMusic', true), status('local', true), status('qobuz', false)]
+  const two = (): ProviderStatus[] => [status('spotify', true), status('youtubeMusic', true), status('local', true), status('tidal', false)]
   const requested = (): string[] => api.getSavedTracks.mock.calls.map((call) => call[0] as string)
   beforeEach(() => {
     api.listProviders.mockResolvedValue(two())
@@ -721,9 +721,9 @@ describe('useLibrary loading on demand', () => {
     const { result } = renderHook(() => useLibrary())
     await waitFor(() => expect(result.current.listing).toBe(false))
 
-    act(() => result.current.ensure('qobuz'))
+    act(() => result.current.ensure('tidal'))
 
-    expect(requested()).not.toContain('qobuz')
+    expect(requested()).not.toContain('tidal')
   })
 
   it("does not try a service again by itself after it failed; the user's Retry does", async () => {

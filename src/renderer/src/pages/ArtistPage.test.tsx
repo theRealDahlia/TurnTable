@@ -3,7 +3,6 @@ import { cleanup, render, screen, waitFor, within } from '@testing-library/react
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Album, ProviderId, ProviderStatus, Track } from '@shared/types'
-import { QOBUZ_NOTICE } from '@shared/qobuz'
 import type { Library } from '../library/useLibrary'
 import type { Player } from '../player/usePlayer'
 import { ArtistPage } from './ArtistPage'
@@ -21,7 +20,6 @@ const provider = (id: ProviderId, name: string, extra: Partial<ProviderStatus> =
 
 const TIDAL = provider('tidal', 'TIDAL')
 const SPOTIFY = provider('spotify', 'Spotify')
-const QOBUZ = provider('qobuz', 'Qobuz')
 const LOCAL = provider('local', 'Local files', { authKind: 'none', playback: 'file' })
 
 const song = (providerId: ProviderId, id: string, artists = ['Foo Fighters']): Track => ({
@@ -35,7 +33,7 @@ const song = (providerId: ProviderId, id: string, artists = ['Foo Fighters']): T
 function makeLibrary(tracks: Track[], loaded: ProviderId[] = ['tidal']): Library {
   return {
     listing: false,
-    providers: [TIDAL, SPOTIFY, QOBUZ, LOCAL],
+    providers: [TIDAL, SPOTIFY, LOCAL],
     libraries: Object.fromEntries(loaded.map((id) => [id, { status: 'ready', tracks: tracks.filter((t) => t.providerId === id) }])),
     tracks,
     loading: false,
@@ -192,12 +190,6 @@ describe('ArtistPage', () => {
     show({ service: SPOTIFY, library: makeLibrary([], []) })
     expect((await screen.findByRole('link', { name: 'Open Spotify' })).getAttribute('href')).toBe('https://open.spotify.com')
     expect(document.querySelector('.spotify-credit img[alt="Spotify logo"]')).toBeTruthy()
-  })
-
-  it("shows Qobuz's notice on a Qobuz artist, as its terms require", async () => {
-    show({ service: QOBUZ, library: makeLibrary([], []) })
-    expect(screen.getByText(QOBUZ_NOTICE)).toBeTruthy()
-    await waitFor(() => expect(searchTracks).toHaveBeenCalled())
   })
 
   describe('albums', () => {

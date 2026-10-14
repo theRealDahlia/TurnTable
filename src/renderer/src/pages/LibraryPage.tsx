@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ProviderId } from '@shared/types'
 import { BrandMark, ClockIcon, SearchIcon } from '../components/icons'
-import { QobuzNotice } from '../components/QobuzNotice'
 import { RefreshMenu } from '../components/RefreshMenu'
 import { SpotifyFullLogo } from '../components/SpotifyFullLogo'
 import { TrackRow } from '../components/TrackRow'
@@ -218,8 +217,6 @@ export function LibraryPage({ library, player, onOpenConnections, onOpenArtist }
       )}
 
       {library.listing && <TrackSkeleton />}
-
-      {connected.some((provider) => provider.id === 'qobuz') && <QobuzNotice />}
     </main>
   )
 }

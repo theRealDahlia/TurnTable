@@ -28,7 +28,7 @@ const track = (providerId: ProviderId, n: number, overrides: Partial<Track> = {}
 })
 
 function makeLibrary(overrides: Partial<Library> = {}, tracks: Track[] = []): Library {
-  const providers = [provider('spotify', 'Spotify', true), provider('qobuz', 'Qobuz', true), provider('youtubeMusic', 'YouTube', false)]
+  const providers = [provider('spotify', 'Spotify', true), provider('tidal', 'TIDAL', true), provider('youtubeMusic', 'YouTube', false)]
   const libraries: Partial<Record<ProviderId, ProviderLibrary>> = {}
   for (const p of providers.filter((x) => x.connected)) {
     libraries[p.id] = { status: 'ready', tracks: tracks.filter((t) => t.providerId === p.id) }
@@ -118,7 +118,7 @@ describe('LibraryPage', () => {
   })
 
   it("shows one service's library at a time, starting with the first connected, with no combined view", async () => {
-    const mixed = [...sample, track('qobuz', 4, { title: 'Qobuz Song' })]
+    const mixed = [...sample, track('tidal', 4, { title: 'TIDAL Song' })]
     render(<LibraryPage library={makeLibrary({}, mixed)} player={makePlayer()} onOpenConnections={vi.fn()} />)
     const filters = within(screen.getByRole('group', { name: 'Filter by service' }))
 
@@ -128,9 +128,9 @@ describe('LibraryPage', () => {
     expect(titles()).toEqual(['Café Noir', 'Song 2', 'Song 1'])
     expect(screen.getByRole('status').textContent).toBe('3 tracks')
 
-    await userEvent.click(filters.getByRole('button', { name: /^Qobuz\s*1$/ }))
-    expect(titles()).toEqual(['Qobuz Song'])
-    expect(filters.getByRole('button', { name: /^Qobuz/ }).getAttribute('aria-pressed')).toBe('true')
+    await userEvent.click(filters.getByRole('button', { name: /^TIDAL\s*1$/ }))
+    expect(titles()).toEqual(['TIDAL Song'])
+    expect(filters.getByRole('button', { name: /^TIDAL/ }).getAttribute('aria-pressed')).toBe('true')
     expect(filters.getByRole('button', { name: /^Spotify/ }).getAttribute('aria-pressed')).toBe('false')
   })
 
@@ -138,11 +138,11 @@ describe('LibraryPage', () => {
     const library = makeLibrary({}, sample)
     render(<LibraryPage library={library} player={makePlayer()} onOpenConnections={vi.fn()} />)
     expect(library.ensure).toHaveBeenCalledWith('spotify')
-    expect(library.ensure).not.toHaveBeenCalledWith('qobuz')
+    expect(library.ensure).not.toHaveBeenCalledWith('tidal')
 
-    await userEvent.click(screen.getByRole('button', { name: /^Qobuz/ }))
+    await userEvent.click(screen.getByRole('button', { name: /^TIDAL/ }))
 
-    expect(library.ensure).toHaveBeenCalledWith('qobuz')
+    expect(library.ensure).toHaveBeenCalledWith('tidal')
   })
 
   it('shows it is loading, not empty, between choosing a service and its first page', () => {
@@ -156,12 +156,12 @@ describe('LibraryPage', () => {
   })
 
   it('moves to another connected service when the one on show is disconnected', async () => {
-    const mixed = [...sample, track('qobuz', 4, { title: 'Qobuz Song' })]
+    const mixed = [...sample, track('tidal', 4, { title: 'TIDAL Song' })]
     const { rerender } = render(<LibraryPage library={makeLibrary({}, mixed)} player={makePlayer()} onOpenConnections={vi.fn()} />)
-    await userEvent.click(screen.getByRole('button', { name: /^Qobuz/ }))
-    expect(titles()).toEqual(['Qobuz Song'])
+    await userEvent.click(screen.getByRole('button', { name: /^TIDAL/ }))
+    expect(titles()).toEqual(['TIDAL Song'])
 
-    const providers = [provider('spotify', 'Spotify', true), provider('qobuz', 'Qobuz', false)]
+    const providers = [provider('spotify', 'Spotify', true), provider('tidal', 'TIDAL', false)]
     rerender(<LibraryPage library={makeLibrary({ providers }, sample)} player={makePlayer()} onOpenConnections={vi.fn()} />)
 
     expect(titles()).toEqual(['Café Noir', 'Song 2', 'Song 1'])
@@ -209,7 +209,7 @@ describe('LibraryPage', () => {
   })
 
   it('shows a per-service error with a retry that targets that service', async () => {
-    const library = makeLibrary({}, [track('qobuz', 3)])
+    const library = makeLibrary({}, [track('tidal', 3)])
     library.libraries.spotify = { status: 'error', tracks: [], error: 'Spotify request failed with status 500' }
     render(<LibraryPage library={library} player={makePlayer()} onOpenConnections={vi.fn()} />)
 
@@ -218,7 +218,7 @@ describe('LibraryPage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Retry Spotify' }))
     expect(library.retry).toHaveBeenCalledWith('spotify')
     // The other service's tracks are still there when its tab is chosen.
-    await userEvent.click(screen.getByRole('button', { name: /^Qobuz/ }))
+    await userEvent.click(screen.getByRole('button', { name: /^TIDAL/ }))
     expect(titles()).toEqual(['Song 3'])
   })
 
@@ -250,24 +250,24 @@ describe('LibraryPage', () => {
 
   describe("Spotify's attribution", () => {
     it('credits Spotify with its full logo and a link back below its tracks, and only there', async () => {
-      const mixed = [track('spotify', 1), track('qobuz', 2)]
+      const mixed = [track('spotify', 1), track('tidal', 2)]
       render(<LibraryPage library={makeLibrary({}, mixed)} player={makePlayer()} onOpenConnections={vi.fn()} />)
 
       expect(document.querySelector('.spotify-credit img[alt="Spotify logo"]')).toBeTruthy()
       expect(screen.getByRole('link', { name: 'Open Spotify' }).getAttribute('href')).toBe('https://open.spotify.com')
 
-      await userEvent.click(screen.getByRole('button', { name: /^Qobuz/ }))
+      await userEvent.click(screen.getByRole('button', { name: /^TIDAL/ }))
       expect(screen.queryByRole('link', { name: 'Open Spotify' })).toBeNull()
     })
 
     it("marks the page with the service on show, so Spotify's rows can be laid out without anything over the artwork", async () => {
-      const mixed = [track('spotify', 1), track('qobuz', 2)]
+      const mixed = [track('spotify', 1), track('tidal', 2)]
       const { container } = render(<LibraryPage library={makeLibrary({}, mixed)} player={makePlayer()} onOpenConnections={vi.fn()} />)
       expect(container.querySelector('main')!.getAttribute('data-service')).toBe('spotify')
       expect(rows()[0]!.getAttribute('data-provider')).toBe('spotify')
 
-      await userEvent.click(screen.getByRole('button', { name: /^Qobuz/ }))
-      expect(container.querySelector('main')!.getAttribute('data-service')).toBe('qobuz')
+      await userEvent.click(screen.getByRole('button', { name: /^TIDAL/ }))
+      expect(container.querySelector('main')!.getAttribute('data-service')).toBe('tidal')
     })
 
     it('gives the whole title on hover, as the service wrote it', () => {
@@ -335,13 +335,13 @@ describe('LibraryPage', () => {
 
     it.each([
       ['an ALAC file', local(1, { quality: { codec: 'alac', lossless: true } }), /ALAC files can't be played/],
-      ['a Qobuz track (playback not built yet)', track('qobuz', 2), /not available yet/],
+      ['a TIDAL track TIDAL does not stream', track('tidal', 2, { playable: false }), /TIDAL doesn't stream this track/],
       ['a Spotify track without a valid id', track('spotify', 3), /Spotify track can't be played/]
     ])('disables Play for %s and says why', async (_label, unplayable, reason) => {
       const player = makePlayer()
       render(<LibraryPage library={library([unplayable])} player={player} onOpenConnections={vi.fn()} />)
 
-      if (unplayable.providerId !== 'local') await userEvent.click(screen.getByRole('button', { name: new RegExp(`^${unplayable.providerId === 'qobuz' ? 'Qobuz' : 'Spotify'}`) }))
+      if (unplayable.providerId !== 'local') await userEvent.click(screen.getByRole('button', { name: new RegExp(`^${unplayable.providerId === 'tidal' ? 'TIDAL' : 'Spotify'}`) }))
       const button = screen.getByRole('button', { name: `Play ${unplayable.title}` }) as HTMLButtonElement
       expect(button.disabled).toBe(true)
       expect(button.title).toMatch(reason)
@@ -460,7 +460,7 @@ describe('refresh button', () => {
 
     const items = within(screen.getByRole('menu', { name: 'Refresh' })).getAllByRole('menuitem')
     // YouTube is not connected, so it is not offered.
-    expect(items.map((item) => item.textContent)).toEqual(['Refresh all', 'Refresh Spotify', 'Refresh Qobuz'])
+    expect(items.map((item) => item.textContent)).toEqual(['Refresh all', 'Refresh Spotify', 'Refresh TIDAL'])
     expect(library.refresh).not.toHaveBeenCalled()
   })
 
@@ -481,9 +481,9 @@ describe('refresh button', () => {
     render(<LibraryPage library={library} player={makePlayer()} onOpenConnections={vi.fn()} />)
 
     await userEvent.click(button())
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Refresh Qobuz' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Refresh TIDAL' }))
 
-    expect(library.refresh).toHaveBeenCalledExactlyOnceWith('qobuz')
+    expect(library.refresh).toHaveBeenCalledExactlyOnceWith('tidal')
   })
 
   it('is not offered when no service is connected', () => {
@@ -519,24 +519,5 @@ describe('refresh button', () => {
     expect(idle.disabled).toBe(false)
     expect(idle.getAttribute('aria-busy')).toBe('false')
     expect(idle.querySelector('svg')?.getAttribute('class') ?? '').not.toContain('spinning')
-  })
-})
-
-describe('Qobuz notice', () => {
-  const NOTICE = 'This application uses the Qobuz API but is not certified by Qobuz.'
-
-  it('is shown on the Library while Qobuz is connected, as its terms require', () => {
-    const library = makeLibrary({ providers: [provider('spotify', 'Spotify', true), provider('qobuz', 'Qobuz', true)] }, [track('spotify', 1)])
-    render(<LibraryPage library={library} player={makePlayer()} onOpenConnections={vi.fn()} />)
-    expect(screen.getByText(NOTICE)).toBeTruthy()
-  })
-
-  it('is not shown when Qobuz is not connected', () => {
-    render(<LibraryPage library={makeLibrary({}, [track('spotify', 1)])} player={makePlayer()} onOpenConnections={vi.fn()} />)
-    // makeLibrary connects Spotify and Qobuz both, so take Qobuz away.
-    cleanup()
-    const library = makeLibrary({ providers: [provider('spotify', 'Spotify', true), provider('qobuz', 'Qobuz', false)] }, [track('spotify', 1)])
-    render(<LibraryPage library={library} player={makePlayer()} onOpenConnections={vi.fn()} />)
-    expect(screen.queryByText(NOTICE)).toBeNull()
   })
 })

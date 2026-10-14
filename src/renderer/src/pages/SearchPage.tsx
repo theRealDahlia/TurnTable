@@ -3,7 +3,6 @@ import type { ProviderId, ProviderStatus, Track } from '@shared/types'
 import { BrandMark, ClockIcon, SearchIcon } from '../components/icons'
 import { ProviderLogo } from '../components/ProviderLogo'
 import { SpotifyFullLogo } from '../components/SpotifyFullLogo'
-import { QobuzNotice } from '../components/QobuzNotice'
 import { TrackRow } from '../components/TrackRow'
 import { TrackSkeleton } from '../components/TrackSkeleton'
 import { filterTracks, sortResults, type ResultSortKey } from '../library/query'
@@ -256,8 +255,6 @@ export function SearchPage({ library, player, search, onOpenConnections, onOpenA
                 Loading more…
               </p>
             )}
-
-            {active.id === 'qobuz' && <QobuzNotice />}
 
             {active.id === 'spotify' && results?.status === 'ready' && results.tracks.length > 0 && (
               <p className="spotify-credit">

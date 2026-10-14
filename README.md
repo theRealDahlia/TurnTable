@@ -18,7 +18,7 @@ Connect several streaming accounts (Spotify, Apple Music, YouTube, Tidal, Deezer
 
 ## Status
 
-Desktop scaffold (Electron + TypeScript + React). The window opens and lists the five services, and the OAuth/PKCE and encrypted token-storage building blocks are in place and tested. Every service is still a placeholder; none can sign in yet. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Desktop app (Electron + TypeScript + React) connecting Spotify, YouTube, TIDAL and local music files: each service's saved tracks, search, saving, artist and album pages, and playback through each service's own player. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and the setup sections below. Qobuz was supported until it was removed; its stored sign-in, if any, is deleted when the app starts.
 
 ## Develop
 
@@ -81,20 +81,6 @@ TIDAL has a public developer platform (https://developer.tidal.com) with a JSON:
 
 **Not checked.** The requests are written from TIDAL's published API description (https://tidal-music.github.io/tidal-api-reference/), and some details may differ from the live service.
 
-## Qobuz setup
-
-Qobuz has no public API. Its API is for partners, and the [API Terms of Use](http://static.qobuz.com/apps/api/QobuzAPI-TermsofUse.pdf) say you may not use it without an application ID and secret that Qobuz issued to you, and may not share them. Request your own from Qobuz (the usual contact given is api@qobuz.com; check Qobuz's site). Muze ships with none, and does not use ones taken from Qobuz's web player or other projects.
-
-1. Put your application ID and secret in `.env` as `MAIN_VITE_QOBUZ_APP_ID` and `MAIN_VITE_QOBUZ_APP_SECRET`.
-2. Restart `npm run dev`, then click Connect on the Qobuz chip and sign in with your Qobuz email and password. The password is sent once to Qobuz over https, in the request body (never in a URL), and is never stored or logged; only the sign-in token Qobuz returns is kept, encrypted. Qobuz's sign-in has no two-factor step, and accounts created through Google, Apple or Facebook need a Qobuz password set first.
-3. The terms require this notice, which Muze shows on the Qobuz sign-in: "This application uses the Qobuz API but is not certified by Qobuz."
-
-**What it does.** Your favorite tracks fill the Library (`favorite/getUserFavorites`), the Search page searches Qobuz (`track/search`) and adds or removes favorites (`favorite/create`, `favorite/delete`), and each track shows the quality your subscription can deliver (hi-res accounts get what the track has, up to 24-bit / 192 kHz; lossless accounts, CD quality; others, 320 kbps MP3). An account without a streaming subscription can browse but its tracks are not playable. The notice above is shown on Qobuz's chip, the Library and Qobuz's search results.
-
-**Playback.** Playing a track asks Qobuz for a stream address (`track/getFileUrl`), a request signed with your application secret in the main process (the secret is never sent to a page or to Qobuz). The address goes to an `<audio>` element of its own, so FLAC up to 24-bit / 192 kHz is decoded and handed to the output unchanged, like a local file; the player bar shows the quality of the stream Qobuz actually sent. Addresses lapse, so if one has expired by the time you resume, a fresh one is fetched once and playback carries on from the same place. Previews and restricted tracks are refused with a message instead of being played as if they were the track.
-
-Qobuz publishes no API documentation, so the requests are written from how third-party clients describe it, and have not been tried against the live service.
-
 ## Search
 
 The **Search** page searches every connected service at once and puts each one's results under its own tab (a chip per service; local files are searched in the library already loaded). Press Enter or Search; results are not fetched as you type, because a YouTube search costs quota. The heart on a result saves it to your library on that service (Spotify: a saved song; YouTube: a like) and removes it again; the Library catches up the next time you open it.
@@ -117,7 +103,7 @@ On Spotify and TIDAL an artist page also has a row of the artist's albums, EPs a
 - Spotify: `GET /artists/{id}/albums` (the artist's own albums, singles and compilations, not records they only appear on) and `GET /albums/{id}/tracks`, both current in Spotify's OpenAPI schema and neither needing a new permission.
 - TIDAL: `GET /artists/{id}/relationships/albums` and `GET /albums/{id}/relationships/items` from the public API, with no extra permission. Videos on an album are left out.
 - Local files: albums are made from your files' own tags (album title, disc and track number), with the first embedded cover found. Files without an album tag aren't on any album.
-- YouTube has no albums in its API, so YouTube artist pages have no album row. Qobuz albums aren't built yet, since the Qobuz connection hasn't been tested.
+- YouTube has no albums in its API, so YouTube artist pages have no album row.
 
 ## Shuffle and media keys
 

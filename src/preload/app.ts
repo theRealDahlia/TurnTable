@@ -1,6 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { IpcChannel, type TurnTableApi } from '@shared/ipc'
-import { QobuzChannel, type QobuzStreamApi } from '@shared/qobuz'
 import { YouTubePlayerChannel, type YouTubePlayerHostApi } from '@shared/youtubePlayer'
 import { TidalPlayerChannel, type TidalPlayerApi, type TidalPlayerEvent } from '@shared/tidalPlayer'
 import { SpotifyPlayerChannel, type SpotifyPlayerApi, type SpotifyPlayerEvent } from '@shared/spotifyPlayer'
@@ -9,7 +8,7 @@ import { SpotifyPlayerChannel, type SpotifyPlayerApi, type SpotifyPlayerEvent } 
 export function exposeAppApi(): void {
   const api: TurnTableApi = {
     listProviders: () => ipcRenderer.invoke(IpcChannel.listProviders),
-    connectProvider: (id, credentials) => ipcRenderer.invoke(IpcChannel.connectProvider, id, credentials),
+    connectProvider: (id) => ipcRenderer.invoke(IpcChannel.connectProvider, id),
     disconnectProvider: (id) => ipcRenderer.invoke(IpcChannel.disconnectProvider, id),
     getSavedTracks: (id, cursor) => ipcRenderer.invoke(IpcChannel.savedTracks, id, cursor),
     searchTracks: (id, query, cursor) => ipcRenderer.invoke(IpcChannel.searchTracks, id, query, cursor),
@@ -49,13 +48,8 @@ export function exposeAppApi(): void {
     getPlayerUrl: () => ipcRenderer.invoke(YouTubePlayerChannel.playerUrl)
   }
 
-  const qobuz: QobuzStreamApi = {
-    getStreamUrl: (trackId) => ipcRenderer.invoke(QobuzChannel.streamUrl, trackId)
-  }
-
   contextBridge.exposeInMainWorld('turntable', api)
   contextBridge.exposeInMainWorld('turntableSpotify', spotify)
   contextBridge.exposeInMainWorld('turntableTidal', tidal)
   contextBridge.exposeInMainWorld('turntableYouTube', youtube)
-  contextBridge.exposeInMainWorld('turntableQobuz', qobuz)
 }

@@ -39,6 +39,18 @@ export class TokenStore {
     })
   }
 
+  /**
+   * Deletes the sign-ins of every service not in `ids`: those of services the app no longer has. Writes nothing
+   * when there is nothing to delete.
+   */
+  retainOnly(ids: readonly ProviderId[]): Promise<void> {
+    return this.enqueue(async () => {
+      const tokens = await this.read()
+      const kept = Object.fromEntries(Object.entries(tokens).filter(([id]) => (ids as readonly string[]).includes(id))) as TokenMap
+      if (Object.keys(kept).length !== Object.keys(tokens).length) await this.write(kept)
+    })
+  }
+
   /** Serializes operations so concurrent read-modify-write calls cannot lose updates. */
   private enqueue<T>(task: () => Promise<T>): Promise<T> {
     const run = this.queue.then(task)
