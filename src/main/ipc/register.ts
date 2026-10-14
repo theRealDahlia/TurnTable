@@ -22,6 +22,11 @@ function checkTrackId(trackId: unknown): string {
   return trackId
 }
 
+function checkCatalogId(value: unknown, what: 'artist' | 'album'): string {
+  if (typeof value !== 'string' || !value || value.length > MAX_TRACK_ID_LENGTH) throw new Error(`That is not a valid ${what}.`)
+  return value
+}
+
 const MAX_CREDENTIAL_LENGTH = 256
 
 /** The user's own sign-in details arrive from the renderer, so check their shape, and never put them in a message. */
@@ -81,6 +86,20 @@ export function createApi(registry: ProviderRegistry): TurnTableApi {
       const checked = checkTrackId(trackId)
       if (!provider.unsaveTrack) throw unsupported(provider.info.name, 'removing saved songs')
       await provider.unsaveTrack(checked)
+    },
+    getArtistAlbums: async (id, artistId, cursor) => {
+      const provider = registry.get(id)
+      const checked = checkCatalogId(artistId, 'artist')
+      const next = checkCursor(cursor)
+      if (!provider.getArtistAlbums) throw unsupported(provider.info.name, 'albums')
+      return provider.getArtistAlbums(checked, next)
+    },
+    getAlbumTracks: async (id, albumId, cursor) => {
+      const provider = registry.get(id)
+      const checked = checkCatalogId(albumId, 'album')
+      const next = checkCursor(cursor)
+      if (!provider.getAlbumTracks) throw unsupported(provider.info.name, 'albums')
+      return provider.getAlbumTracks(checked, next)
     }
   }
 }
@@ -98,4 +117,6 @@ export function registerIpc(registry: ProviderRegistry): void {
   )
   ipcMain.handle(IpcChannel.saveTrack, (_event, id: string, trackId: string) => api.saveTrack(id as ProviderId, trackId))
   ipcMain.handle(IpcChannel.unsaveTrack, (_event, id: string, trackId: string) => api.unsaveTrack(id as ProviderId, trackId))
+  ipcMain.handle(IpcChannel.artistAlbums, (_event, id: string, artistId: string, cursor?: string) => api.getArtistAlbums(id as ProviderId, artistId, cursor))
+  ipcMain.handle(IpcChannel.albumTracks, (_event, id: string, albumId: string, cursor?: string) => api.getAlbumTracks(id as ProviderId, albumId, cursor))
 }

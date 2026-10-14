@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import type { Album, ProviderStatus } from '@shared/types'
 import { artistKey, type Artist } from './artist/useArtistSongs'
 import { LegalDialog } from './components/LegalDialog'
 import { PlayerBar } from './components/PlayerBar'
@@ -7,6 +8,7 @@ import { useAcceptance } from './legal/useAcceptance'
 import { Sidebar, type Page } from './components/Sidebar'
 import { YouTubePanel } from './components/YouTubePanel'
 import { useLibrary } from './library/useLibrary'
+import { AlbumPage } from './pages/AlbumPage'
 import { ArtistPage } from './pages/ArtistPage'
 import { ConnectionsPage } from './pages/ConnectionsPage'
 import { LibraryPage } from './pages/LibraryPage'
@@ -17,7 +19,14 @@ import { usePlayer } from './player/usePlayer'
 import { useSpacebarToggle } from './player/useSpacebarToggle'
 import { useSearch } from './search/useSearch'
 
-/** What the Back button on an artist page says when it returns to a page. */
+/** An artist's or an album's page, opened over the current page. */
+type View = { kind: 'artist'; artist: Artist } | { kind: 'album'; album: Album }
+
+const viewKey = (view: View): string => (view.kind === 'artist' ? `artist:${artistKey(view.artist)}` : `album:${view.album.providerId}:${view.album.id}`)
+const viewName = (view: View): string => (view.kind === 'artist' ? view.artist.name : view.album.title)
+const viewService = (view: View): Album['providerId'] => (view.kind === 'artist' ? view.artist.providerId : view.album.providerId)
+
+/** What the Back button on an artist or album page says when it returns to a page. */
 const PAGE_NAMES: Record<Page, string> = { library: 'Library', search: 'Search', connections: 'Connections' }
 
 /** Nothing connects or loads until the user has agreed to the agreement and privacy policy. */
@@ -29,11 +38,13 @@ export function App(): React.JSX.Element {
 function Main(): React.JSX.Element {
   const [page, setPage] = useState<Page>('library')
   const [legalOpen, setLegalOpen] = useState(false)
-  // Artist pages open over the current page, which stays as it was underneath; Back walks back through them.
-  const [artists, setArtists] = useState<Artist[]>([])
+  // Artist and album pages open over the current page, which stays as it was underneath; Back walks back through them.
+  const [views, setViews] = useState<View[]>([])
   const content = useRef<HTMLDivElement>(null)
-  /** Where the page underneath was scrolled to when the first artist opened. */
-  const pageScroll = useRef(0)
+  /** How far each level was scrolled when another opened over it: the page underneath first, then each view. */
+  const scrolls = useRef<number[]>([])
+  /** Where the next level to show should be scrolled to. */
+  const nextScroll = useRef(0)
   // Owned here so the library and the player survive switching pages.
   const library = useLibrary()
   const player = usePlayer()
@@ -52,28 +63,44 @@ function Main(): React.JSX.Element {
   }, [playingFrom, library.providers, clear])
 
   const navigate = (next: Page): void => {
-    setArtists([])
+    nextScroll.current = 0
+    setViews([])
     setPage(next)
   }
 
-  const openArtist = (artist: Artist): void => {
-    const top = artists.at(-1)
-    if (top && artistKey(top) === artistKey(artist)) return
-    if (!top) pageScroll.current = content.current?.scrollTop ?? 0
-    setArtists([...artists, artist])
+  const open = (view: View): void => {
+    const already = views.findIndex((open) => viewKey(open) === viewKey(view))
+    if (already >= 0 && already === views.length - 1) return
+    // A page that is already open further back is gone back to, as it was left, rather than opened twice.
+    if (already >= 0) {
+      nextScroll.current = scrolls.current[already + 1] ?? 0
+      setViews(views.slice(0, already + 1))
+      return
+    }
+    scrolls.current[views.length] = content.current?.scrollTop ?? 0
+    nextScroll.current = 0
+    setViews([...views, view])
   }
-  const back = (): void => setArtists(artists.slice(0, -1))
+  const openArtist = (artist: Artist): void => open({ kind: 'artist', artist })
+  const openAlbum = (album: Album): void => open({ kind: 'album', album })
+  const back = (): void => {
+    nextScroll.current = scrolls.current[views.length - 1] ?? 0
+    setViews(views.slice(0, -1))
+  }
 
-  // An artist's page belongs to its service, so it goes when the service is disconnected.
-  const top = artists.at(-1)
-  const topProvider = top && library.providers.find((provider) => provider.id === top.providerId && provider.connected)
-  const showingArtist = top !== undefined && topProvider !== undefined
-  const below = artists.at(-2)
+  // An artist's or album's page belongs to its service, so it goes when the service is disconnected.
+  const connectedTo = (view: View): ProviderStatus | undefined => library.providers.find((provider) => provider.id === viewService(view) && provider.connected)
+  const openViews = views.flatMap((view) => {
+    const provider = connectedTo(view)
+    return provider ? [{ view, provider }] : []
+  })
+  const top = openViews.at(-1)
+  const showingView = top !== undefined
 
-  // Each artist page opens at the top; closing the last one returns the page underneath to where it was.
-  const shownKey = showingArtist ? artistKey(top) : undefined
+  // A newly opened level starts at the top; going back returns to where that level was left.
+  const shownKey = top ? viewKey(top.view) : `page:${page}`
   useLayoutEffect(() => {
-    if (content.current) content.current.scrollTop = shownKey ? 0 : pageScroll.current
+    if (content.current) content.current.scrollTop = nextScroll.current
   }, [shownKey])
 
   return (
@@ -83,7 +110,7 @@ function Main(): React.JSX.Element {
         <YouTubePanel track={player.track} />
       </Sidebar>
       <div className="content" ref={content}>
-        <div className="page-holder" hidden={showingArtist}>
+        <div className="page-holder" hidden={showingView}>
           {page === 'library' && <LibraryPage library={library} player={player} onOpenConnections={() => navigate('connections')} onOpenArtist={openArtist} />}
           {page === 'search' && <SearchPage library={library} player={player} search={search} onOpenConnections={() => navigate('connections')} onOpenArtist={openArtist} />}
           {page === 'connections' && <ConnectionsPage
@@ -94,18 +121,28 @@ function Main(): React.JSX.Element {
               }}
             />}
         </div>
-        {showingArtist && (
-          <ArtistPage
-            key={shownKey}
-            artist={top}
-            provider={topProvider}
-            library={library}
-            player={player}
-            backLabel={below ? below.name : PAGE_NAMES[page]}
-            onBack={back}
-            onOpenArtist={openArtist}
-          />
-        )}
+        {/* Pages under the top one stay as they were, so Back shows them again without fetching anything. */}
+        {openViews.map(({ view, provider }, index) => {
+          const backLabel = index > 0 ? viewName(openViews[index - 1]!.view) : PAGE_NAMES[page]
+          return (
+            <div key={viewKey(view)} className="page-holder" hidden={index !== openViews.length - 1}>
+              {view.kind === 'artist' ? (
+                <ArtistPage
+                  artist={view.artist}
+                  provider={provider}
+                  library={library}
+                  player={player}
+                  backLabel={backLabel}
+                  onBack={back}
+                  onOpenArtist={openArtist}
+                  onOpenAlbum={openAlbum}
+                />
+              ) : (
+                <AlbumPage album={view.album} provider={provider} library={library} player={player} backLabel={backLabel} onBack={back} onOpenArtist={openArtist} />
+              )}
+            </div>
+          )
+        })}
       </div>
       <PlayerBar player={player} onOpenArtist={openArtist} />
       {legalOpen && <LegalDialog initial="PRIVACY.md" onClose={() => setLegalOpen(false)} />}

@@ -12,8 +12,12 @@ const item = (id: string | null, overrides = {}) => ({
     id,
     name: `Song ${id}`,
     duration_ms: 200_000,
-    artists: [{ name: 'Artist A' }, { name: 'Artist B' }],
+    disc_number: 1,
+    track_number: 4,
+    // Spotify gives every artist an id; the second here is malformed, so it isn't kept.
+    artists: [{ name: 'Artist A', id: '0TnOYISbd1XYRBk9myaseg' }, { name: 'Artist B', id: 'bad id' }],
     album: {
+      id: '2noRn2Aes5aoNVsU6iWThc',
       name: 'Album',
       images: [
         { url: 'https://img/640', width: 640 },
@@ -63,7 +67,11 @@ describe('Spotify getSavedTracks', () => {
           providerId: 'spotify',
           title: 'Song abc',
           artists: ['Artist A', 'Artist B'],
+          artistIds: ['0TnOYISbd1XYRBk9myaseg', ''],
           album: 'Album',
+          albumId: '2noRn2Aes5aoNVsU6iWThc',
+          discNumber: 1,
+          trackNumber: 4,
           durationMs: 200_000,
           artworkUrl: 'https://img/300',
           url: 'https://open.spotify.com/track/abc',

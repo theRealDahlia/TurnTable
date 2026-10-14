@@ -47,7 +47,9 @@ beforeEach(() => {
     }),
     searchTracks: vi.fn(),
     saveTrack: vi.fn(),
-    unsaveTrack: vi.fn()
+    unsaveTrack: vi.fn(),
+    getArtistAlbums: vi.fn(),
+    getAlbumTracks: vi.fn()
   }
   Object.assign(window, { turntable: api })
 })
@@ -212,6 +214,45 @@ describe('App', () => {
     // The page underneath kept what had been typed into it.
     expect((screen.getByRole('searchbox', { name: 'Search your library' }) as HTMLInputElement).value).toBe('first')
     expect(api.getSavedTracks).toHaveBeenCalledOnce()
+  })
+
+  it("opens an album from an artist's page, plays it, and goes back to the artist", async () => {
+    api.listProviders.mockResolvedValue([{ ...spotify(true), albums: true }])
+    api.getSavedTracks.mockResolvedValue({ tracks: [{ id: 't1', providerId: 'spotify', title: 'First Song', artists: ['Someone'], artistIds: ['ar1'], durationMs: 60_000 }] })
+    api.getArtistAlbums.mockResolvedValue({ albums: [{ id: 'al1', providerId: 'spotify', title: 'Debut', artists: ['Someone'], kind: 'album' }] })
+    api.getAlbumTracks.mockResolvedValue({ tracks: [{ id: 'x1', providerId: 'spotify', title: 'Opener', artists: ['Someone'], durationMs: 60_000 }] })
+    render(<App />)
+    const row = (await screen.findByText('First Song')).closest('li') as HTMLElement
+    await userEvent.click(within(row).getByRole('button', { name: 'Someone' }))
+
+    await userEvent.click(await screen.findByRole('button', { name: /Debut/ }))
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Debut' })).toBeTruthy()
+    expect(api.getArtistAlbums).toHaveBeenCalledWith('spotify', 'ar1')
+    expect(await screen.findByText('Opener')).toBeTruthy()
+    expect(api.getAlbumTracks).toHaveBeenCalledWith('spotify', 'al1', undefined)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Back to Someone' }))
+    expect(screen.getByRole('heading', { level: 1, name: 'Someone' })).toBeTruthy()
+    // The artist's page was kept as it was, so going back fetched nothing again.
+    expect(api.getArtistAlbums).toHaveBeenCalledOnce()
+  })
+
+  it("goes back to an artist already open, rather than opening them twice, when they are clicked on their album", async () => {
+    api.listProviders.mockResolvedValue([{ ...spotify(true), albums: true }])
+    api.getSavedTracks.mockResolvedValue({ tracks: [{ id: 't1', providerId: 'spotify', title: 'First Song', artists: ['Someone'], artistIds: ['ar1'], durationMs: 60_000 }] })
+    api.getArtistAlbums.mockResolvedValue({ albums: [{ id: 'al1', providerId: 'spotify', title: 'Debut', artists: ['Someone'], artistIds: ['ar1'] }] })
+    api.getAlbumTracks.mockResolvedValue({ tracks: [] })
+    render(<App />)
+    const row = (await screen.findByText('First Song')).closest('li') as HTMLElement
+    await userEvent.click(within(row).getByRole('button', { name: 'Someone' }))
+    await userEvent.click(await screen.findByRole('button', { name: /Debut/ }))
+
+    await userEvent.click(within(document.querySelector('.album-byline') as HTMLElement).getByRole('button', { name: 'Someone' }))
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Someone' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Back to Library' })).toBeTruthy()
+    expect(api.getArtistAlbums).toHaveBeenCalledOnce()
   })
 
   it('walks back through artists opened one from another, and the sidebar leaves them all', async () => {

@@ -7,9 +7,11 @@ import { hasArtist } from '../library/query'
 export interface Artist {
   providerId: ProviderId
   name: string
+  /** The service's own id for the artist, when the song it was opened from had one. */
+  id?: string
 }
 
-export const artistKey = (artist: Artist): string => `${artist.providerId}:${artist.name}`
+export const artistKey = (artist: Artist): string => `${artist.providerId}:${artist.id ?? ''}:${artist.name}`
 
 export interface ArtistSongs {
   /** "idle" when the service can't be searched, so only the library can show this artist's songs. */

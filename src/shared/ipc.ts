@@ -1,4 +1,4 @@
-import type { ProviderId, ProviderStatus, TrackPage } from './types'
+import type { AlbumPage, ProviderId, ProviderStatus, TrackPage } from './types'
 
 export const IpcChannel = {
   listProviders: 'providers:list',
@@ -7,7 +7,9 @@ export const IpcChannel = {
   savedTracks: 'library:saved-tracks',
   searchTracks: 'library:search',
   saveTrack: 'library:save',
-  unsaveTrack: 'library:unsave'
+  unsaveTrack: 'library:unsave',
+  artistAlbums: 'catalog:artist-albums',
+  albumTracks: 'catalog:album-tracks'
 } as const
 
 /** An account's own sign-in, for services that have no browser sign-in of their own (Qobuz). Never stored. */
@@ -29,4 +31,8 @@ export interface TurnTableApi {
   saveTrack(id: ProviderId, trackId: string): Promise<void>
   /** Removes a track from the user's library on its service. */
   unsaveTrack(id: ProviderId, trackId: string): Promise<void>
+  /** An artist's albums, EPs and singles on one service, newest first where the service orders them so. */
+  getArtistAlbums(id: ProviderId, artistId: string, cursor?: string): Promise<AlbumPage>
+  /** An album's tracks, in album order. */
+  getAlbumTracks(id: ProviderId, albumId: string, cursor?: string): Promise<TrackPage>
 }

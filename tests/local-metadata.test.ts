@@ -43,6 +43,8 @@ describe('readFileMetadata', () => {
       title: '01 My Song',
       artists: [],
       album: undefined,
+      discNumber: undefined,
+      trackNumber: undefined,
       hasArtwork: false,
       quality: { codec: 'wav', lossless: true, sampleRateHz: 48000, bitDepth: 24 }
     })

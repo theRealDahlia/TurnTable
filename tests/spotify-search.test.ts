@@ -73,6 +73,7 @@ describe('Spotify search', () => {
         providerId: 'spotify',
         title: `Song ${ID_A}`,
         artists: ['Foo Fighters'],
+        artistIds: [''],
         album: 'Wasting Light',
         durationMs: 200_000,
         artworkUrl: 'https://img/300',

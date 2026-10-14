@@ -108,7 +108,16 @@ The **Sort by** menu beside the tabs orders the results of the tab that is showi
 
 ## Artist pages
 
-Click an artist's name on a song (in the Library, in Search, on an artist page, or in the player bar) to open their page. An artist page belongs to one service, the one the song came from, since services are never mixed. It lists your saved songs by them on that service, then more of their songs that the service's search finds (only songs credited to that exact name are kept). *Find more* looks further; nothing is fetched further on its own, because on YouTube every artist page and every *Find more* is one of the day's 100 searches. Local files have no search, so their artist pages show your files only. Back returns to the page you came from, as you left it; the sidebar leaves artist pages altogether. Like search results, nothing on an artist page is saved to disk.
+Click an artist's name on a song (in the Library, in Search, on an artist or album page, or in the player bar) to open their page. An artist page belongs to one service, the one the song came from, since services are never mixed. It lists your saved songs by them on that service, then more of their songs that the service's search finds (only songs credited to that exact name are kept). *Find more* looks further; nothing is fetched further on its own, because on YouTube every artist page and every *Find more* is one of the day's 100 searches. Local files have no search, so their artist pages show your files only. Back returns to the page you came from, as you left it; the sidebar leaves artist pages altogether. Like search results, nothing on an artist page is saved to disk.
+
+### Albums
+
+On Spotify and TIDAL an artist page also has a row of the artist's albums, EPs and singles, newest first, that scrolls sideways (with a trackpad, or the arrow buttons). More albums load as the end of the row comes into view: Spotify sends ten at a time, so a long discography costs a request per ten, and only if you scroll that far. Click an album to open its page: its cover, year and length, and every track in album order. **Play** plays the album from the start in order (and turns shuffle off); **Shuffle** plays it shuffled; any track plays with the album as the queue. Back returns to the artist as you left them, row position included, without fetching anything again.
+
+- Spotify: `GET /artists/{id}/albums` (the artist's own albums, singles and compilations, not records they only appear on) and `GET /albums/{id}/tracks`, both current in Spotify's OpenAPI schema and neither needing a new permission.
+- TIDAL: `GET /artists/{id}/relationships/albums` and `GET /albums/{id}/relationships/items` from the public API, with no extra permission. Videos on an album are left out.
+- Local files: albums are made from your files' own tags (album title, disc and track number), with the first embedded cover found. Files without an album tag aren't on any album.
+- YouTube has no albums in its API, so YouTube artist pages have no album row. Qobuz albums aren't built yet, since the Qobuz connection hasn't been tested.
 
 ## Shuffle and media keys
 

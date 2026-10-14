@@ -30,6 +30,8 @@ export interface ProviderStatus extends ProviderDescriptor {
   searchable?: boolean
   /** Tracks found by searching can be saved to, and removed from, the user's library on the service. */
   savable?: boolean
+  /** An artist's albums, and each album's tracks, can be listed. */
+  albums?: boolean
 }
 
 export interface Track {
@@ -37,7 +39,14 @@ export interface Track {
   providerId: ProviderId
   title: string
   artists: string[]
+  /** The service's id for each of `artists`, in the same order, where it gave one ("" where it didn't). */
+  artistIds?: string[]
   album?: string
+  /** The service's id for `album`, when it gave one. */
+  albumId?: string
+  /** Position on its album, when known: disc first, then track. */
+  discNumber?: number
+  trackNumber?: number
   durationMs: number
   artworkUrl?: string
   /** Web page for the track on its own service, used to link back to it. */
@@ -51,6 +60,29 @@ export interface Track {
   savedAt?: string
   /** In search results: whether the track is already in the user's library on its service. */
   saved?: boolean
+}
+
+/** An album, EP or single on one service. */
+export interface Album {
+  id: string
+  providerId: ProviderId
+  title: string
+  artists: string[]
+  /** The service's id for each of `artists`, in the same order ("" where it gave none). */
+  artistIds?: string[]
+  artworkUrl?: string
+  /** As precise as the service gives it: "2003", "2003-05" or "2003-05-20". */
+  releaseDate?: string
+  kind?: 'album' | 'single' | 'ep' | 'compilation'
+  trackCount?: number
+  /** Web page for the album on its own service, used to link back to it. */
+  url?: string
+}
+
+export interface AlbumPage {
+  albums: Album[]
+  /** Pass back to fetch the next page; absent on the last page. */
+  nextCursor?: string
 }
 
 export interface TrackPage {

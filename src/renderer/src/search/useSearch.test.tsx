@@ -38,7 +38,9 @@ beforeEach(() => {
     getSavedTracks: vi.fn(),
     searchTracks: vi.fn(async (id: ProviderId) => page(id, [1, 2])),
     saveTrack: vi.fn().mockResolvedValue(undefined),
-    unsaveTrack: vi.fn().mockResolvedValue(undefined)
+    unsaveTrack: vi.fn().mockResolvedValue(undefined),
+    getArtistAlbums: vi.fn(),
+    getAlbumTracks: vi.fn()
   }
   Object.assign(window, { turntable: api })
 })

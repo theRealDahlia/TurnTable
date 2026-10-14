@@ -2,7 +2,7 @@
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { ProviderId, ProviderStatus, Track } from '@shared/types'
+import type { Album, ProviderId, ProviderStatus, Track } from '@shared/types'
 import { QOBUZ_NOTICE } from '@shared/qobuz'
 import type { Library } from '../library/useLibrary'
 import type { Player } from '../player/usePlayer'
@@ -72,9 +72,11 @@ function makePlayer(overrides: Partial<Player> = {}): Player {
 }
 
 let searchTracks: ReturnType<typeof vi.fn>
+let getArtistAlbums: ReturnType<typeof vi.fn>
 beforeEach(() => {
   searchTracks = vi.fn().mockResolvedValue({ tracks: [] })
-  Object.assign(window, { turntable: { searchTracks } })
+  getArtistAlbums = vi.fn().mockResolvedValue({ albums: [] })
+  Object.assign(window, { turntable: { searchTracks, getArtistAlbums } })
 })
 afterEach(cleanup)
 
@@ -85,20 +87,23 @@ const show = ({
   player = makePlayer(),
   onBack = vi.fn(),
   onOpenArtist = vi.fn(),
-  backLabel = 'Library'
-}: Partial<{ name: string; service: ProviderStatus; library: Library; player: Player; onBack: () => void; onOpenArtist: () => void; backLabel: string }> = {}) => {
+  onOpenAlbum = vi.fn(),
+  backLabel = 'Library',
+  id
+}: Partial<{ name: string; service: ProviderStatus; library: Library; player: Player; onBack: () => void; onOpenArtist: () => void; onOpenAlbum: () => void; backLabel: string; id: string }> = {}) => {
   render(
     <ArtistPage
-      artist={{ providerId: service.id, name }}
+      artist={{ providerId: service.id, name, ...(id ? { id } : {}) }}
       provider={service}
       library={library}
       player={player}
       backLabel={backLabel}
       onBack={onBack}
       onOpenArtist={onOpenArtist}
+      onOpenAlbum={onOpenAlbum}
     />
   )
-  return { player, onBack, onOpenArtist }
+  return { player, onBack, onOpenArtist, onOpenAlbum }
 }
 const titlesIn = (name: string): string[] => within(screen.getByRole('list', { name })).getAllByRole('listitem').map((row) => row.querySelector('.track-title')?.textContent ?? '')
 
@@ -193,5 +198,50 @@ describe('ArtistPage', () => {
     show({ service: QOBUZ, library: makeLibrary([], []) })
     expect(screen.getByText(QOBUZ_NOTICE)).toBeTruthy()
     await waitFor(() => expect(searchTracks).toHaveBeenCalled())
+  })
+
+  describe('albums', () => {
+    const WITH_ALBUMS = { ...TIDAL, albums: true }
+    const album = (id: string): Album => ({ id, providerId: 'tidal', title: `Album ${id}`, artists: ['Foo Fighters'], releaseDate: '1997-05-20', kind: 'album' })
+    const shelf = (): HTMLElement => screen.getByRole('list', { name: 'Albums by Foo Fighters' })
+
+    it("lists the artist's albums on their service, and opens the one clicked", async () => {
+      getArtistAlbums.mockResolvedValue({ albums: [album('1'), album('2')] })
+      const { onOpenAlbum } = show({ service: WITH_ALBUMS, id: 'a1' })
+
+      await waitFor(() => expect(within(shelf()).getAllByRole('listitem')).toHaveLength(2))
+      expect(getArtistAlbums).toHaveBeenCalledExactlyOnceWith('tidal', 'a1')
+
+      await userEvent.click(within(shelf()).getByRole('button', { name: /Album 2/ }))
+      expect(onOpenAlbum).toHaveBeenCalledExactlyOnceWith(album('2'))
+    })
+
+    it("finds the artist's id on a song of theirs when they were opened without one", async () => {
+      searchTracks.mockResolvedValue({ tracks: [song('tidal', 'e', ['Guest', 'Foo Fighters'])].map((t) => ({ ...t, artistIds: ['g9', 'a7'] })) })
+      show({ service: WITH_ALBUMS })
+      await waitFor(() => expect(getArtistAlbums).toHaveBeenCalledExactlyOnceWith('tidal', 'a7'))
+    })
+
+    it('shows a failure with a way to try again', async () => {
+      getArtistAlbums.mockRejectedValueOnce(new Error('TIDAL is down')).mockResolvedValueOnce({ albums: [album('1')] })
+      show({ service: WITH_ALBUMS, id: 'a1' })
+      const alert = await screen.findByText('TIDAL: TIDAL is down', { exact: false })
+      await userEvent.click(within(alert.closest('.banner') as HTMLElement).getByRole('button', { name: 'Retry' }))
+      await waitFor(() => expect(within(shelf()).getAllByRole('listitem')).toHaveLength(1))
+    })
+
+    it("has no album row on a service that has no albums", async () => {
+      show({ service: TIDAL, id: 'a1' })
+      await waitFor(() => expect(searchTracks).toHaveBeenCalled())
+      expect(screen.queryByRole('heading', { name: 'Albums' })).toBeNull()
+      expect(getArtistAlbums).not.toHaveBeenCalled()
+    })
+
+    it('makes albums of local files from their tags, fetching nothing', () => {
+      const files = [song('local', 'd', ['Foo Fighters']), song('local', 'e', ['Foo Fighters'])].map((t, i) => ({ ...t, album: i ? 'Wasting Light' : 'Echoes' }))
+      show({ service: LOCAL, library: makeLibrary(files, ['local']) })
+      expect(within(shelf()).getAllByRole('listitem').map((item) => item.querySelector('.album-title')?.textContent)).toEqual(['Echoes', 'Wasting Light'])
+      expect(getArtistAlbums).not.toHaveBeenCalled()
+    })
   })
 })

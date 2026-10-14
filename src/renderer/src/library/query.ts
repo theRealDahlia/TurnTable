@@ -8,7 +8,7 @@ export interface LibraryFilter {
 }
 
 /** Case- and accent-insensitive form used for matching. */
-const fold = (text: string): string => text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
+export const fold = (text: string): string => text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
 
 const compareText = (a: string, b: string): number =>
   a.localeCompare(b, undefined, { sensitivity: 'base', numeric: true })
@@ -24,11 +24,14 @@ export function filterTracks(tracks: Track[], { query, providerId }: LibraryFilt
   })
 }
 
-/** True when `name` is one of the track's artists, ignoring case and accents. */
-export const hasArtist = (track: Track, name: string): boolean => {
-  const wanted = fold(name.trim())
-  return wanted !== '' && track.artists.some((artist) => fold(artist.trim()) === wanted)
+/** True when two artist names are the same, ignoring case, accents and stray spaces. Empty names match nothing. */
+export const sameName = (a: string, b: string): boolean => {
+  const wanted = fold(b.trim())
+  return wanted !== '' && fold(a.trim()) === wanted
 }
+
+/** True when `name` is one of the track's artists, ignoring case and accents. */
+export const hasArtist = (track: Track, name: string): boolean => track.artists.some((artist) => sameName(artist, name))
 
 /** The tracks credited to an artist, on one service, in the order given. */
 export const tracksByArtist = (tracks: Track[], name: string, providerId: ProviderId): Track[] =>

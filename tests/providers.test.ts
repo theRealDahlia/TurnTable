@@ -113,6 +113,51 @@ describe('api: search and saving', () => {
   })
 })
 
+describe('api: albums', () => {
+  const fake = () => {
+    const provider = {
+      info: { id: 'spotify', name: 'Spotify', authKind: 'oauth-pkce', playback: 'sdk', maxQuality: { codec: 'ogg', lossless: false } },
+      isConnected: vi.fn().mockResolvedValue(true),
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+      getSavedTracks: vi.fn(),
+      getArtistAlbums: vi.fn().mockResolvedValue({ albums: [] }),
+      getAlbumTracks: vi.fn().mockResolvedValue({ tracks: [] })
+    }
+    return { provider, api: createApi(createDefaultRegistry({ spotify: provider as never })) }
+  }
+
+  it("passes an artist's or album's id and the cursor to the service", async () => {
+    const { provider, api } = fake()
+    await api.getArtistAlbums('spotify', 'artist-1', '10')
+    await api.getAlbumTracks('spotify', 'album-1')
+    expect(provider.getArtistAlbums).toHaveBeenCalledExactlyOnceWith('artist-1', '10')
+    expect(provider.getAlbumTracks).toHaveBeenCalledExactlyOnceWith('album-1', undefined)
+  })
+
+  it.each([['empty', ''], ['not text', 5], ['huge', 'x'.repeat(101)]])('refuses an id that is %s', async (_label, id) => {
+    const { provider, api } = fake()
+    await expect(api.getArtistAlbums('spotify', id as string)).rejects.toThrow('That is not a valid artist.')
+    await expect(api.getAlbumTracks('spotify', id as string)).rejects.toThrow('That is not a valid album.')
+    expect(provider.getArtistAlbums).not.toHaveBeenCalled()
+    expect(provider.getAlbumTracks).not.toHaveBeenCalled()
+  })
+
+  it('refuses a bad cursor', async () => {
+    const { provider, api } = fake()
+    await expect(api.getAlbumTracks('spotify', 'album-1', 'x'.repeat(501))).rejects.toThrow('Invalid library cursor')
+    expect(provider.getAlbumTracks).not.toHaveBeenCalled()
+  })
+
+  it('says plainly when a service has no albums, and reports which do', async () => {
+    const { provider } = fake()
+    await expect(createApi(createDefaultRegistry()).getArtistAlbums('qobuz', 'x')).rejects.toThrow("Qobuz doesn't support albums")
+    const statuses = await createDefaultRegistry({ spotify: provider as never }).listStatuses()
+    expect(statuses.find((s) => s.id === 'spotify')?.albums).toBe(true)
+    expect(statuses.find((s) => s.id === 'qobuz')?.albums).toBe(false)
+  })
+})
+
 describe('api: signing in with credentials', () => {
   const fake = () => {
     const connect = vi.fn().mockResolvedValue(undefined)

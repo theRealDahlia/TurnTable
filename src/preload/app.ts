@@ -14,7 +14,9 @@ export function exposeAppApi(): void {
     getSavedTracks: (id, cursor) => ipcRenderer.invoke(IpcChannel.savedTracks, id, cursor),
     searchTracks: (id, query, cursor) => ipcRenderer.invoke(IpcChannel.searchTracks, id, query, cursor),
     saveTrack: (id, trackId) => ipcRenderer.invoke(IpcChannel.saveTrack, id, trackId),
-    unsaveTrack: (id, trackId) => ipcRenderer.invoke(IpcChannel.unsaveTrack, id, trackId)
+    unsaveTrack: (id, trackId) => ipcRenderer.invoke(IpcChannel.unsaveTrack, id, trackId),
+    getArtistAlbums: (id, artistId, cursor) => ipcRenderer.invoke(IpcChannel.artistAlbums, id, artistId, cursor),
+    getAlbumTracks: (id, albumId, cursor) => ipcRenderer.invoke(IpcChannel.albumTracks, id, albumId, cursor)
   }
 
   const spotify: SpotifyPlayerApi = {

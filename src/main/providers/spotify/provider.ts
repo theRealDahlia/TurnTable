@@ -1,4 +1,4 @@
-import type { Track, TrackPage } from '@shared/types'
+import type { Album, AlbumPage, Track, TrackPage } from '@shared/types'
 import { AuthRequiredError, type OAuthSession } from '../../auth/session'
 import { parseOffsetCursor } from '../cursor'
 import { SPOTIFY } from '../descriptors'
@@ -24,14 +24,39 @@ interface SpotifyImage {
   width: number | null
 }
 
+interface SpotifyArtist {
+  id?: string | null
+  name: string
+}
+
 interface SpotifyTrack {
   id: string | null
   name: string
   duration_ms: number
   is_local?: boolean
-  artists: { name: string }[]
-  album?: { name: string; images?: SpotifyImage[] }
+  disc_number?: number
+  track_number?: number
+  artists: SpotifyArtist[]
+  /** Missing from an album's own track list, whose tracks are all on that album. */
+  album?: { id?: string | null; name: string; images?: SpotifyImage[] }
   external_urls?: { spotify?: string }
+}
+
+/** An album as an artist's discography lists it. */
+interface SpotifyAlbum {
+  id: string | null
+  name: string
+  album_type?: string
+  total_tracks?: number
+  release_date?: string
+  images?: SpotifyImage[]
+  artists?: SpotifyArtist[]
+  external_urls?: { spotify?: string }
+}
+
+interface Paging<T> {
+  items: (T | null)[]
+  next: string | null
 }
 
 interface SavedTracksResponse {
@@ -42,6 +67,12 @@ interface SavedTracksResponse {
 interface SearchResponse {
   tracks?: { items: (SpotifyTrack | null)[]; next: string | null }
 }
+
+/** Spotify's largest page of an artist's albums, and of an album's tracks. */
+const ALBUMS_PAGE_SIZE = 10
+const ALBUM_TRACKS_PAGE_SIZE = 50
+/** The artist's own releases; "appears_on" (other artists' records they feature on) is left out. */
+const ALBUM_GROUPS = 'album,single,compilation'
 
 /** Spotify returns at most this many search results per request (and none beyond the thousandth). */
 const SEARCH_PAGE_SIZE = 10
@@ -103,15 +134,28 @@ function spotifyWebUrl(url: string | undefined): string | undefined {
   return url?.startsWith('https://open.spotify.com/') ? url : undefined
 }
 
+/** Spotify ids are 22 base-62 characters; ids reach this code from the renderer, so check before building a URL. */
+const ID_PATTERN = /^[A-Za-z0-9]{22}$/
+
+/** A Spotify id that is safe to keep and hand back later, or "" when there is none. */
+const plainId = (id: string | null | undefined): string => (typeof id === 'string' && ID_PATTERN.test(id) ? id : '')
+
+const positive = (value: number | undefined): number | undefined => (typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : undefined)
+
 function toTrack(savedAt: string | undefined, track: SpotifyTrack | null): Track | undefined {
   // Removed/unavailable tracks come back as null, and local files have no Spotify id to play.
   if (!track || !track.id || track.is_local) return undefined
+  const albumId = plainId(track.album?.id)
   return {
     id: track.id,
     providerId: 'spotify',
     title: track.name,
     artists: track.artists.map((artist) => artist.name),
+    artistIds: track.artists.map((artist) => plainId(artist.id)),
     album: track.album?.name,
+    ...(albumId ? { albumId } : {}),
+    discNumber: positive(track.disc_number),
+    trackNumber: positive(track.track_number),
     durationMs: track.duration_ms,
     artworkUrl: pickArtwork(track.album?.images),
     url: spotifyWebUrl(track.external_urls?.spotify),
@@ -119,8 +163,25 @@ function toTrack(savedAt: string | undefined, track: SpotifyTrack | null): Track
   }
 }
 
-/** Spotify ids are 22 base-62 characters; ids reach this code from the renderer, so check before building a URL. */
-const TRACK_ID_PATTERN = /^[A-Za-z0-9]{22}$/
+const ALBUM_KINDS: Record<string, Album['kind']> = { album: 'album', single: 'single', compilation: 'compilation' }
+
+function toAlbum(album: SpotifyAlbum | null): Album | undefined {
+  const id = plainId(album?.id)
+  if (!album || !id || !album.name) return undefined
+  return {
+    id,
+    providerId: 'spotify',
+    title: album.name,
+    artists: (album.artists ?? []).map((artist) => artist.name),
+    artistIds: (album.artists ?? []).map((artist) => plainId(artist.id)),
+    artworkUrl: pickArtwork(album.images),
+    releaseDate: typeof album.release_date === 'string' ? album.release_date : undefined,
+    kind: album.album_type ? ALBUM_KINDS[album.album_type] : undefined,
+    trackCount: positive(album.total_tracks),
+    url: spotifyWebUrl(album.external_urls?.spotify)
+  }
+}
+
 /** Device ids come back from the SDK; they are opaque, so only exclude what could alter the URL. */
 const DEVICE_ID_PATTERN = /^[A-Za-z0-9_-]{10,100}$/
 
@@ -208,7 +269,7 @@ export function createSpotifyProvider(session: OAuthSession, options: SpotifyPro
 
   /** Adds a track to the user's library or removes it, with `/me/library`, which replaced the type-specific endpoints. */
   async function changeLibrary(method: 'PUT' | 'DELETE', trackId: string): Promise<void> {
-    if (!TRACK_ID_PATTERN.test(trackId)) throw new Error('That is not a valid Spotify track.')
+    if (!ID_PATTERN.test(trackId)) throw new Error('That is not a valid Spotify track.')
     if (!(await session.hasScopes(LIBRARY_WRITE_SCOPES))) throw new LibraryPermissionError()
     await call(`/me/library?${new URLSearchParams({ uris: trackUri(trackId) }).toString()}`, { method })
   }
@@ -228,7 +289,7 @@ export function createSpotifyProvider(session: OAuthSession, options: SpotifyPro
     },
 
     async startPlayback(deviceId, trackId) {
-      if (!TRACK_ID_PATTERN.test(trackId)) throw new Error('That is not a valid Spotify track.')
+      if (!ID_PATTERN.test(trackId)) throw new Error('That is not a valid Spotify track.')
       if (!DEVICE_ID_PATTERN.test(deviceId)) throw new Error('Spotify player is not ready.')
       await call(`/me/player/play?device_id=${encodeURIComponent(deviceId)}`, {
         method: 'PUT',
@@ -270,6 +331,26 @@ export function createSpotifyProvider(session: OAuthSession, options: SpotifyPro
 
     async unsaveTrack(trackId) {
       await changeLibrary('DELETE', trackId)
+    },
+
+    async getArtistAlbums(artistId, cursor): Promise<AlbumPage> {
+      if (!ID_PATTERN.test(artistId)) throw new Error('That is not a valid Spotify artist.')
+      const offset = parseOffsetCursor(cursor)
+      const params = new URLSearchParams({ include_groups: ALBUM_GROUPS, limit: String(ALBUMS_PAGE_SIZE), offset: String(offset) })
+      const page = await getJson<Paging<SpotifyAlbum>>(`/artists/${artistId}/albums?${params.toString()}`)
+      const hasMore = page.next !== null && page.items.length > 0
+      return { albums: page.items.flatMap((album) => toAlbum(album) ?? []), nextCursor: hasMore ? String(offset + page.items.length) : undefined }
+    },
+
+    async getAlbumTracks(albumId, cursor): Promise<TrackPage> {
+      if (!ID_PATTERN.test(albumId)) throw new Error('That is not a valid Spotify album.')
+      const offset = parseOffsetCursor(cursor)
+      const params = new URLSearchParams({ limit: String(ALBUM_TRACKS_PAGE_SIZE), offset: String(offset) })
+      const page = await getJson<Paging<SpotifyTrack>>(`/albums/${albumId}/tracks?${params.toString()}`)
+      // An album's own track list leaves the album out of each track; every one of them is on this album.
+      const tracks = page.items.flatMap((track) => toTrack(undefined, track) ?? []).map((track) => ({ ...track, albumId }))
+      const hasMore = page.next !== null && page.items.length > 0
+      return { tracks, nextCursor: hasMore ? String(offset + page.items.length) : undefined }
     },
 
     async getSavedTracks(cursor): Promise<TrackPage> {

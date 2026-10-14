@@ -1,11 +1,12 @@
-import type { Track } from '@shared/types'
+import type { Album, Track } from '@shared/types'
 import { parseIsoDuration } from '../duration'
 
 /** The few parts of a JSON:API document (https://jsonapi.org/format/) the app reads. Everything in it is untrusted. */
 export interface Identifier {
   id?: unknown
   type?: unknown
-  meta?: { addedAt?: unknown }
+  /** `addedAt` on a collection's items; `volumeNumber` and `trackNumber` on an album's. */
+  meta?: { addedAt?: unknown; volumeNumber?: unknown; trackNumber?: unknown }
 }
 
 export interface Resource {
@@ -71,6 +72,23 @@ function pickArtwork(artwork: Resource | undefined): string | undefined {
 /** Only links that really point at TIDAL's site are passed on to the UI. */
 const tidalWebUrl = (url: unknown): string | undefined => (typeof url === 'string' && url.startsWith('https://tidal.com/') ? url : undefined)
 
+const firstLink = (links: unknown): string | undefined =>
+  Array.isArray(links) ? links.map((entry) => (isRecord(entry) ? tidalWebUrl(entry.href) : undefined)).find(Boolean) : undefined
+
+const position = (value: unknown): number | undefined => (typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : undefined)
+
+/** The id of a related resource, if it is a plain one. */
+const plainId = (resource: Resource | undefined): string => (typeof resource?.id === 'string' && ID_PATTERN.test(resource.id) ? resource.id : '')
+
+/** Names and ids of the artists a resource credits, kept in step; artists without a name are left out of both. */
+function creditedArtists(resource: Resource | undefined, included: Included): { names: string[]; ids: string[] } {
+  const named = included.related(resource, 'artists', 'artists').flatMap((artist) => {
+    const name = text(artist.attributes?.name)
+    return name ? [{ name, id: plainId(artist) }] : []
+  })
+  return { names: named.map((artist) => artist.name), ids: named.map((artist) => artist.id) }
+}
+
 /**
  * A track from the document, or undefined if there is not enough to show it. `addedAt` is when the user saved it,
  * when the identifier says so.
@@ -84,23 +102,59 @@ export function toTrack(identifier: Identifier, included: Included): Track | und
 
   const version = text(track.attributes?.version)
   const album = included.related(track, 'albums', 'albums')[0]
+  const albumId = plainId(album)
   const artwork = included.related(album, 'coverArt', 'artworks')[0]
-  const link = Array.isArray(track.attributes?.externalLinks) ? track.attributes.externalLinks.map((entry) => (isRecord(entry) ? tidalWebUrl(entry.href) : undefined)).find(Boolean) : undefined
+  const link = firstLink(track.attributes?.externalLinks)
   const availability = track.attributes?.availability
   const streamable = !Array.isArray(availability) || availability.includes('STREAM')
   const addedAt = identifier.meta?.addedAt
+  const artists = creditedArtists(track, included)
 
   return {
     id,
     providerId: 'tidal',
     title: version ? `${title} (${version})` : title,
-    artists: included.related(track, 'artists', 'artists').flatMap((artist) => text(artist.attributes?.name) ?? []),
+    artists: artists.names,
+    artistIds: artists.ids,
     album: text(album?.attributes?.title),
+    ...(albumId ? { albumId } : {}),
+    discNumber: position(identifier.meta?.volumeNumber),
+    trackNumber: position(identifier.meta?.trackNumber),
     durationMs: parseIsoDuration(typeof track.attributes?.duration === 'string' ? track.attributes.duration : undefined),
     artworkUrl: pickArtwork(artwork),
     url: link ?? `https://tidal.com/browse/track/${id}`,
     savedAt: typeof addedAt === 'string' ? addedAt : undefined,
     ...(streamable ? {} : { playable: false })
+  }
+}
+
+const ALBUM_KINDS: Record<string, Album['kind']> = { ALBUM: 'album', EP: 'ep', SINGLE: 'single' }
+/** Release dates are kept only in the plain forms TIDAL uses, "2003-05-20" (or a shorter part of it). */
+const DATE_PATTERN = /^\d{4}(-\d{2}){0,2}$/
+
+/** An album from the document, or undefined if there is not enough to show it. */
+export function toAlbum(identifier: Identifier, included: Included): Album | undefined {
+  const id = identifier.id
+  if (typeof id !== 'string' || !ID_PATTERN.test(id)) return undefined
+  const album = included.get('albums', id)
+  const title = text(album?.attributes?.title)
+  if (!album || !title) return undefined
+
+  const releaseDate = album.attributes?.releaseDate
+  const kind = album.attributes?.albumType
+  const count = position(album.attributes?.numberOfItems)
+  const artists = creditedArtists(album, included)
+  return {
+    id,
+    providerId: 'tidal',
+    title,
+    artists: artists.names,
+    artistIds: artists.ids,
+    artworkUrl: pickArtwork(included.related(album, 'coverArt', 'artworks')[0]),
+    releaseDate: typeof releaseDate === 'string' && DATE_PATTERN.test(releaseDate) ? releaseDate : undefined,
+    kind: typeof kind === 'string' ? ALBUM_KINDS[kind] : undefined,
+    ...(count ? { trackCount: count } : {}),
+    url: firstLink(album.attributes?.externalLinks) ?? `https://tidal.com/browse/album/${id}`
   }
 }
 

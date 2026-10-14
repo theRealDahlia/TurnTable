@@ -1,5 +1,8 @@
 import { useMemo } from 'react'
-import type { ProviderStatus, Track } from '@shared/types'
+import type { Album, ProviderStatus, Track } from '@shared/types'
+import { localAlbums } from '../album/localAlbums'
+import { useArtistAlbums } from '../album/useArtistAlbums'
+import { AlbumShelf } from '../components/AlbumShelf'
 import { useArtistSongs, type Artist } from '../artist/useArtistSongs'
 import { ChevronLeftIcon, ClockIcon, SearchIcon } from '../components/icons'
 import { ProviderLogo } from '../components/ProviderLogo'
@@ -7,7 +10,7 @@ import { QobuzNotice } from '../components/QobuzNotice'
 import { SpotifyFullLogo } from '../components/SpotifyFullLogo'
 import { TrackRow } from '../components/TrackRow'
 import { TrackSkeleton } from '../components/TrackSkeleton'
-import { tracksByArtist } from '../library/query'
+import { sameName, tracksByArtist } from '../library/query'
 import type { Library } from '../library/useLibrary'
 import type { Player } from '../player/usePlayer'
 
@@ -21,10 +24,22 @@ interface Props {
   backLabel: string
   onBack: () => void
   onOpenArtist: (artist: Artist) => void
+  onOpenAlbum: (album: Album) => void
+}
+
+/** The service's id for the artist: the one they were opened with, else one a song of theirs carries. */
+function findArtistId(artist: Artist, tracks: Track[]): string | undefined {
+  if (artist.id) return artist.id
+  for (const track of tracks) {
+    const index = track.artists.findIndex((name) => sameName(name, artist.name))
+    const id = index >= 0 ? track.artistIds?.[index] : undefined
+    if (id) return id
+  }
+  return undefined
 }
 
 /** One artist on one service: their songs in your library there, and more of their songs the service finds. */
-export function ArtistPage({ artist, provider, library, player, backLabel, onBack, onOpenArtist }: Props): React.JSX.Element {
+export function ArtistPage({ artist, provider, library, player, backLabel, onBack, onOpenArtist, onOpenAlbum }: Props): React.JSX.Element {
   // Local files have nothing to search but the library itself.
   const searchable = provider.searchable === true && provider.id !== 'local'
   const songs = useArtistSongs(artist, searchable)
@@ -34,6 +49,14 @@ export function ArtistPage({ artist, provider, library, player, backLabel, onBac
   // What the service found, less the songs already listed as saved.
   const more = songs.tracks.filter((track) => !savedIds.has(track.id))
   const libraryLoaded = library.libraries[artist.providerId]?.status === 'ready' || artist.providerId === 'local'
+
+  // Albums: local files are grouped by their tags; other services list the artist's albums, which needs their id there.
+  const local = artist.providerId === 'local'
+  const artistId = local ? undefined : findArtistId(artist, [...saved, ...songs.tracks])
+  const remoteAlbums = useArtistAlbums(artist.providerId, artistId, provider.albums === true && !local)
+  const ownAlbums = useMemo(() => (local ? localAlbums(library.tracks, artist.name) : []), [local, library.tracks, artist.name])
+  const albums = local ? ownAlbums : remoteAlbums.albums
+  const albumsLoading = remoteAlbums.status === 'loading'
 
   const rows = (tracks: Track[], label: string): React.JSX.Element => (
     <ul className="tracks" aria-label={label}>
@@ -90,6 +113,39 @@ export function ArtistPage({ artist, provider, library, player, backLabel, onBac
           </p>
         )}
       </header>
+
+      {(albums.length > 0 || albumsLoading || remoteAlbums.status === 'error') && (
+        <section className="artist-section" aria-labelledby="artist-albums">
+          <h2 id="artist-albums">Albums</h2>
+          {remoteAlbums.status === 'error' ? (
+            <div className="banner" role="alert">
+              <span>
+                {provider.name}: {remoteAlbums.error}
+              </span>
+              <button type="button" onClick={remoteAlbums.retry}>
+                Retry
+              </button>
+            </div>
+          ) : (
+            <AlbumShelf
+              albums={albums}
+              loading={albumsLoading && albums.length === 0}
+              hasMore={remoteAlbums.hasMore}
+              loadingMore={remoteAlbums.loadingMore}
+              onLoadMore={remoteAlbums.loadMore}
+              onOpen={onOpenAlbum}
+              label={`Albums by ${artist.name}`}
+            />
+          )}
+          {remoteAlbums.moreError && (
+            <div className="banner" role="alert">
+              <span>
+                {provider.name}: {remoteAlbums.moreError}
+              </span>
+            </div>
+          )}
+        </section>
+      )}
 
       {saved.length > 0 && (
         <section className="artist-section" aria-labelledby="artist-saved">

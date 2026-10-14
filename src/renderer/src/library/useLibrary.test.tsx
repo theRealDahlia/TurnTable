@@ -38,7 +38,9 @@ beforeEach(() => {
     getSavedTracks: vi.fn().mockResolvedValue(page('spotify', [1])),
     searchTracks: vi.fn(),
     saveTrack: vi.fn(),
-    unsaveTrack: vi.fn()
+    unsaveTrack: vi.fn(),
+    getArtistAlbums: vi.fn(),
+    getAlbumTracks: vi.fn()
   }
   Object.assign(window, { turntable: api })
 })

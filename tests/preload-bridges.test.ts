@@ -31,7 +31,7 @@ describe('preload role separation', () => {
   it('gives the app window the library API, the Spotify and TIDAL controls and the YouTube page lookup, and nothing from the player pages', async () => {
     await loadPreloadFor('/app/out/renderer/index.html')
     expect(Object.keys(exposed).sort()).toEqual(['turntable', 'turntableQobuz', 'turntableSpotify', 'turntableTidal', 'turntableYouTube'])
-    expect(Object.keys(exposed.turntable as object).sort()).toEqual(['connectProvider', 'disconnectProvider', 'getSavedTracks', 'listProviders', 'saveTrack', 'searchTracks', 'unsaveTrack'])
+    expect(Object.keys(exposed.turntable as object).sort()).toEqual(['connectProvider', 'disconnectProvider', 'getAlbumTracks', 'getArtistAlbums', 'getSavedTracks', 'listProviders', 'saveTrack', 'searchTracks', 'unsaveTrack'])
     expect(Object.keys(exposed.turntableSpotify as object).sort()).toEqual(['onEvent', 'pause', 'play', 'resume', 'seek', 'setVolume'])
     expect(Object.keys(exposed.turntableTidal as object).sort()).toEqual(['onEvent', 'pause', 'play', 'resume', 'seek', 'setVolume'])
     expect(Object.keys(exposed.turntableYouTube as object)).toEqual(['getPlayerUrl'])

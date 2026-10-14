@@ -74,6 +74,8 @@ export class LocalLibrary {
         title: meta.title,
         artists: meta.artists,
         album: meta.album,
+        discNumber: meta.discNumber,
+        trackNumber: meta.trackNumber,
         durationMs: meta.durationMs,
         artworkUrl: meta.hasArtwork ? mediaUrl('art', id) : undefined,
         quality: meta.quality,

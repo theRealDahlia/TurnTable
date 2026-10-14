@@ -91,6 +91,20 @@ export const ChevronLeftIcon = ({ className }: IconProps): React.JSX.Element => 
   </svg>
 )
 
+export const ChevronRightIcon = ({ className }: IconProps): React.JSX.Element => (
+  <svg {...STROKED} className={className}>
+    <path d="m9 18 6-6-6-6" />
+  </svg>
+)
+
+/** Stands in for an album that has no cover. */
+export const DiscIcon = ({ className }: IconProps): React.JSX.Element => (
+  <svg {...STROKED} className={className}>
+    <circle cx="12" cy="12" r="9" />
+    <circle cx="12" cy="12" r="2.5" />
+  </svg>
+)
+
 export const ChevronDownIcon = ({ className }: IconProps): React.JSX.Element => (
   <svg {...STROKED} className={className}>
     <path d="m6 9 6 6 6-6" />

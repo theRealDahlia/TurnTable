@@ -40,6 +40,12 @@ async function setup(count: number, readMetadata = vi.fn(async (path: string) =>
 }
 
 describe('local provider', () => {
+  it("keeps each file's disc and track number, so an album plays in order", async () => {
+    const { provider } = await setup(1, vi.fn(async () => meta('Everlong', { discNumber: 1, trackNumber: 11 })))
+    const { tracks } = await provider.getSavedTracks()
+    expect(tracks[0]).toMatchObject({ title: 'Everlong', album: 'Album', discNumber: 1, trackNumber: 11 })
+  })
+
   it('is connected only once folders have been added', async () => {
     const { provider } = await setup(0)
     await folders.clear()

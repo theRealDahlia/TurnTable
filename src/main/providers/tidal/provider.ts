@@ -1,4 +1,4 @@
-import type { Track, TrackPage } from '@shared/types'
+import type { AlbumPage, Track, TrackPage } from '@shared/types'
 import { APP_NAME } from '@shared/app'
 import { AuthRequiredError, type OAuthSession } from '../../auth/session'
 import { TIDAL } from '../descriptors'
@@ -6,7 +6,7 @@ import { describeWait } from '../spotify/rateLimit'
 import type { MusicProvider } from '../types'
 import type { TidalPlayerAuth } from '@shared/tidalPlayer'
 import { COLLECTION_SCOPES, PLAYBACK_SCOPES, SEARCH_SCOPES, TIDAL_API, TIDAL_SCOPES } from './config'
-import { ID_PATTERN, Included, identifiers, nextCursorOf, toTrack, type Document } from './jsonapi'
+import { ID_PATTERN, Included, identifiers, nextCursorOf, toAlbum, toTrack, type Document } from './jsonapi'
 
 const MAX_ERROR_MESSAGE_LENGTH = 200
 const MAX_QUERY_LENGTH = 200
@@ -78,6 +78,9 @@ const MAX_BLOCK_MS = 24 * 60 * 60 * 1000
 const LIBRARY_INCLUDES = ['items,items.artists,items.albums,items.albums.coverArt', 'items']
 /** The same for search results, whose tracks hang off the search result rather than off the user's collection. */
 const SEARCH_INCLUDES = ['tracks,tracks.artists,tracks.albums,tracks.albums.coverArt', 'tracks']
+/** An artist's albums with their cover art and artists; an album's tracks, like a library page. */
+const ARTIST_ALBUM_INCLUDES = ['albums,albums.coverArt,albums.artists', 'albums']
+const ALBUM_TRACK_INCLUDES = LIBRARY_INCLUDES
 
 /**
  * Where a search is up to: which search result to continue, and TIDAL's cursor into its tracks. One string,
@@ -123,7 +126,7 @@ export function createTidalProvider(session: OAuthSession, options: TidalProvide
   let nextSlot = 0
   let blockedUntil = 0
   /** Which `include` list TIDAL accepted for the library and for search; once it refuses the long one, the short one is used. */
-  const includeAttempt = { library: 0, search: 0 }
+  const includeAttempt = { library: 0, search: 0, artistAlbums: 0, albumTracks: 0 }
 
   async function waitForTurn(): Promise<void> {
     if (minIntervalMs <= 0) return
@@ -177,9 +180,8 @@ export function createTidalProvider(session: OAuthSession, options: TidalProvide
     if (!(await session.hasScopes(scopes))) throw new TidalPermissionError()
   }
 
-
   /** Runs `attempt` with the long `include` list, then with the short one if TIDAL refuses the long one (and keeps using it). */
-  async function withIncludes<T>(kind: 'library' | 'search', lists: string[], attempt: (include: string) => Promise<T>): Promise<T> {
+  async function withIncludes<T>(kind: keyof typeof includeAttempt, lists: string[], attempt: (include: string) => Promise<T>): Promise<T> {
     for (;;) {
       try {
         return await attempt(lists[includeAttempt[kind]]!)
@@ -268,6 +270,32 @@ export function createTidalProvider(session: OAuthSession, options: TidalProvide
           tracks: identifiers(tracksRelationship?.data).flatMap((identifier) => toTrack(identifier, included) ?? []),
           nextCursor: next !== undefined && typeof result?.id === 'string' ? encodeSearchCursor(result.id, next) : undefined
         }
+      })
+    },
+
+    async getArtistAlbums(artistId, cursor): Promise<AlbumPage> {
+      if (!ID_PATTERN.test(artistId)) throw new Error('That is not a valid TIDAL artist.')
+      if (cursor !== undefined && !CURSOR_PATTERN.test(cursor)) throw new Error('Invalid library cursor')
+
+      return withIncludes('artistAlbums', ARTIST_ALBUM_INCLUDES, async (include) => {
+        const params = new URLSearchParams({ include })
+        if (cursor !== undefined) params.set('page[cursor]', cursor)
+        const document = await getDocument(`/artists/${artistId}/relationships/albums?${params.toString()}`)
+        const included = new Included(document.included)
+        return { albums: identifiers(document.data).flatMap((identifier) => toAlbum(identifier, included) ?? []), nextCursor: nextCursorOf(document) }
+      })
+    },
+
+    async getAlbumTracks(albumId, cursor): Promise<TrackPage> {
+      if (!ID_PATTERN.test(albumId)) throw new Error('That is not a valid TIDAL album.')
+      if (cursor !== undefined && !CURSOR_PATTERN.test(cursor)) throw new Error('Invalid library cursor')
+
+      return withIncludes('albumTracks', ALBUM_TRACK_INCLUDES, async (include) => {
+        const params = new URLSearchParams({ include })
+        if (cursor !== undefined) params.set('page[cursor]', cursor)
+        const document = await getDocument(`/albums/${albumId}/relationships/items?${params.toString()}`)
+        // An album's items can include videos, which have no track to show and are left out.
+        return { tracks: tracksOf(document).map((track) => ({ ...track, albumId })), nextCursor: nextCursorOf(document) }
       })
     },
 

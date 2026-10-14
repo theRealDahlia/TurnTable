@@ -1,5 +1,5 @@
 import type { Credentials } from '@shared/ipc'
-import type { ProviderDescriptor, TrackPage } from '@shared/types'
+import type { AlbumPage, ProviderDescriptor, TrackPage } from '@shared/types'
 
 export interface MusicProvider {
   readonly info: ProviderDescriptor
@@ -16,6 +16,10 @@ export interface MusicProvider {
   saveTrack?(trackId: string): Promise<void>
   /** Removes a track from the user's library on the service. */
   unsaveTrack?(trackId: string): Promise<void>
+  /** An artist's albums. Comes with `getAlbumTracks`. */
+  getArtistAlbums?(artistId: string, cursor?: string): Promise<AlbumPage>
+  /** An album's tracks, in album order. */
+  getAlbumTracks?(albumId: string, cursor?: string): Promise<TrackPage>
 }
 
 export class NotImplementedError extends Error {

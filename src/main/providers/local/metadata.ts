@@ -6,6 +6,9 @@ export interface FileMetadata {
   title: string
   artists: string[]
   album?: string
+  /** From the tags, when they say: which disc of the album, and which track on it. */
+  discNumber?: number
+  trackNumber?: number
   durationMs: number
   quality: AudioQuality
   hasArtwork: boolean
@@ -39,6 +42,9 @@ export function describeFormat(format: Pick<IFormat, 'container' | 'codec' | 'lo
 
 export type ReadMetadata = (path: string) => Promise<FileMetadata>
 
+/** A tag's number, if it is a sensible positive one. */
+const tagNumber = (value: number | null | undefined): number | undefined => (typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : undefined)
+
 /** Reads tags and audio format from one file, falling back to the file name when tags are missing. */
 export const readFileMetadata: ReadMetadata = async (path) => {
   const { common, format } = await parseFile(path, { duration: true })
@@ -47,6 +53,8 @@ export const readFileMetadata: ReadMetadata = async (path) => {
     title: common.title?.trim() || basename(path, extname(path)),
     artists,
     album: common.album?.trim() || undefined,
+    discNumber: tagNumber(common.disk.no),
+    trackNumber: tagNumber(common.track.no),
     durationMs: Math.round((format.duration ?? 0) * 1000),
     quality: describeFormat(format),
     hasArtwork: (common.picture?.length ?? 0) > 0
