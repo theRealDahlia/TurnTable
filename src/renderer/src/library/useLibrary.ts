@@ -8,6 +8,8 @@ export interface ProviderLibrary {
   error?: string
   /** During a refresh: the new list as it arrives, while `tracks` keeps showing the old one until it is complete. */
   incoming?: Track[]
+  /** After a first load failed part-way: the page it stopped at, so Retry carries on from there instead of starting over. */
+  resumeFrom?: string
 }
 
 type Libraries = Partial<Record<ProviderId, ProviderLibrary>>
@@ -25,11 +27,15 @@ type Action =
   | { type: 'listed'; providers: ProviderStatus[] }
   | { type: 'providersUpdated'; providers: ProviderStatus[] }
   | { type: 'listFailed'; error: string }
-  /** `keep` shows the current tracks until the new list is complete, instead of emptying the library first. */
-  | { type: 'providerStarted'; id: ProviderId; keep?: boolean }
+  /**
+   * `keep` shows the current tracks until the new list is complete, instead of emptying the library first;
+   * `resume` carries on after the tracks already loaded.
+   */
+  | { type: 'providerStarted'; id: ProviderId; keep?: boolean; resume?: boolean }
   | { type: 'pageLoaded'; id: ProviderId; tracks: Track[] }
   | { type: 'providerDone'; id: ProviderId }
-  | { type: 'providerFailed'; id: ProviderId; error: string }
+  /** `at` is the page that failed, for a load that can carry on from it. */
+  | { type: 'providerFailed'; id: ProviderId; error: string; at?: string }
   /** One track was saved to a service (`saved`) or removed from it, from outside the library. */
   | { type: 'trackSaved'; track: Track; saved: boolean }
 
@@ -61,7 +67,11 @@ function reducer(state: State, action: Action): State {
       return { ...state, phase: 'error', error: action.error }
     case 'providerStarted':
       return update(action.id, (lib) =>
-        action.keep && lib.tracks.length > 0 ? { status: 'loading', tracks: lib.tracks, incoming: [] } : { status: 'loading', tracks: [] }
+        action.resume
+          ? { status: 'loading', tracks: lib.tracks }
+          : action.keep && lib.tracks.length > 0
+            ? { status: 'loading', tracks: lib.tracks, incoming: [] }
+            : { status: 'loading', tracks: [] }
       )
     case 'pageLoaded':
       return update(action.id, (lib) =>
@@ -83,8 +93,14 @@ function reducer(state: State, action: Action): State {
       return update(action.track.providerId, (lib) => ({ ...lib, tracks: change(lib.tracks), ...(lib.incoming ? { incoming: change(lib.incoming) } : {}) }))
     }
     case 'providerFailed':
-      // A refresh that fails leaves the list as it was; a first load keeps whatever pages had arrived.
-      return update(action.id, (lib) => ({ status: 'error', tracks: lib.tracks, error: action.error }))
+      // A refresh that fails leaves the list as it was. A first load keeps whatever pages had arrived, and where it
+      // stopped, so Retry can carry on from there.
+      return update(action.id, (lib) => ({
+        status: 'error',
+        tracks: lib.tracks,
+        error: action.error,
+        ...(lib.incoming === undefined && action.at !== undefined ? { resumeFrom: action.at } : {})
+      }))
   }
 }
 
@@ -126,7 +142,10 @@ export interface Library {
    * that one track, so the library does not have to be fetched again; a service that has not been opened is left to load when it is.
    */
   noteSaved(track: Track, saved: boolean): void
-  /** Re-fetches one service, e.g. after an error. */
+  /**
+   * Fetches one service again after an error. A first load that failed part-way carries on from the page that
+   * failed, keeping the pages already loaded, rather than asking for every page again.
+   */
   retry(id: ProviderId): void
 }
 
@@ -148,14 +167,15 @@ export function useLibrary(): Library {
   /** Runs connection checks for single services one after another, so answers are applied in the order asked. */
   const refreshQueue = useRef<Promise<void>>(Promise.resolve())
 
-  const loadProvider = useCallback(async (id: ProviderId, keep = false): Promise<void> => {
+  /** Fetches a service's library page by page; `from` carries on from that page, after the tracks already loaded. */
+  const loadProvider = useCallback(async (id: ProviderId, keep = false, from?: string): Promise<void> => {
     const run = ++counter.current
     wanted.current.set(id, run)
     const superseded = (): boolean => wanted.current.get(id) !== run
 
-    dispatch({ type: 'providerStarted', id, keep })
+    dispatch({ type: 'providerStarted', id, keep, resume: from !== undefined })
+    let cursor: string | undefined = from
     try {
-      let cursor: string | undefined
       do {
         const page = await window.turntable.getSavedTracks(id, cursor)
         if (superseded()) return
@@ -164,9 +184,15 @@ export function useLibrary(): Library {
       } while (cursor)
       dispatch({ type: 'providerDone', id })
     } catch (e) {
-      if (!superseded()) dispatch({ type: 'providerFailed', id, error: describeError(e) })
+      if (!superseded()) dispatch({ type: 'providerFailed', id, error: describeError(e), at: cursor })
     }
   }, [])
+
+  // Retry reads where a failed load stopped without being rebuilt each time a page arrives.
+  const librariesRef = useRef(state.libraries)
+  useEffect(() => {
+    librariesRef.current = state.libraries
+  })
 
   useEffect(() => {
     const claims = wanted.current
@@ -267,6 +293,6 @@ export function useLibrary(): Library {
     ensure,
     refreshProvider,
     noteSaved: useCallback((track: Track, saved: boolean) => dispatch({ type: 'trackSaved', track, saved }), []),
-    retry: useCallback((id: ProviderId) => void loadProvider(id), [loadProvider])
+    retry: useCallback((id: ProviderId) => void loadProvider(id, false, librariesRef.current[id]?.resumeFrom), [loadProvider])
   }
 }

@@ -4,6 +4,7 @@ import { AuthRequiredError, type OAuthSession } from '../../auth/session'
 import { TIDAL } from '../descriptors'
 import { describeWait } from '../spotify/rateLimit'
 import type { MusicProvider } from '../types'
+import { SERVER_ERROR_RETRY_DELAYS_MS, shouldRetryServerError } from '../serverErrors'
 import type { TidalPlayerAuth } from '@shared/tidalPlayer'
 import { COLLECTION_SCOPES, PLAYBACK_SCOPES, SEARCH_SCOPES, TIDAL_API, TIDAL_SCOPES } from './config'
 import { ID_PATTERN, Included, identifiers, nextCursorOf, toAlbum, toTrack, type Document } from './jsonapi'
@@ -139,9 +140,11 @@ export function createTidalProvider(session: OAuthSession, options: TidalProvide
   /**
    * Calls TIDAL's API and returns a successful response. A 401 gets one retry with a freshly refreshed token, then
    * the user must sign in again. A 429 stops every request until the wait TIDAL asked for is over, with no retry.
+   * A read that meets a passing server error (502 and the like) is asked again after a pause, twice at most.
    */
   async function request(path: string, init: { method?: string; body?: unknown } = {}): Promise<Response> {
     let refreshed = false
+    let serverRetries = 0
     const body = init.body === undefined ? undefined : JSON.stringify(init.body)
 
     for (;;) {
@@ -171,6 +174,10 @@ export function createTidalProvider(session: OAuthSession, options: TidalProvide
         throw new TidalRateLimitedError(blockedUntil, now())
       }
 
+      if (shouldRetryServerError(init.method, response.status, serverRetries)) {
+        await sleep(SERVER_ERROR_RETRY_DELAYS_MS[serverRetries++]!)
+        continue
+      }
       if (!response.ok) throw await toApiError(response)
       return response
     }

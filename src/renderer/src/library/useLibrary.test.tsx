@@ -112,19 +112,53 @@ describe('useLibrary', () => {
     expect(result.current.tracks.map((t) => t.id)).toEqual(['spotify-1', 'youtubeMusic-1'])
   })
 
-  it('retries one service from scratch without duplicating tracks', async () => {
+  it('carries on from the page that failed when retried, keeping the pages already loaded and duplicating nothing', async () => {
     api.getSavedTracks
-      .mockResolvedValueOnce(page('spotify', [1], '1'))
-      .mockRejectedValueOnce(new Error('boom'))
-      .mockResolvedValueOnce(page('spotify', [1, 2]))
+      .mockResolvedValueOnce(page('spotify', [1], 'p2'))
+      .mockResolvedValueOnce(page('spotify', [2], 'p3'))
+      .mockRejectedValueOnce(new Error('Spotify: An unexpected error occurred. Please try again later. (status 502)'))
+      .mockResolvedValueOnce(page('spotify', [3]))
 
+    const { result } = renderHook(() => useOpenedLibrary())
+    await waitFor(() => expect(result.current.libraries.spotify?.status).toBe('error'))
+    expect(result.current.tracks.map((t) => t.id)).toEqual(['spotify-1', 'spotify-2'])
+
+    act(() => result.current.retry('spotify'))
+    // The pages already loaded stay on screen while the rest arrives.
+    expect(result.current.tracks.map((t) => t.id)).toEqual(['spotify-1', 'spotify-2'])
+    await waitFor(() => expect(result.current.libraries.spotify?.status).toBe('ready'))
+
+    expect(api.getSavedTracks).toHaveBeenLastCalledWith('spotify', 'p3')
+    expect(api.getSavedTracks).toHaveBeenCalledTimes(4)
+    expect(result.current.tracks.map((t) => t.id)).toEqual(['spotify-1', 'spotify-2', 'spotify-3'])
+  })
+
+  it('starts over when retried after the very first page failed', async () => {
+    api.getSavedTracks.mockRejectedValueOnce(new Error('boom')).mockResolvedValueOnce(page('spotify', [1]))
     const { result } = renderHook(() => useOpenedLibrary())
     await waitFor(() => expect(result.current.libraries.spotify?.status).toBe('error'))
 
     act(() => result.current.retry('spotify'))
     await waitFor(() => expect(result.current.libraries.spotify?.status).toBe('ready'))
 
-    expect(result.current.tracks.map((t) => t.id)).toEqual(['spotify-1', 'spotify-2'])
+    expect(api.getSavedTracks).toHaveBeenLastCalledWith('spotify', undefined)
+    expect(result.current.tracks.map((t) => t.id)).toEqual(['spotify-1'])
+  })
+
+  it('starts over when retried after a refresh failed part-way, since the list on screen is the old one', async () => {
+    api.getSavedTracks.mockResolvedValueOnce(page('spotify', [1]))
+    const { result } = renderHook(() => useOpenedLibrary())
+    await waitFor(() => expect(result.current.libraries.spotify?.status).toBe('ready'))
+
+    api.getSavedTracks.mockResolvedValueOnce(page('spotify', [5], 'p2')).mockRejectedValueOnce(new Error('boom')).mockResolvedValueOnce(page('spotify', [6]))
+    act(() => result.current.refresh('spotify'))
+    await waitFor(() => expect(result.current.libraries.spotify?.status).toBe('error'))
+    expect(result.current.tracks.map((t) => t.id)).toEqual(['spotify-1'])
+
+    act(() => result.current.retry('spotify'))
+    await waitFor(() => expect(result.current.libraries.spotify?.status).toBe('ready'))
+    expect(api.getSavedTracks).toHaveBeenLastCalledWith('spotify', undefined)
+    expect(result.current.tracks.map((t) => t.id)).toEqual(['spotify-6'])
   })
 
   it('reports a failure to list services', async () => {

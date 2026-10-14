@@ -121,6 +121,7 @@ Spotify limits how fast an app may call it, and a development-mode app has a str
 - Spotify requests are sent at least half a second apart, so a long library arrives at a steady pace instead of in a burst.
 - A song saved or removed in Search changes the library already loaded by that one song; nothing is fetched again. The Library is fetched again only when you press Refresh.
 - The first time Spotify says "too many requests", Muze stops sending anything to Spotify until the time Spotify gave has passed (and for longer if it refuses again straight after). It does not retry in between, and the stop survives restarts. The Library says when to try again.
+- Spotify's servers sometimes answer a request with a passing error (502 "An unexpected error occurred", or 500, 503, 504), which in a long library can land on any one of a hundred pages. Muze asks for that page again after 2 seconds and, if need be, after another 5, and only then shows the error. It does this only for reads, never for saving or removing a song, and never for "too many requests". If the Library still stops part-way, **Retry** carries on from the page that failed, keeping the pages already loaded. TIDAL is handled the same way.
 
 ## Look and feel
 

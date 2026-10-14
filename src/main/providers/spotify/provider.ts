@@ -4,6 +4,7 @@ import { parseOffsetCursor } from '../cursor'
 import { SPOTIFY } from '../descriptors'
 import { LIBRARY_WRITE_SCOPES, PLAYBACK_SCOPES, REQUIRED_SCOPES } from './config'
 import { RateLimitGate } from './rateLimit'
+import { SERVER_ERROR_RETRY_DELAYS_MS, shouldRetryServerError } from '../serverErrors'
 import type { MusicProvider } from '../types'
 import { APP_NAME } from '@shared/app'
 
@@ -231,10 +232,13 @@ export function createSpotifyProvider(session: OAuthSession, options: SpotifyPro
   /**
    * Calls the Web API and returns a successful response. A 401 triggers one retry with a freshly
    * refreshed token; a 429 stops all requests until Spotify's Retry-After has passed (see `rateLimitDelay`).
+   * A read that meets a passing server error (502 and the like) is asked again after a pause, twice at most,
+   * so one hiccup doesn't end a library that takes a hundred pages.
    */
   async function call(path: string, init: { method?: string; body?: unknown } = {}): Promise<Response> {
     let forceRefresh = false
     let refreshed = false
+    let serverRetries = 0
     const body = init.body === undefined ? undefined : JSON.stringify(init.body)
 
     for (;;) {
@@ -262,6 +266,10 @@ export function createSpotifyProvider(session: OAuthSession, options: SpotifyPro
       }
 
       refusals = 0
+      if (shouldRetryServerError(init.method, response.status, serverRetries)) {
+        await sleep(SERVER_ERROR_RETRY_DELAYS_MS[serverRetries++]!)
+        continue
+      }
       if (!response.ok) throw await toApiError(response)
       return response
     }

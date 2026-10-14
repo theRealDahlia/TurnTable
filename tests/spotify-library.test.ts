@@ -35,6 +35,7 @@ function setup(responses: Response[], random = () => 0, extra: { now?: () => num
     getAccessToken: vi.fn().mockResolvedValue('token-1'),
     disconnect: vi.fn().mockResolvedValue(undefined),
     isConnected: vi.fn(),
+    hasScopes: vi.fn().mockResolvedValue(true),
     connect: vi.fn()
   }
   const fetchFn = vi.fn()
@@ -318,9 +319,38 @@ describe('Spotify getSavedTracks', () => {
       ['a non-string message', { error: { message: { nested: 1 } } }],
       ['a blank message', { error: { message: '   ' } }]
     ])('falls back to the status code for %s, without echoing the body', async (_label, body) => {
-      const { provider } = setup([failure(500, body)])
+      // 501 is not one of the passing server errors that are asked again.
+      const { provider } = setup([failure(501, body)])
       const error = await provider.getSavedTracks().catch((e: Error) => e)
-      expect((error as Error).message).toBe('Spotify request failed with status 500')
+      expect((error as Error).message).toBe('Spotify request failed with status 501')
+    })
+
+    describe('passing server errors', () => {
+      const hiccup = (status = 502): Response => failure(status, { error: { status, message: 'An unexpected error occurred. Please try again later.' } })
+      const page = (): Response => new Response(JSON.stringify({ items: [item('abc')], next: null }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+
+      it.each([500, 502, 503, 504])('asks again after a pause when Spotify answers a read with %i, and carries on', async (status) => {
+        const { provider, fetchFn, sleep } = setup([hiccup(status), hiccup(status), page()])
+
+        const { tracks } = await provider.getSavedTracks()
+
+        expect(tracks.map((t) => t.id)).toEqual(['abc'])
+        expect(fetchFn).toHaveBeenCalledTimes(3)
+        expect(sleep.mock.calls.map(([ms]) => ms)).toEqual([2000, 5000])
+      })
+
+      it("gives up after the third try, with Spotify's own message", async () => {
+        const { provider, fetchFn } = setup([hiccup(), hiccup(), hiccup(), page()])
+        await expect(provider.getSavedTracks()).rejects.toThrow('Spotify: An unexpected error occurred. Please try again later. (status 502)')
+        expect(fetchFn).toHaveBeenCalledTimes(3)
+      })
+
+      it('never asks again for a change to the library, which Spotify may already have made', async () => {
+        const { provider, fetchFn, sleep } = setup([hiccup(), new Response(null, { status: 200 })])
+        await expect(provider.saveTrack!('4iV5W9uYEdYUVa79Axb7Rh')).rejects.toThrow('(status 502)')
+        expect(fetchFn).toHaveBeenCalledOnce()
+        expect(sleep).not.toHaveBeenCalled()
+      })
     })
 
     it('strips control characters and caps the length of the message', async () => {

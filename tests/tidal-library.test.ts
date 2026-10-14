@@ -131,8 +131,25 @@ describe('TIDAL saved tracks', () => {
   })
 
   it('falls back to the status when TIDAL gives no explanation', async () => {
-    const { provider } = setup([new Response('oops', { status: 500 })])
-    await expect(provider.getSavedTracks()).rejects.toThrow('TIDAL request failed with status 500')
+    // 501 is not one of the passing server errors that are asked again.
+    const { provider } = setup([new Response('oops', { status: 501 })])
+    await expect(provider.getSavedTracks()).rejects.toThrow('TIDAL request failed with status 501')
+  })
+
+  it('asks again after a pause when TIDAL answers a read with a passing server error, and gives up after the third try', async () => {
+    const recovers = setup([new Response('busy', { status: 503 }), json(page({ ids: ['100'] }))])
+    expect((await recovers.provider.getSavedTracks()).tracks.map((t) => t.id)).toEqual(['100'])
+    expect(recovers.sleep.mock.calls.map(([ms]) => ms)).toEqual([2000])
+
+    const down = setup([new Response('bad', { status: 502 }), new Response('bad', { status: 502 }), new Response('bad', { status: 502 })])
+    await expect(down.provider.getSavedTracks()).rejects.toThrow('TIDAL request failed with status 502')
+    expect(down.fetchFn).toHaveBeenCalledTimes(3)
+  })
+
+  it('never asks again for a change to the collection', async () => {
+    const { provider, fetchFn } = setup([new Response('bad', { status: 502 })])
+    await expect(provider.saveTrack!('100')).rejects.toThrow('TIDAL request failed with status 502')
+    expect(fetchFn).toHaveBeenCalledOnce()
   })
 
   it('asks to reconnect when the grant lacks the collection permission, without calling TIDAL', async () => {
