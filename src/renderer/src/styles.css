@@ -7,7 +7,7 @@
 :root {
   color-scheme: light dark;
   --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
-  --font-display: 'Instrument Serif', 'New York', Georgia, serif;
+  --font-display: 'Bricolage Grotesque Variable', var(--font);
   --radius-sm: 8px;
   --radius-md: 14px;
   --radius-lg: 22px;
@@ -149,10 +149,10 @@ button {
 .page-header h1 {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 48px;
-  font-weight: 400;
-  line-height: 1.02;
-  letter-spacing: -0.01em;
+  font-size: 42px;
+  font-weight: 750;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
   background: linear-gradient(100deg, var(--text) 30%, color-mix(in srgb, var(--accent) 80%, var(--text)));
   background-clip: text;
   -webkit-background-clip: text;
@@ -1327,9 +1327,9 @@ a.track-source:hover .logo {
 .empty-state h2 {
   margin: 0 0 8px;
   font-family: var(--font-display);
-  font-size: 30px;
-  font-weight: 400;
-  letter-spacing: -0.005em;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
 }
 
 .empty-state p {
@@ -1357,7 +1357,7 @@ a.track-source:hover .logo {
 }
 
 .empty-state.compact h2 {
-  font-size: 24px;
+  font-size: 19px;
 }
 
 .empty-state.compact p {
@@ -1387,7 +1387,7 @@ a.track-source:hover .logo {
   }
 
   .page-header h1 {
-    font-size: 38px;
+    font-size: 34px;
   }
 
   .track-album,
@@ -1492,11 +1492,10 @@ html[data-platform='mac'] .drag-strip {
 
 .brand span {
   font-family: var(--font-display);
-  font-size: 28px;
-  font-style: italic;
-  font-weight: 400;
+  font-size: 23px;
+  font-weight: 750;
   line-height: 1;
-  letter-spacing: -0.005em;
+  letter-spacing: -0.04em;
 }
 
 .sidebar nav {
@@ -2067,9 +2066,10 @@ html[data-platform='mac'] .drag-strip {
 .terms-card h1 {
   margin: 4px 0 0;
   font-family: var(--font-display);
-  font-size: 42px;
-  font-weight: 400;
-  line-height: 1.05;
+  font-size: 34px;
+  font-weight: 750;
+  line-height: 1.1;
+  letter-spacing: -0.035em;
 }
 
 .terms-card p {
@@ -2149,8 +2149,9 @@ html[data-platform='mac'] .drag-strip {
 .legal-header h1 {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 28px;
-  font-weight: 400;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
 }
 
 .legal-close {

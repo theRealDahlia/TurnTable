@@ -17,7 +17,7 @@
     "check": "npm run typecheck && npm run lint && npm test"
   },
   "dependencies": {
-    "@fontsource/instrument-serif": "^5.3.0",
+    "@fontsource-variable/bricolage-grotesque": "^5.3.0",
     "@tidal-music/player": "^0.20.1",
     "music-metadata": "^12.1.0",
     "react": "^19.3.0",

@@ -125,7 +125,7 @@ Spotify limits how fast an app may call it, and a development-mode app has a str
 
 The theme, "Afterglow", follows the system's light or dark setting. It lives in [`src/renderer/src/styles.css`](src/renderer/src/styles.css), and its colours, glow and gradient are tokens at the top of that file. The glow and grain are page backgrounds, painted behind everything, and the bars that the track list scrolls under are opaque, because Spotify forbids putting anything over its artwork or blurring it.
 
-Page titles use [Instrument Serif](https://github.com/Instrument/instrument-serif), bundled through `@fontsource/instrument-serif` so nothing is fetched at runtime. It is licensed under the SIL Open Font License 1.1, which requires the font's copyright notice and licence to go with every copy, so a packaged release must include `node_modules/@fontsource/instrument-serif/LICENSE`.
+Page titles use [Bricolage Grotesque](https://github.com/ateliertriay/bricolage), bundled through `@fontsource-variable/bricolage-grotesque` so nothing is fetched at runtime. It is licensed under the SIL Open Font License 1.1, which requires the font's copyright notice and licence to go with every copy, so a packaged release must include `node_modules/@fontsource-variable/bricolage-grotesque/LICENSE`.
 
 ## Privacy policy
 
