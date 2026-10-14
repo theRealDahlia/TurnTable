@@ -121,6 +121,12 @@ Spotify limits how fast an app may call it, and a development-mode app has a str
 - A song saved or removed in Search changes the library already loaded by that one song; nothing is fetched again. The Library is fetched again only when you press Refresh.
 - The first time Spotify says "too many requests", Muze stops sending anything to Spotify until the time Spotify gave has passed (and for longer if it refuses again straight after). It does not retry in between, and the stop survives restarts. The Library says when to try again.
 
+## Look and feel
+
+The theme, "Afterglow", follows the system's light or dark setting. It lives in [`src/renderer/src/styles.css`](src/renderer/src/styles.css), and its colours, glow and gradient are tokens at the top of that file. The glow and grain are page backgrounds, painted behind everything, and the bars that the track list scrolls under are opaque, because Spotify forbids putting anything over its artwork or blurring it.
+
+Page titles use [Instrument Serif](https://github.com/Instrument/instrument-serif), bundled through `@fontsource/instrument-serif` so nothing is fetched at runtime. It is licensed under the SIL Open Font License 1.1, which requires the font's copyright notice and licence to go with every copy, so a packaged release must include `node_modules/@fontsource/instrument-serif/LICENSE`.
+
 ## Privacy policy
 
 [`docs/PRIVACY.md`](docs/PRIVACY.md) is only a draft of a privacy policy. It describes what the app does today, but it has blanks that still need filling in, it has not been reviewed by a lawyer, and the app does not show it. It is not a real, enforceable legal document. Do not rely on it, and do not release Muze to other people without a proper privacy policy written or reviewed by a lawyer and kept in step with what the app does.

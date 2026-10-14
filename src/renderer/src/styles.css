@@ -1,28 +1,51 @@
 /* ---------- Design tokens ---------- */
+/*
+ * "Afterglow": deep ink with a soft violet, rose and teal glow behind frosted panels.
+ * The glow and grain are page backgrounds, painted behind everything, so they never sit over
+ * a service's artwork (Spotify forbids tinting, blurring or overlaying its artwork).
+ */
 :root {
   color-scheme: light dark;
   --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Instrument Serif', 'New York', Georgia, serif;
   --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 18px;
-  --bg: #f5f5f8;
-  --sidebar: #ececf2;
-  --surface: #ffffff;
-  --surface-hover: #f8f8fb;
-  --surface-sunken: #eeeef3;
-  --text: #16161d;
-  --text-muted: #666675;
-  --text-faint: #9898a6;
-  --border: rgb(22 22 40 / 8%);
-  --border-strong: rgb(22 22 40 / 15%);
-  --accent: #5b47f0;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  --bg: #f6f4fb;
+  --sidebar: rgb(255 255 255 / 46%);
+  --surface: rgb(255 255 255 / 66%);
+  --surface-solid: #ffffff;
+  --surface-hover: rgb(255 255 255 / 92%);
+  --surface-sunken: rgb(36 20 90 / 5.5%);
+  --text: #17132b;
+  --text-muted: #5d5878;
+  --text-faint: #9893b0;
+  --border: rgb(40 20 100 / 9%);
+  --border-strong: rgb(40 20 100 / 17%);
+  --highlight: rgb(255 255 255 / 80%);
+  --accent: #7c3aed;
+  --accent-from: #7c3aed;
+  --accent-via: #c026d3;
+  --accent-to: #f43f5e;
+  --accent-gradient: linear-gradient(135deg, var(--accent-from), var(--accent-via) 55%, var(--accent-to));
   --accent-text: #ffffff;
-  --accent-soft: rgb(91 71 240 / 11%);
-  --ok: #148a50;
-  --ok-soft: rgb(23 160 93 / 13%);
-  --danger-bg: #fdecec;
-  --danger-text: #a12727;
-  --shadow: 0 1px 2px rgb(16 16 40 / 5%), 0 6px 20px rgb(16 16 40 / 6%);
+  --accent-soft: rgb(124 58 237 / 10%);
+  --glow: 0 6px 22px rgb(168 50 220 / 28%);
+  --ok: #0f8a55;
+  --ok-soft: rgb(16 160 96 / 14%);
+  --danger-bg: #fdecef;
+  --danger-text: #a3203a;
+  --shadow: 0 1px 2px rgb(30 16 70 / 5%), 0 10px 30px rgb(30 16 70 / 8%);
+  --shadow-lg: 0 2px 6px rgb(30 16 70 / 6%), 0 24px 60px rgb(30 16 70 / 14%);
+  --aurora:
+    radial-gradient(60vw 55vh at 6% -8%, rgb(139 92 246 / 26%), transparent 70%),
+    radial-gradient(48vw 45vh at 102% 4%, rgb(236 72 153 / 17%), transparent 70%),
+    radial-gradient(70vw 50vh at 70% 112%, rgb(45 212 191 / 16%), transparent 70%);
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  /* The page's own backdrop. Bars that content scrolls under use it too, so they look clear without blurring what passes beneath. */
+  --backdrop: var(--grain), var(--aurora), var(--bg);
   --chrome-top: 0px;
   --track-columns: 40px minmax(0, 3fr) minmax(0, 2fr) minmax(0, 1.4fr) 28px 52px;
   font-family: var(--font);
@@ -35,24 +58,36 @@ html[data-platform='mac'] {
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0c0c11;
-    --sidebar: #101016;
-    --surface: #15151c;
-    --surface-hover: #1b1b24;
-    --surface-sunken: #1d1d26;
-    --text: #f3f3f8;
-    --text-muted: #a2a2b2;
-    --text-faint: #6c6c7e;
-    --border: rgb(255 255 255 / 7%);
-    --border-strong: rgb(255 255 255 / 14%);
-    --accent: #8e80ff;
-    --accent-text: #0c0c11;
-    --accent-soft: rgb(142 128 255 / 15%);
-    --ok: #34d286;
-    --ok-soft: rgb(52 210 134 / 14%);
-    --danger-bg: #36191c;
-    --danger-text: #ffb3b3;
-    --shadow: 0 1px 2px rgb(0 0 0 / 35%), 0 8px 24px rgb(0 0 0 / 32%);
+    --bg: #08070e;
+    --sidebar: rgb(255 255 255 / 3%);
+    --surface: rgb(255 255 255 / 4.5%);
+    --surface-solid: #15121f;
+    --surface-hover: rgb(255 255 255 / 8%);
+    --surface-sunken: rgb(255 255 255 / 6%);
+    --text: #f5f3ff;
+    --text-muted: #aaa5c4;
+    --text-faint: #6f6a8c;
+    --border: rgb(255 255 255 / 7.5%);
+    --border-strong: rgb(255 255 255 / 15%);
+    --highlight: rgb(255 255 255 / 7%);
+    --accent: #b9a2ff;
+    --accent-from: #8b5cf6;
+    --accent-via: #d946ef;
+    --accent-to: #fb7185;
+    --accent-text: #ffffff;
+    --accent-soft: rgb(167 139 250 / 14%);
+    --glow: 0 8px 28px rgb(192 80 240 / 38%);
+    --ok: #3ddc97;
+    --ok-soft: rgb(61 220 151 / 14%);
+    --danger-bg: rgb(244 63 94 / 13%);
+    --danger-text: #ffb4c0;
+    --shadow: 0 1px 2px rgb(0 0 0 / 40%), 0 10px 30px rgb(0 0 0 / 35%);
+    --shadow-lg: 0 2px 8px rgb(0 0 0 / 40%), 0 30px 80px rgb(0 0 0 / 55%);
+    --aurora:
+      radial-gradient(60vw 55vh at 6% -8%, rgb(124 58 237 / 34%), transparent 70%),
+      radial-gradient(48vw 45vh at 102% 4%, rgb(219 39 119 / 22%), transparent 70%),
+      radial-gradient(70vw 50vh at 70% 112%, rgb(13 148 136 / 22%), transparent 70%);
+    --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
 }
 
@@ -64,7 +99,8 @@ body {
   margin: 0;
   font-size: 14px;
   line-height: 1.45;
-  background: var(--bg);
+  background: var(--backdrop);
+  background-attachment: fixed;
   color: var(--text);
   -webkit-font-smoothing: antialiased;
 }
@@ -78,23 +114,53 @@ button {
   outline-offset: 2px;
 }
 
+::selection {
+  background: color-mix(in srgb, var(--accent-from) 35%, transparent);
+}
+
+/* Thin scrollbars that only show their thumb. */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--text) 16%, transparent);
+  background-clip: padding-box;
+  border: 3px solid transparent;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in srgb, var(--text) 28%, transparent);
+}
+
 /* ---------- Pages ---------- */
 .page {
   max-width: 760px;
   margin: 0 auto;
-  padding: 40px 32px 56px;
+  padding: 44px 32px 56px;
 }
 
 .page-header h1 {
   margin: 0;
-  font-size: 28px;
-  font-weight: 700;
-  line-height: 1.15;
-  letter-spacing: -0.022em;
+  font-family: var(--font-display);
+  font-size: 48px;
+  font-weight: 400;
+  line-height: 1.02;
+  letter-spacing: -0.01em;
+  background: linear-gradient(100deg, var(--text) 30%, color-mix(in srgb, var(--accent) 80%, var(--text)));
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
 }
 
 .page-header p {
-  margin: 6px 0 0;
+  margin: 10px 0 0;
   color: var(--text-muted);
 }
 
@@ -110,17 +176,18 @@ button {
   flex: none;
   align-items: center;
   gap: 7px;
-  padding: 7px 14px;
+  padding: 8px 15px;
   background: var(--surface);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 999px;
+  box-shadow: inset 0 1px 0 var(--highlight);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition:
-    background 0.12s ease,
-    border-color 0.12s ease;
+    background 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .refresh-button svg {
@@ -142,28 +209,37 @@ button {
 
 .refresh-list {
   position: absolute;
-  top: calc(100% + 6px);
+  top: calc(100% + 8px);
   right: 0;
   z-index: 40;
   display: flex;
-  min-width: 232px;
+  min-width: 240px;
   flex-direction: column;
-  padding: 5px;
-  background: var(--surface);
+  padding: 6px;
+  background: color-mix(in srgb, var(--surface-solid) 88%, transparent);
+  backdrop-filter: blur(24px) saturate(1.5);
   border: 1px solid var(--border-strong);
-  border-radius: 12px;
-  box-shadow: var(--shadow);
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
+  animation: pop-in 0.16s var(--ease);
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
 }
 
 .refresh-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 10px;
+  padding: 9px 10px;
   background: transparent;
   color: var(--text);
   border: 0;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 13px;
   font-weight: 500;
   text-align: left;
@@ -178,7 +254,7 @@ button {
 
 .refresh-item:hover,
 .refresh-item:focus-visible {
-  background: var(--surface-hover);
+  background: var(--accent-soft);
   outline: none;
 }
 
@@ -218,7 +294,8 @@ button {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .refresh-button .spinning {
+  .refresh-button .spinning,
+  .refresh-list {
     animation: none;
   }
 }
@@ -239,8 +316,8 @@ button {
 .chips {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin: 28px 0 0;
+  gap: 12px;
+  margin: 32px 0 0;
   padding: 0;
   list-style: none;
 }
@@ -249,30 +326,41 @@ button {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 11px 14px 11px 11px;
+  padding: 12px 14px 12px 12px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 999px;
-  box-shadow: var(--shadow);
-  transition: border-color 0.15s ease;
+  box-shadow:
+    inset 0 1px 0 var(--highlight),
+    var(--shadow);
+  transition:
+    border-color 0.2s ease,
+    transform 0.2s var(--ease),
+    box-shadow 0.2s ease;
 }
 
 .chip:hover {
   border-color: var(--border-strong);
+  transform: translateY(-1px);
 }
 
 .chip[data-connected='true'] {
-  border-color: color-mix(in srgb, var(--ok) 32%, var(--border));
+  border-color: color-mix(in srgb, var(--ok) 30%, var(--border));
+  box-shadow:
+    inset 0 1px 0 var(--highlight),
+    0 0 0 4px color-mix(in srgb, var(--ok) 6%, transparent),
+    var(--shadow);
 }
 
 .logo {
   display: grid;
   place-items: center;
   flex: none;
-  width: 46px;
-  height: 46px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   background: var(--surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--border);
   color: var(--text-muted);
 }
 
@@ -292,11 +380,11 @@ button {
   flex: 1;
   flex-direction: column;
   min-width: 0;
-  gap: 1px;
+  gap: 2px;
 }
 
 .chip-name {
-  font-size: 15px;
+  font-size: 15.5px;
   font-weight: 650;
   letter-spacing: -0.01em;
 }
@@ -368,7 +456,9 @@ button {
 
 .chip[data-connected='true'] .status-dot {
   background: var(--ok);
-  box-shadow: 0 0 0 3px var(--ok-soft);
+  box-shadow:
+    0 0 0 3px var(--ok-soft),
+    0 0 10px var(--ok);
 }
 
 .chip[data-connected='true'] .chip-status {
@@ -378,43 +468,57 @@ button {
 
 .chip-action {
   flex: none;
-  min-width: 104px;
-  height: 34px;
-  padding: 0 16px;
+  min-width: 108px;
+  height: 36px;
+  padding: 0 18px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 650;
   color: var(--accent-text);
-  background: var(--accent);
+  background: var(--accent-gradient);
   border: 1px solid transparent;
   border-radius: 999px;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 25%),
+    var(--glow);
   cursor: pointer;
   transition:
     filter 0.15s ease,
-    background 0.15s ease;
+    transform 0.15s var(--ease),
+    box-shadow 0.15s ease;
 }
 
 .chip-action:hover:not(:disabled) {
-  filter: brightness(1.08);
+  filter: brightness(1.08) saturate(1.05);
+  transform: translateY(-1px);
+}
+
+.chip-action:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .chip-secondary {
   min-width: 0;
 }
 
-.chip[data-connected='true'] .chip-action {
+.chip[data-connected='true'] .chip-action,
+.chip-action.chip-secondary {
   color: var(--text);
   background: var(--surface-sunken);
   border-color: var(--border);
+  box-shadow: inset 0 1px 0 var(--highlight);
 }
 
-.chip[data-connected='true'] .chip-action:hover:not(:disabled) {
+.chip[data-connected='true'] .chip-action:hover:not(:disabled),
+.chip-action.chip-secondary:hover:not(:disabled) {
   filter: none;
   border-color: var(--border-strong);
+  background: var(--surface-hover);
 }
 
 .chip-action:disabled {
-  opacity: 0.55;
+  opacity: 0.5;
   cursor: progress;
+  box-shadow: none;
 }
 
 /* ---------- Shared: banners, empty text ---------- */
@@ -424,11 +528,11 @@ button {
   justify-content: space-between;
   gap: 12px;
   margin-top: 20px;
-  padding: 10px 14px;
+  padding: 11px 14px;
   font-size: 13px;
   color: var(--danger-text);
   background: var(--danger-bg);
-  border: 1px solid color-mix(in srgb, var(--danger-text) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--danger-text) 20%, transparent);
   border-radius: var(--radius-md);
 }
 
@@ -450,7 +554,7 @@ button {
 @media (max-width: 520px) {
   .chip {
     flex-wrap: wrap;
-    border-radius: 24px;
+    border-radius: 26px;
   }
 
   .chip-action {
@@ -463,16 +567,22 @@ button {
   .chip-action {
     transition: none;
   }
+
+  .chip:hover,
+  .chip-action:hover:not(:disabled) {
+    transform: none;
+  }
 }
 
 /* Sign-in form for services that use the account's own email and password. */
 .credentials-card {
   list-style: none;
   margin: -4px 0 4px;
-  padding: 16px 18px;
+  padding: 18px 20px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
+  box-shadow: inset 0 1px 0 var(--highlight);
 }
 
 .credentials-form {
@@ -497,20 +607,24 @@ button {
 }
 
 .credentials-fields input {
-  height: 38px;
+  height: 40px;
   padding: 0 12px;
   color: var(--text);
   background: var(--surface-sunken);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 12px;
   font: inherit;
   font-size: 14px;
   font-weight: 400;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .credentials-fields input:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 4px var(--accent-soft);
 }
 
 .credentials-hint {
@@ -554,15 +668,19 @@ button {
   max-width: 1040px;
 }
 
-/* Search, filters and column headings stay put while the list scrolls beneath them. */
+/*
+ * Search, filters and column headings stay put while the list scrolls beneath them. The bar is
+ * opaque, painted with the page's own fixed backdrop so it looks clear, because blurring artwork
+ * as it passes under would alter it.
+ */
 .library-controls {
   position: sticky;
   top: var(--chrome-top);
   z-index: 4;
   margin: 0 -32px;
-  padding: 18px 32px 0;
-  background: color-mix(in srgb, var(--bg) 84%, transparent);
-  backdrop-filter: blur(16px) saturate(1.3);
+  padding: 20px 32px 0;
+  background: var(--backdrop);
+  background-attachment: fixed;
 }
 
 .toolbar {
@@ -580,36 +698,48 @@ button {
 .search-field svg {
   position: absolute;
   top: 50%;
-  left: 12px;
+  left: 13px;
   width: 16px;
   height: 16px;
   color: var(--text-faint);
   transform: translateY(-50%);
   pointer-events: none;
+  transition: color 0.15s ease;
+}
+
+.search-field:focus-within svg {
+  color: var(--accent);
 }
 
 .search {
   width: 100%;
-  height: 36px;
-  padding: 0 14px 0 36px;
+  height: 40px;
+  padding: 0 14px 0 38px;
   font: inherit;
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 12px;
+  box-shadow: inset 0 1px 0 var(--highlight);
   transition:
-    border-color 0.12s ease,
-    box-shadow 0.12s ease;
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
 }
 
 .search::placeholder {
   color: var(--text-faint);
 }
 
+.search:hover {
+  border-color: var(--border-strong);
+}
+
 .search:focus-visible {
+  background: var(--surface-hover);
   border-color: var(--accent);
   outline: none;
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  box-shadow: 0 0 0 4px var(--accent-soft);
 }
 
 .sort {
@@ -621,14 +751,14 @@ button {
 }
 
 .sort select {
-  height: 36px;
+  height: 40px;
   padding: 0 10px;
   font: inherit;
   font-size: 13px;
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 12px;
 }
 
 .filter-row {
@@ -637,7 +767,7 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 8px 16px;
-  margin-top: 12px;
+  margin-top: 14px;
 }
 
 .filters {
@@ -650,19 +780,20 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 28px;
-  padding: 0 12px;
+  height: 30px;
+  padding: 0 13px;
   font-size: 12.5px;
   font-weight: 600;
   color: var(--text-muted);
-  background: transparent;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 999px;
   cursor: pointer;
   transition:
-    color 0.12s ease,
-    border-color 0.12s ease,
-    background 0.12s ease;
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .filter:hover {
@@ -671,9 +802,10 @@ button {
 }
 
 .filter[aria-pressed='true'] {
-  color: var(--accent);
-  background: var(--accent-soft);
+  color: var(--accent-text);
+  background: var(--accent-gradient);
   border-color: transparent;
+  box-shadow: var(--glow);
 }
 
 .filter-count {
@@ -684,7 +816,7 @@ button {
 
 .filter[aria-pressed='true'] .filter-count {
   color: inherit;
-  opacity: 0.75;
+  opacity: 0.8;
 }
 
 .filter-row .summary {
@@ -699,11 +831,11 @@ button {
   grid-template-columns: var(--track-columns);
   align-items: center;
   gap: 14px;
-  margin-top: 10px;
+  margin-top: 12px;
   padding: 9px 10px 8px;
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 650;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--text-faint);
   border-bottom: 1px solid var(--border);
@@ -723,32 +855,46 @@ button {
 .search-form {
   display: flex;
   gap: 10px;
-  margin-top: 22px;
+  margin-top: 24px;
 }
 
 .search-form .search-field {
   flex: 1;
 }
 
+.search-form .search {
+  height: 46px;
+  font-size: 15px;
+  border-radius: 14px;
+}
+
 .search-submit {
   flex: none;
-  padding: 0 20px;
-  background: var(--accent);
-  color: #fff;
+  padding: 0 24px;
+  background: var(--accent-gradient);
+  color: var(--accent-text);
   border: 0;
-  border-radius: 10px;
+  border-radius: 14px;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 25%),
+    var(--glow);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 650;
   cursor: pointer;
+  transition:
+    filter 0.15s ease,
+    transform 0.15s var(--ease);
 }
 
 .search-submit:hover:not(:disabled) {
   filter: brightness(1.08);
+  transform: translateY(-1px);
 }
 
 .search-submit:disabled {
-  opacity: 0.45;
+  opacity: 0.4;
   cursor: default;
+  box-shadow: none;
 }
 
 .search-submit:focus-visible {
@@ -764,14 +910,15 @@ button {
 }
 
 .filter[aria-selected='true'] {
-  color: var(--accent);
-  background: var(--accent-soft);
+  color: var(--accent-text);
+  background: var(--accent-gradient);
   border-color: transparent;
+  box-shadow: var(--glow);
 }
 
 .filter[aria-selected='true'] .filter-count {
   color: inherit;
-  opacity: 0.75;
+  opacity: 0.8;
 }
 
 /* Rows in search results have a Save button before the duration. */
@@ -796,8 +943,9 @@ button {
   border-radius: 999px;
   cursor: pointer;
   transition:
-    color 0.12s ease,
-    background 0.12s ease;
+    color 0.15s ease,
+    background 0.15s ease,
+    transform 0.15s var(--ease);
 }
 
 .track-save svg {
@@ -809,6 +957,10 @@ button {
 .track-save:focus-visible {
   color: var(--text);
   background: var(--surface-hover);
+}
+
+.track-save:active:not(:disabled) {
+  transform: scale(0.9);
 }
 
 .track-save[aria-pressed='true'] {
@@ -827,7 +979,7 @@ button {
 
 /* Track rows */
 .tracks {
-  margin: 4px 0 0;
+  margin: 6px 0 0;
   padding: 0;
   list-style: none;
 }
@@ -838,18 +990,20 @@ button {
   grid-template-columns: var(--track-columns);
   align-items: center;
   gap: 14px;
-  padding: 6px 10px;
-  border-radius: 10px;
+  padding: 7px 10px;
+  border-radius: 12px;
   content-visibility: auto;
-  contain-intrinsic-size: auto 52px;
+  contain-intrinsic-size: auto 54px;
+  transition: background 0.15s ease;
 }
 
 .track:hover {
-  background: color-mix(in srgb, var(--text) 5%, transparent);
+  background: color-mix(in srgb, var(--text) 5.5%, transparent);
 }
 
 .track[data-current='true'] {
-  background: var(--accent-soft);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent-from) 20%, transparent), color-mix(in srgb, var(--accent-to) 4%, transparent) 85%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-from) 18%, transparent);
 }
 
 .track[data-current='true']::before {
@@ -859,8 +1013,9 @@ button {
   bottom: 10px;
   left: 0;
   width: 3px;
-  background: var(--accent);
+  background: linear-gradient(var(--accent-from), var(--accent-to));
   border-radius: 3px;
+  box-shadow: 0 0 10px var(--accent-via);
 }
 
 .track[data-current='true'] .track-title {
@@ -880,7 +1035,9 @@ button {
   background: var(--surface-sunken);
   /* Spotify's guidelines round artwork to 8px on large screens. */
   border-radius: 8px;
-  box-shadow: 0 0 0 1px var(--border);
+  box-shadow:
+    0 0 0 1px var(--border),
+    0 4px 10px rgb(0 0 0 / 14%);
 }
 
 .track-art-empty {
@@ -968,7 +1125,7 @@ a.track-source:hover .logo {
 .equalizer {
   position: absolute;
   inset: 0;
-  border-radius: 6px;
+  border-radius: 8px;
 }
 
 .track-play {
@@ -976,11 +1133,11 @@ a.track-source:hover .logo {
   place-items: center;
   padding: 0;
   color: #fff;
-  background: rgb(0 0 0 / 55%);
+  background: rgb(10 6 24 / 58%);
   border: 0;
   opacity: 0;
   cursor: pointer;
-  transition: opacity 0.12s ease;
+  transition: opacity 0.15s ease;
 }
 
 .track-play svg {
@@ -1016,7 +1173,7 @@ a.track-source:hover .logo {
   justify-content: center;
   gap: 3px;
   padding: 11px 0;
-  background: rgb(0 0 0 / 50%);
+  background: rgb(10 6 24 / 55%);
   opacity: 0;
   pointer-events: none;
 }
@@ -1032,8 +1189,8 @@ a.track-source:hover .logo {
 .equalizer span {
   width: 3px;
   height: 100%;
-  background: #fff;
-  border-radius: 1px;
+  background: linear-gradient(to top, #c4b5fd, #f9a8d4);
+  border-radius: 2px;
   transform-origin: bottom;
   animation: equalize 0.9s ease-in-out infinite;
 }
@@ -1062,7 +1219,7 @@ a.track-source:hover .logo {
   grid-template-columns: var(--track-columns);
   align-items: center;
   gap: 14px;
-  padding: 6px 10px;
+  padding: 7px 10px;
 }
 
 .skeleton-lines {
@@ -1077,7 +1234,7 @@ a.track-source:hover .logo {
   background: linear-gradient(
     90deg,
     var(--surface-sunken) 25%,
-    color-mix(in srgb, var(--surface-sunken), var(--text) 7%) 50%,
+    color-mix(in srgb, var(--surface-sunken), var(--accent) 12%) 50%,
     var(--surface-sunken) 75%
   );
   background-size: 200% 100%;
@@ -1088,7 +1245,7 @@ a.track-source:hover .logo {
 .skeleton-art {
   width: 40px;
   height: 40px;
-  border-radius: 6px;
+  border-radius: 8px;
 }
 
 @keyframes shimmer {
@@ -1099,15 +1256,16 @@ a.track-source:hover .logo {
 
 .show-more {
   display: block;
-  margin: 16px auto 0;
-  padding: 0 20px;
-  height: 34px;
+  margin: 18px auto 0;
+  padding: 0 22px;
+  height: 36px;
   font-size: 13px;
   font-weight: 600;
   color: var(--text);
-  background: var(--surface-sunken);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 999px;
+  box-shadow: inset 0 1px 0 var(--highlight);
   cursor: pointer;
 }
 
@@ -1123,35 +1281,60 @@ a.track-source:hover .logo {
 }
 
 .show-more:hover {
+  background: var(--surface-hover);
   border-color: var(--border-strong);
 }
 
 /* Empty states */
 .empty-state {
+  position: relative;
   margin-top: 32px;
-  padding: 52px 24px;
+  padding: 60px 24px;
+  overflow: hidden;
   text-align: center;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
+  box-shadow:
+    inset 0 1px 0 var(--highlight),
+    var(--shadow);
+}
+
+/* A soft glow behind the icon. */
+.empty-state::before {
+  content: '';
+  position: absolute;
+  top: -80px;
+  left: 50%;
+  width: 360px;
+  height: 240px;
+  margin-left: -180px;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--accent-via) 22%, transparent), transparent);
+  pointer-events: none;
+}
+
+.empty-state > * {
+  position: relative;
 }
 
 .empty-state .empty-icon {
-  width: 44px;
-  height: 44px;
-  margin-bottom: 14px;
-  color: var(--text-faint);
+  width: 48px;
+  height: 48px;
+  margin-bottom: 16px;
+  color: var(--accent);
 }
 
 .empty-state h2 {
-  margin: 0 0 6px;
-  font-size: 18px;
-  letter-spacing: -0.012em;
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 400;
+  letter-spacing: -0.005em;
 }
 
 .empty-state p {
   max-width: 380px;
-  margin: 0 auto 22px;
+  margin: 0 auto 24px;
   color: var(--text-muted);
 }
 
@@ -1159,12 +1342,22 @@ a.track-source:hover .logo {
   padding: 36px 24px;
   background: transparent;
   border-style: dashed;
+  box-shadow: none;
+}
+
+.empty-state.compact::before {
+  display: none;
 }
 
 .empty-state.compact .empty-icon {
   width: 30px;
   height: 30px;
   margin-bottom: 10px;
+  color: var(--text-faint);
+}
+
+.empty-state.compact h2 {
+  font-size: 24px;
 }
 
 .empty-state.compact p {
@@ -1184,9 +1377,17 @@ a.track-source:hover .logo {
     flex-direction: column;
   }
 
+  .search-submit {
+    height: 42px;
+  }
+
   .library-controls {
     margin: 0 -16px;
     padding: 14px 16px 0;
+  }
+
+  .page-header h1 {
+    font-size: 38px;
   }
 
   .track-album,
@@ -1212,7 +1413,10 @@ a.track-source:hover .logo {
 
   .search,
   .filter,
-  .track-play {
+  .track,
+  .track-play,
+  .track-save,
+  .search-submit {
     transition: none;
   }
 }
@@ -1220,7 +1424,7 @@ a.track-source:hover .logo {
 /* ---------- App shell ---------- */
 .app {
   display: grid;
-  grid-template-columns: 232px minmax(0, 1fr);
+  grid-template-columns: 240px minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr) auto;
   height: 100vh;
 }
@@ -1233,9 +1437,10 @@ a.track-source:hover .logo {
 .sidebar {
   display: flex;
   flex-direction: column;
-  padding: 22px 12px;
+  padding: 22px 12px 14px;
   background: var(--sidebar);
   border-right: 1px solid var(--border);
+  box-shadow: inset -1px 0 0 var(--highlight);
   overflow-y: auto;
   /* On macOS the window has no title bar, so the sidebar's empty space is where you drag it. */
   -webkit-app-region: drag;
@@ -1254,56 +1459,71 @@ html[data-platform='mac'] .drag-strip {
   display: block;
   position: fixed;
   top: 0;
-  left: 232px;
+  left: 240px;
   right: 0;
   height: var(--chrome-top);
   z-index: 10;
-  background: color-mix(in srgb, var(--bg) 82%, transparent);
-  backdrop-filter: blur(16px);
+  /* Opaque for the same reason as the library's sticky bar. */
+  background: var(--backdrop);
+  background-attachment: fixed;
   -webkit-app-region: drag;
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 0 10px 22px;
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  gap: 11px;
+  padding: 0 8px 26px;
 }
 
+/* The mark sits in a small glowing tile, like an app icon. */
 .brand-mark {
   flex: none;
-  width: 24px;
-  height: 24px;
-  color: var(--accent);
+  width: 32px;
+  height: 32px;
+  padding: 6px;
+  color: #fff;
+  background: var(--accent-gradient);
+  border-radius: 10px;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 30%),
+    var(--glow);
+}
+
+.brand span {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-style: italic;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -0.005em;
 }
 
 .sidebar nav {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   -webkit-app-region: no-drag;
 }
 
 .nav-item {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
-  height: 36px;
-  padding: 0 10px;
+  gap: 11px;
+  height: 38px;
+  padding: 0 12px;
   font-size: 14px;
   font-weight: 550;
   color: var(--text-muted);
   text-align: left;
   background: none;
   border: 0;
-  border-radius: 10px;
+  border-radius: 12px;
   cursor: pointer;
   transition:
-    background 0.12s ease,
-    color 0.12s ease;
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .nav-item svg {
@@ -1317,8 +1537,13 @@ html[data-platform='mac'] .drag-strip {
 }
 
 .nav-item[aria-current='page'] {
+  color: var(--text);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent-from) 22%, transparent), color-mix(in srgb, var(--accent-to) 6%, transparent));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-from) 20%, transparent);
+}
+
+.nav-item[aria-current='page'] svg {
   color: var(--accent);
-  background: var(--accent-soft);
 }
 
 @media (max-width: 640px) {
@@ -1342,7 +1567,7 @@ html[data-platform='mac'] .drag-strip {
   }
 
   .brand {
-    padding-bottom: 8px;
+    padding-bottom: 10px;
   }
 
   .sidebar nav {
@@ -1366,8 +1591,8 @@ html[data-platform='mac'] .drag-strip {
   overflow: hidden;
   background: #000;
   border: 1px solid var(--border-strong);
-  border-radius: 12px;
-  box-shadow: var(--shadow);
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
   /* The sidebar is a window-dragging area, which would swallow clicks meant for the video. */
   -webkit-app-region: no-drag;
 }
@@ -1401,8 +1626,8 @@ html[data-platform='mac'] .drag-strip {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 7px 12px 8px;
-  background: var(--surface);
+  padding: 8px 12px 9px;
+  background: var(--surface-solid);
   color: var(--text-muted);
   font-size: 12px;
 }
@@ -1417,33 +1642,57 @@ html[data-platform='mac'] .drag-strip {
 }
 
 /* ---------- Player ---------- */
+/* A floating dock: it has its own row, so nothing scrolls beneath it. */
 .player {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 1fr);
   grid-column: 1 / -1;
   align-items: center;
   gap: 8px 24px;
-  padding: 10px 20px;
-  background: color-mix(in srgb, var(--surface) 90%, transparent);
-  backdrop-filter: blur(20px) saturate(1.4);
-  border-top: 1px solid var(--border);
+  margin: 0 12px 12px;
+  padding: 12px 20px 12px 12px;
+  background: color-mix(in srgb, var(--surface-solid) 78%, transparent);
+  backdrop-filter: blur(28px) saturate(1.6);
+  border: 1px solid var(--border-strong);
+  border-radius: 22px;
+  box-shadow:
+    inset 0 1px 0 var(--highlight),
+    var(--shadow-lg);
+}
+
+/* A thin line of light along the top edge while music plays. */
+.player::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 24px;
+  right: 24px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent-from), var(--accent-via), var(--accent-to), transparent);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.player[data-status='playing']::before {
+  opacity: 1;
 }
 
 .player-track {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   min-width: 0;
 }
 
 .player-track .track-art {
   flex: none;
-  width: 52px;
-  height: 52px;
+  width: 56px;
+  height: 56px;
   border-radius: 8px;
   box-shadow:
     0 0 0 1px var(--border),
-    0 4px 12px rgb(0 0 0 / 18%);
+    0 8px 20px rgb(0 0 0 / 28%);
 }
 
 .player-meta {
@@ -1460,6 +1709,10 @@ html[data-platform='mac'] .drag-strip {
   text-overflow: ellipsis;
 }
 
+.player-meta .track-title {
+  font-size: 14.5px;
+}
+
 .player-meta .track-artists {
   font-size: 12.5px;
   color: var(--text-muted);
@@ -1467,13 +1720,19 @@ html[data-platform='mac'] .drag-strip {
 
 .quality-badge {
   align-self: flex-start;
-  margin-top: 4px;
+  max-width: 100%;
+  margin-top: 5px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   padding: 1px 8px;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 10.5px;
+  font-weight: 700;
   line-height: 1.6;
+  letter-spacing: 0.02em;
   color: var(--accent);
   background: var(--accent-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
   border-radius: 999px;
 }
 
@@ -1481,21 +1740,21 @@ html[data-platform='mac'] .drag-strip {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
 }
 
 .transport {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .transport button {
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   padding: 0;
   color: var(--text-muted);
   background: none;
@@ -1503,9 +1762,10 @@ html[data-platform='mac'] .drag-strip {
   border-radius: 50%;
   cursor: pointer;
   transition:
-    color 0.12s ease,
-    background 0.12s ease,
-    transform 0.12s ease;
+    color 0.15s ease,
+    background 0.15s ease,
+    transform 0.15s var(--ease),
+    box-shadow 0.3s ease;
 }
 
 .transport button svg {
@@ -1515,6 +1775,11 @@ html[data-platform='mac'] .drag-strip {
 
 .transport button:hover:not(:disabled) {
   color: var(--text);
+  background: color-mix(in srgb, var(--text) 7%, transparent);
+}
+
+.transport button:active:not(:disabled) {
+  transform: scale(0.92);
 }
 
 .transport button[aria-pressed='true'] {
@@ -1544,10 +1809,13 @@ html[data-platform='mac'] .drag-strip {
 }
 
 .transport .play-main {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   color: var(--accent-text);
-  background: var(--accent);
+  background: var(--accent-gradient);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 30%),
+    var(--glow);
 }
 
 .transport .play-main svg {
@@ -1557,7 +1825,32 @@ html[data-platform='mac'] .drag-strip {
 
 .transport .play-main:hover:not(:disabled) {
   color: var(--accent-text);
-  transform: scale(1.06);
+  background: var(--accent-gradient);
+  transform: scale(1.07);
+}
+
+.transport .play-main:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+/* The play button breathes gently while music plays. */
+.player[data-status='playing'] .play-main {
+  animation: breathe 2.8s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 30%),
+      var(--glow);
+  }
+  50% {
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 30%),
+      0 0 0 6px color-mix(in srgb, var(--accent-via) 12%, transparent),
+      var(--glow);
+  }
 }
 
 .seek {
@@ -1583,7 +1876,7 @@ html[data-platform='mac'] .drag-strip {
   flex: 1;
 }
 
-/* Sliders: a thin track filled up to the thumb; the thumb shows on hover or focus. */
+/* Sliders: a thin track filled with the accent gradient up to the thumb; the thumb shows on hover or focus. */
 .player input[type='range'] {
   --progress: 0%;
   height: 16px;
@@ -1596,26 +1889,35 @@ html[data-platform='mac'] .drag-strip {
 
 .player input[type='range']::-webkit-slider-runnable-track {
   height: 4px;
-  background: linear-gradient(
-    to right,
-    var(--accent) var(--progress),
-    color-mix(in srgb, var(--text) 16%, transparent) var(--progress)
-  );
+  background:
+    linear-gradient(90deg, var(--accent-from), var(--accent-via), var(--accent-to)) left / var(--progress) 100% no-repeat,
+    color-mix(in srgb, var(--text) 14%, transparent);
   border-radius: 999px;
+  transition: height 0.15s ease;
+}
+
+.player input[type='range']:hover::-webkit-slider-runnable-track {
+  height: 6px;
 }
 
 .player input[type='range']::-webkit-slider-thumb {
-  width: 12px;
-  height: 12px;
-  margin-top: -4px;
-  background: var(--text);
+  width: 13px;
+  height: 13px;
+  margin-top: -4.5px;
+  background: #fff;
   border: 0;
   border-radius: 50%;
-  box-shadow: 0 1px 4px rgb(0 0 0 / 35%);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--accent-via) 35%, transparent),
+    0 2px 6px rgb(0 0 0 / 35%);
   opacity: 0;
-  transition: opacity 0.12s ease;
+  transition: opacity 0.15s ease;
   appearance: none;
   -webkit-appearance: none;
+}
+
+.player input[type='range']:hover::-webkit-slider-thumb {
+  margin-top: -3.5px;
 }
 
 .player input[type='range']:hover::-webkit-slider-thumb,
@@ -1642,22 +1944,23 @@ html[data-platform='mac'] .drag-strip {
 }
 
 .player-volume input {
-  width: 108px;
+  width: 112px;
 }
 
 .player-error {
   grid-column: 1 / -1;
   margin: 0;
-  padding: 6px 12px;
+  padding: 7px 12px;
   font-size: 12.5px;
   color: var(--danger-text);
   background: var(--danger-bg);
-  border-radius: var(--radius-sm);
+  border-radius: 10px;
 }
 
 @media (max-width: 640px) {
   .player {
     grid-template-columns: minmax(0, 1fr);
+    margin: 0 8px 8px;
     padding: 10px 14px;
   }
 
@@ -1668,21 +1971,29 @@ html[data-platform='mac'] .drag-strip {
 
 @media (prefers-reduced-motion: reduce) {
   .transport button,
+  .player::before,
+  .player input[type='range']::-webkit-slider-runnable-track,
   .player input[type='range']::-webkit-slider-thumb {
     transition: none;
+  }
+
+  .player[data-status='playing'] .play-main {
+    animation: none;
   }
 }
 
 /* ---------- Legal documents ---------- */
 .sidebar-legal {
   align-self: flex-start;
-  margin: 10px 0 0 10px;
+  margin: 12px 0 0 12px;
   padding: 2px 0;
   font-size: 12px;
   color: var(--text-faint);
   background: none;
   border: 0;
   text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--text-faint) 50%, transparent);
+  text-underline-offset: 3px;
   cursor: pointer;
   -webkit-app-region: no-drag;
 }
@@ -1696,38 +2007,75 @@ html[data-platform='mac'] .drag-strip {
   place-items: center;
   min-height: 100vh;
   padding: 24px;
-  background: var(--bg);
 }
 
 .terms-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 16px;
-  max-width: 520px;
-  padding: 32px;
+  max-width: 540px;
+  padding: 40px 36px 32px;
+  overflow: hidden;
   text-align: center;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  box-shadow: var(--shadow);
+  backdrop-filter: blur(30px) saturate(1.5);
+  border: 1px solid var(--border-strong);
+  border-radius: 28px;
+  box-shadow:
+    inset 0 1px 0 var(--highlight),
+    var(--shadow-lg);
+  animation: rise-in 0.5s var(--ease);
+}
+
+.terms-card::before {
+  content: '';
+  position: absolute;
+  top: -120px;
+  left: 50%;
+  width: 420px;
+  height: 260px;
+  margin-left: -210px;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--accent-via) 26%, transparent), transparent);
+  pointer-events: none;
+}
+
+.terms-card > * {
+  position: relative;
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
 }
 
 .terms-mark {
-  width: 44px;
-  height: 44px;
-  color: var(--accent);
+  width: 56px;
+  height: 56px;
+  padding: 11px;
+  color: #fff;
+  background: var(--accent-gradient);
+  border-radius: 16px;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 30%),
+    var(--glow);
 }
 
 .terms-card h1 {
-  margin: 0;
-  font-size: 24px;
+  margin: 4px 0 0;
+  font-family: var(--font-display);
+  font-size: 42px;
+  font-weight: 400;
+  line-height: 1.05;
 }
 
 .terms-card p {
   margin: 0;
   color: var(--text-muted);
-  line-height: 1.5;
+  line-height: 1.55;
 }
 
 .terms-links {
@@ -1741,13 +2089,18 @@ html[data-platform='mac'] .drag-strip {
   display: flex;
   align-items: flex-start;
   gap: 10px;
+  padding: 12px 14px;
   text-align: left;
   font-size: 14px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: 14px;
   cursor: pointer;
 }
 
 .terms-agree input {
   margin-top: 3px;
+  accent-color: var(--accent-from);
 }
 
 .terms-note {
@@ -1761,7 +2114,15 @@ html[data-platform='mac'] .drag-strip {
   display: grid;
   place-items: center;
   padding: 24px;
-  background: rgb(0 0 0 / 55%);
+  background: rgb(6 4 16 / 60%);
+  backdrop-filter: blur(6px);
+  animation: fade-in 0.2s ease;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
 }
 
 .legal-dialog {
@@ -1770,11 +2131,12 @@ html[data-platform='mac'] .drag-strip {
   gap: 12px;
   width: min(760px, 100%);
   max-height: 100%;
-  padding: 20px 22px;
-  background: var(--surface);
+  padding: 22px 24px;
+  background: var(--surface-solid);
   border: 1px solid var(--border-strong);
-  border-radius: 16px;
-  box-shadow: var(--shadow);
+  border-radius: 22px;
+  box-shadow: var(--shadow-lg);
+  animation: rise-in 0.3s var(--ease);
 }
 
 .legal-header {
@@ -1786,16 +2148,22 @@ html[data-platform='mac'] .drag-strip {
 
 .legal-header h1 {
   margin: 0;
-  font-size: 18px;
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 400;
 }
 
 .legal-close {
-  padding: 6px 14px;
+  padding: 7px 16px;
   color: var(--text);
   background: var(--surface-sunken);
   border: 1px solid var(--border-strong);
   border-radius: 999px;
   cursor: pointer;
+}
+
+.legal-close:hover {
+  background: color-mix(in srgb, var(--text) 10%, transparent);
 }
 
 .legal-scroll {
@@ -1806,7 +2174,7 @@ html[data-platform='mac'] .drag-strip {
 
 .legal-text {
   font-size: 14px;
-  line-height: 1.55;
+  line-height: 1.6;
 }
 
 .legal-text h2 {
@@ -1815,7 +2183,7 @@ html[data-platform='mac'] .drag-strip {
 }
 
 .legal-text h3 {
-  margin: 20px 0 8px;
+  margin: 22px 0 8px;
   font-size: 16px;
 }
 
@@ -1832,9 +2200,9 @@ html[data-platform='mac'] .drag-strip {
   margin: 0 0 14px;
   padding: 10px 14px;
   color: var(--text-muted);
-  background: var(--surface-sunken);
+  background: var(--accent-soft);
   border-left: 3px solid var(--accent);
-  border-radius: 6px;
+  border-radius: 8px;
 }
 
 .legal-text a,
@@ -1870,6 +2238,14 @@ html[data-platform='mac'] .drag-strip {
   border: 1px solid var(--border-strong);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .terms-card,
+  .legal-backdrop,
+  .legal-dialog {
+    animation: none;
+  }
+}
+
 /* ---------- Spotify's artwork rules ---------- */
 /* Spotify's guidelines forbid putting anything over its artwork, so for Spotify rows the play button and the "now playing" bars sit beside it instead of on it. */
 [data-service='spotify'] {
@@ -1898,8 +2274,19 @@ html[data-platform='mac'] .drag-strip {
   border-radius: 50%;
 }
 
+/* Beside the artwork, the play button is a gradient circle rather than a dark veil. */
+.track[data-provider='spotify'] .track-play {
+  background: var(--accent-gradient);
+  box-shadow: var(--glow);
+}
+
 .track[data-provider='spotify'] .equalizer {
   padding: 8px 0;
+  background: var(--accent-gradient);
+}
+
+.track[data-provider='spotify'] .equalizer span {
+  background: #fff;
 }
 
 .spotify-full-sm img {

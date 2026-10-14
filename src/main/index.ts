@@ -36,7 +36,7 @@ function createWindow(): void {
     show: false,
     title: APP_NAME,
     // Matches the page background, so there is no white flash before the first paint.
-    backgroundColor: nativeTheme.shouldUseDarkColors ? '#0c0c11' : '#f5f5f8',
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#08070e' : '#f6f4fb',
     // On macOS the title bar is hidden and the traffic lights sit inside the sidebar, like a native app.
     ...(process.platform === 'darwin' ? { titleBarStyle: 'hiddenInset' as const, trafficLightPosition: { x: 18, y: 19 } } : {}),
     webPreferences: {

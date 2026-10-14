@@ -23,7 +23,7 @@ export function PlayerBar({ player }: Props): React.JSX.Element | null {
   const total = formatDuration(player.duration * 1000)
 
   return (
-    <footer className="player" aria-label="Player">
+    <footer className="player" aria-label="Player" data-status={status}>
       <div className="player-track">
         {track.artworkUrl ? <img className="track-art" src={track.artworkUrl} alt="" /> : <span className="track-art track-art-empty" aria-hidden="true">
             <NoteIcon />
@@ -31,7 +31,11 @@ export function PlayerBar({ player }: Props): React.JSX.Element | null {
         <div className="player-meta">
           <span className="track-title">{track.title}</span>
           <span className="track-artists">{track.artists.join(', ')}</span>
-          {quality && <span className="quality-badge">{quality}</span>}
+          {quality && (
+            <span className="quality-badge" title={quality}>
+              {quality}
+            </span>
+          )}
         </div>
         {/* Spotify asks for its logo wherever its content plays, and a link back to it. */}
         {track.providerId === 'spotify' && (
