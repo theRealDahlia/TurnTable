@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Track } from '@shared/types'
-import { filterTracks, formatDuration, sortResults, sortTracks } from './query'
+import { filterTracks, formatDuration, hasArtist, sortResults, sortTracks, tracksByArtist } from './query'
 
 const track = (overrides: Partial<Track>): Track => ({
   id: 'id',
@@ -76,6 +76,24 @@ describe('sortTracks', () => {
   it('copes with tracks that have no artists', () => {
     const result = sortTracks([track({ id: 'a', artists: [] }), track({ id: 'b', artists: ['A'] })], 'artist')
     expect(ids(result)).toEqual(['a', 'b'])
+  })
+})
+
+describe('hasArtist and tracksByArtist', () => {
+  it('matches any one of the artists, ignoring case, accents and stray spaces', () => {
+    expect(hasArtist(tracks[2]!, 'scott lafaro')).toBe(true)
+    expect(hasArtist(track({ artists: ['Beyoncé'] }), ' BEYONCE ')).toBe(true)
+  })
+
+  it('needs the whole name, not part of it, and never matches an empty name', () => {
+    expect(hasArtist(tracks[0]!, 'Miles')).toBe(false)
+    expect(hasArtist(tracks[0]!, '  ')).toBe(false)
+  })
+
+  it("keeps one service's tracks by the artist, in order", () => {
+    const mixed = [...tracks, track({ id: '6', artists: ['Zed'], providerId: 'tidal' })]
+    expect(ids(tracksByArtist(mixed, 'zed', 'spotify'))).toEqual(['4', '5'])
+    expect(ids(tracksByArtist(mixed, 'Zed', 'tidal'))).toEqual(['6'])
   })
 })
 

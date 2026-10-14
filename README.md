@@ -104,6 +104,12 @@ The **Search** page searches every connected service at once and puts each one's
 - More results load by themselves as you scroll to the end of the list (a *Show more* button appears instead if that stops working, or after two pages in a row with nothing to show, so a rare search can't use up the day's YouTube quota). Each page is another search against that quota.
 - Results live in memory only and are never written to disk.
 
+The **Sort by** menu beside the tabs orders the results of the tab that is showing: *Best match* (each service's own order), title, artist, album, or length. Playing a result queues the list in the order shown.
+
+## Artist pages
+
+Click an artist's name on a song (in the Library, in Search, on an artist page, or in the player bar) to open their page. An artist page belongs to one service, the one the song came from, since services are never mixed. It lists your saved songs by them on that service, then more of their songs that the service's search finds (only songs credited to that exact name are kept). *Find more* looks further; nothing is fetched further on its own, because on YouTube every artist page and every *Find more* is one of the day's 100 searches. Local files have no search, so their artist pages show your files only. Back returns to the page you came from, as you left it; the sidebar leaves artist pages altogether. Like search results, nothing on an artist page is saved to disk.
+
 ## Shuffle and media keys
 
 The queue is always one service's list: next, previous and shuffle never move to another service, and playback stops at the end of the list. The shuffle button in the player bar plays the current queue in a random order. The song that is playing carries on and the rest is reordered (including songs listed before it). There is no last song: when every song has played, a new pass starts in a fresh order that never begins with the song just played, so skipping never runs out (with a single song there is nothing to skip to). Previous goes back through what was played, across passes, and turning shuffle off returns to the listed order from the song that is playing.

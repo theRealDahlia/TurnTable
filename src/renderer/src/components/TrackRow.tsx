@@ -1,8 +1,10 @@
 import { isPlayable, unplayableReason } from '@shared/media'
 import type { ProviderStatus, Track } from '@shared/types'
+import type { Artist } from '../artist/useArtistSongs'
 import { formatQuality } from '../lib/quality'
 import { formatDuration } from '../library/query'
 import { HeartIcon, NoteIcon, PauseIcon, PlayIcon } from './icons'
+import { ArtistLinks } from './ArtistLinks'
 import { ProviderLogo } from './ProviderLogo'
 
 interface Props {
@@ -17,9 +19,11 @@ interface Props {
   onToggleSave?: (track: Track) => void
   /** A save or removal is still being sent. */
   savePending?: boolean
+  /** When given, each artist's name opens their page. */
+  onOpenArtist?: (artist: Artist) => void
 }
 
-export function TrackRow({ track, provider, current, playing, onPlay, onToggleSave, savePending = false }: Props): React.JSX.Element {
+export function TrackRow({ track, provider, current, playing, onPlay, onToggleSave, savePending = false, onOpenArtist }: Props): React.JSX.Element {
   const playable = isPlayable(track)
   const action = current && playing ? 'Pause' : 'Play'
   const quality = formatQuality(track.quality)
@@ -55,9 +59,7 @@ export function TrackRow({ track, provider, current, playing, onPlay, onToggleSa
         <span className="track-title" title={track.title}>
           {track.title}
         </span>
-        <span className="track-artists" title={track.artists.join(', ')}>
-          {track.artists.join(', ')}
-        </span>
+        <ArtistLinks track={track} className="track-artists" onOpenArtist={onOpenArtist} />
       </div>
       <span className="track-album" title={track.album}>
         {track.album}

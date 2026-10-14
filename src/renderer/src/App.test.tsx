@@ -188,6 +188,50 @@ describe('App search', () => {
 })
 
 describe('App', () => {
+  it("opens an artist's page from a song, and Back returns to the Library as it was", async () => {
+    api.listProviders.mockResolvedValue([spotify(true)])
+    api.getSavedTracks.mockResolvedValue({
+      tracks: [
+        { id: 't1', providerId: 'spotify', title: 'First Song', artists: ['Someone'], durationMs: 60_000 },
+        { id: 't2', providerId: 'spotify', title: 'Second Song', artists: ['Someone Else'], durationMs: 60_000 }
+      ]
+    })
+    render(<App />)
+    await userEvent.type(await screen.findByRole('searchbox', { name: 'Search your library' }), 'first')
+    const row = (await screen.findByText('First Song')).closest('li') as HTMLElement
+
+    await userEvent.click(within(row).getByRole('button', { name: 'Someone' }))
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Someone' })).toBeTruthy()
+    expect(within(screen.getByRole('list', { name: 'Someone in your library' })).getByText('First Song')).toBeTruthy()
+    expect(screen.queryByText('Second Song')).toBeNull()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Back to Library' }))
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Library' })).toBeTruthy()
+    // The page underneath kept what had been typed into it.
+    expect((screen.getByRole('searchbox', { name: 'Search your library' }) as HTMLInputElement).value).toBe('first')
+    expect(api.getSavedTracks).toHaveBeenCalledOnce()
+  })
+
+  it('walks back through artists opened one from another, and the sidebar leaves them all', async () => {
+    api.listProviders.mockResolvedValue([spotify(true)])
+    api.getSavedTracks.mockResolvedValue({ tracks: [{ id: 't1', providerId: 'spotify', title: 'Duet', artists: ['Ana', 'Ben'], durationMs: 60_000 }] })
+    render(<App />)
+    const row = (await screen.findByText('Duet')).closest('li') as HTMLElement
+    await userEvent.click(within(row).getByRole('button', { name: 'Ana' }))
+    const onAna = within(screen.getByRole('list', { name: 'Ana in your library' }))
+    await userEvent.click(onAna.getByRole('button', { name: 'Ben' }))
+    expect(screen.getByRole('heading', { level: 1, name: 'Ben' })).toBeTruthy()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Back to Ana' }))
+    expect(screen.getByRole('heading', { level: 1, name: 'Ana' })).toBeTruthy()
+
+    await userEvent.click(nav().getByRole('button', { name: 'Search' }))
+    expect(screen.getByRole('heading', { level: 1, name: 'Search' })).toBeTruthy()
+    expect(screen.queryByRole('heading', { level: 1, name: 'Ana' })).toBeNull()
+  })
+
   it('opens on the Library and marks it as the current page', async () => {
     render(<App />)
 

@@ -8,6 +8,7 @@ import { TrackRow } from '../components/TrackRow'
 import { TrackSkeleton } from '../components/TrackSkeleton'
 import { filterTracks, sortTracks, type SortKey } from '../library/query'
 import type { Library } from '../library/useLibrary'
+import type { Artist } from '../artist/useArtistSongs'
 import type { Player } from '../player/usePlayer'
 
 /** Rows rendered at a time, so a library of thousands of tracks stays responsive. */
@@ -17,9 +18,11 @@ interface Props {
   library: Library
   player: Player
   onOpenConnections: () => void
+  /** When given, each artist's name opens their page. */
+  onOpenArtist?: (artist: Artist) => void
 }
 
-export function LibraryPage({ library, player, onOpenConnections }: Props): React.JSX.Element {
+export function LibraryPage({ library, player, onOpenConnections, onOpenArtist }: Props): React.JSX.Element {
   const [query, setQuery] = useState('')
   // Each service has its library to itself: Spotify's rules don't allow its content to be mixed with other services'.
   const [chosenId, setChosenId] = useState<ProviderId>()
@@ -191,6 +194,7 @@ export function LibraryPage({ library, player, onOpenConnections }: Props): Reac
                   current={current}
                   playing={player.status === 'playing' || player.status === 'loading'}
                   onPlay={(picked) => (current ? player.toggle() : player.play(picked, visible))}
+                  onOpenArtist={onOpenArtist}
                 />
               )
             })}

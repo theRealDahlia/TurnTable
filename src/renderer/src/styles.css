@@ -1440,6 +1440,115 @@ a.track-source:hover .logo {
   }
 }
 
+/* ---------- Artists ---------- */
+/* An artist's name in a row or the player: plain text until pointed at. */
+.artist-link {
+  display: inline;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  border-radius: 3px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 2px;
+  transition:
+    color 0.12s ease,
+    text-decoration-color 0.12s ease;
+}
+
+.artist-link:hover,
+.artist-link:focus-visible {
+  color: var(--text);
+  text-decoration-color: currentColor;
+}
+
+.back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: -14px 0 18px -8px;
+  padding: 5px 12px 5px 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: none;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  transition:
+    color 0.12s ease,
+    background 0.12s ease;
+}
+
+.back-button svg {
+  width: 17px;
+  height: 17px;
+}
+
+.back-button:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+}
+
+.artist-service {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 11.5px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.artist-service .logo-sm {
+  width: 24px;
+  height: 24px;
+}
+
+.artist-service .logo-sm svg {
+  width: 14px;
+  height: 14px;
+}
+
+.artist-header h1 {
+  font-size: 56px;
+  overflow-wrap: anywhere;
+}
+
+.artist-section {
+  margin-top: 34px;
+}
+
+.artist-section h2 {
+  margin: 0 0 4px;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.artist-section .empty {
+  margin-top: 12px;
+}
+
+@media (max-width: 640px) {
+  .artist-header h1 {
+    font-size: 40px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .artist-link,
+  .back-button {
+    transition: none;
+  }
+}
+
 /* ---------- App shell ---------- */
 .app {
   display: grid;

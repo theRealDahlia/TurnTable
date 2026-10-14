@@ -56,6 +56,15 @@ describe('PlayerBar', () => {
     expect(bar.getByText('FLAC · 24-bit / 96 kHz')).toBeTruthy()
   })
 
+  it("opens an artist's page from their name", async () => {
+    const onOpenArtist = vi.fn()
+    render(<PlayerBar player={makePlayer()} onOpenArtist={onOpenArtist} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Ana Veliz' }))
+
+    expect(onOpenArtist).toHaveBeenCalledExactlyOnceWith({ providerId: 'local', name: 'Ana Veliz' })
+  })
+
   it('marks the bar with the playback state, which the theme uses to light it up while music plays', () => {
     const { rerender } = render(<PlayerBar player={makePlayer({ status: 'playing' })} />)
     expect(screen.getByRole('contentinfo', { name: 'Player' }).dataset.status).toBe('playing')

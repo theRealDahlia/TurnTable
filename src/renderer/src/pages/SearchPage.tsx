@@ -8,6 +8,7 @@ import { TrackRow } from '../components/TrackRow'
 import { TrackSkeleton } from '../components/TrackSkeleton'
 import { filterTracks, sortResults, type ResultSortKey } from '../library/query'
 import type { Library } from '../library/useLibrary'
+import type { Artist } from '../artist/useArtistSongs'
 import type { Player } from '../player/usePlayer'
 import { trackKey, type ProviderResults, type SearchState } from '../search/useSearch'
 
@@ -16,6 +17,8 @@ interface Props {
   player: Player
   search: SearchState
   onOpenConnections: () => void
+  /** When given, each artist's name opens their page. */
+  onOpenArtist?: (artist: Artist) => void
 }
 
 /** How far before the end of the list the next page is fetched, so it is usually there before the user arrives. */
@@ -24,7 +27,7 @@ const PREFETCH_DISTANCE = '400px'
 /** Local files are searched in the library the app already has, so there is nothing to wait for. */
 const LOCAL: ProviderId = 'local'
 
-export function SearchPage({ library, player, search, onOpenConnections }: Props): React.JSX.Element {
+export function SearchPage({ library, player, search, onOpenConnections, onOpenArtist }: Props): React.JSX.Element {
   const [draft, setDraft] = useState(search.query)
   // One order for every tab. "Best match" is the order each service returned.
   const [sort, setSort] = useState<ResultSortKey>('relevance')
@@ -94,6 +97,7 @@ export function SearchPage({ library, player, search, onOpenConnections }: Props
             onPlay={(picked) => (current ? player.toggle() : player.play(picked, tracks))}
             onToggleSave={provider.savable ? search.toggleSave : undefined}
             savePending={search.pending[trackKey(track)] === true}
+            onOpenArtist={onOpenArtist}
           />
         )
       })}

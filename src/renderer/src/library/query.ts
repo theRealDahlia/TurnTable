@@ -24,6 +24,16 @@ export function filterTracks(tracks: Track[], { query, providerId }: LibraryFilt
   })
 }
 
+/** True when `name` is one of the track's artists, ignoring case and accents. */
+export const hasArtist = (track: Track, name: string): boolean => {
+  const wanted = fold(name.trim())
+  return wanted !== '' && track.artists.some((artist) => fold(artist.trim()) === wanted)
+}
+
+/** The tracks credited to an artist, on one service, in the order given. */
+export const tracksByArtist = (tracks: Track[], name: string, providerId: ProviderId): Track[] =>
+  tracks.filter((track) => track.providerId === providerId && hasArtist(track, name))
+
 /** Returns a sorted copy. Tracks without a save date sort last under "recent". */
 export function sortTracks(tracks: Track[], sort: SortKey): Track[] {
   const sorted = [...tracks]

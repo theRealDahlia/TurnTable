@@ -1,18 +1,22 @@
+import type { Artist } from '../artist/useArtistSongs'
 import { formatQuality } from '../lib/quality'
 import { NextIcon, NoteIcon, PauseIcon, PlayIcon, PreviousIcon, ShuffleIcon, SpeakerIcon } from './icons'
 import { formatDuration } from '../library/query'
 import type { Player } from '../player/usePlayer'
+import { ArtistLinks } from './ArtistLinks'
 import { SpotifyFullLogo } from './SpotifyFullLogo'
 
 interface Props {
   player: Player
+  /** When given, each artist's name opens their page. */
+  onOpenArtist?: (artist: Artist) => void
 }
 
 /** How full a slider is, as a CSS length, so the track can be drawn filled up to the thumb. */
 const fill = (fraction: number): React.CSSProperties =>
   ({ '--progress': `${Math.round(Math.min(1, Math.max(0, Number.isFinite(fraction) ? fraction : 0)) * 10000) / 100}%` }) as React.CSSProperties
 
-export function PlayerBar({ player }: Props): React.JSX.Element | null {
+export function PlayerBar({ player, onOpenArtist }: Props): React.JSX.Element | null {
   const { track, status } = player
   if (!track) return null
 
@@ -30,7 +34,7 @@ export function PlayerBar({ player }: Props): React.JSX.Element | null {
           </span>}
         <div className="player-meta">
           <span className="track-title">{track.title}</span>
-          <span className="track-artists">{track.artists.join(', ')}</span>
+          <ArtistLinks track={track} className="track-artists" onOpenArtist={onOpenArtist} />
           {quality && (
             <span className="quality-badge" title={quality}>
               {quality}
