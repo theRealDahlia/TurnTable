@@ -15,6 +15,10 @@ Connect several streaming accounts (Spotify, Apple Music, YouTube, Tidal, Deezer
 - De-duplication of the same track saved on multiple services
 - Play a track through its source service's player
 - Periodic sync of saved tracks
+- **To do:** add an Apple Music connection
+- **To do:** add a Deezer connection
+
+Before building either, read that service's current developer terms and API documentation, and add its rules to `CLAUDE.md` as for the other services.
 
 ## Status
 
