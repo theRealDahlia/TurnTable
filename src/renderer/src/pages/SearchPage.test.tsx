@@ -331,6 +331,67 @@ describe('SearchPage results', () => {
   })
 })
 
+describe('SearchPage sorting', () => {
+  const results = [
+    track('spotify', 1, { title: 'Monkey Wrench', album: 'The Colour and the Shape', durationMs: 231_000 }),
+    track('spotify', 2, { title: 'Best of You', album: 'In Your Honor', durationMs: 255_000 }),
+    track('spotify', 3, { title: 'All My Life', album: 'One by One', durationMs: 263_000 })
+  ]
+  const titles = (): (string | null | undefined)[] => rows().map((row) => row.querySelector('.track-title')?.textContent)
+  const sortBy = (): HTMLSelectElement => screen.getByRole('combobox', { name: 'Sort by' })
+  const searchedSpotify = (player = makePlayer()) =>
+    show(makeSearch({ query: 'foo', tab: 'spotify', results: { spotify: ready(results), youtubeMusic: ready([track('youtubeMusic', 9, { title: 'Zebra' }), track('youtubeMusic', 8, { title: 'Apple' })]) } }), makeLibrary(), player)
+
+  it("starts with the service's own order, as best match", () => {
+    searchedSpotify()
+    expect(sortBy().value).toBe('relevance')
+    expect(titles()).toEqual(['Monkey Wrench', 'Best of You', 'All My Life'])
+  })
+
+  it('reorders the results by the chosen order, and back', async () => {
+    searchedSpotify()
+    await userEvent.selectOptions(sortBy(), 'Title')
+    expect(titles()).toEqual(['All My Life', 'Best of You', 'Monkey Wrench'])
+    await userEvent.selectOptions(sortBy(), 'Longest first')
+    expect(titles()).toEqual(['All My Life', 'Best of You', 'Monkey Wrench'])
+    await userEvent.selectOptions(sortBy(), 'Album')
+    expect(titles()).toEqual(['Best of You', 'All My Life', 'Monkey Wrench'])
+    await userEvent.selectOptions(sortBy(), 'Best match')
+    expect(titles()).toEqual(['Monkey Wrench', 'Best of You', 'All My Life'])
+  })
+
+  it('plays in the order shown, so next and previous follow it', async () => {
+    const player = makePlayer()
+    searchedSpotify(player)
+    await userEvent.selectOptions(sortBy(), 'Shortest first')
+    await userEvent.click(screen.getByRole('button', { name: 'Play Best of You' }))
+    expect(player.play).toHaveBeenCalledExactlyOnceWith(results[1], [results[0], results[1], results[2]])
+
+    await userEvent.selectOptions(sortBy(), 'Title')
+    await userEvent.click(screen.getByRole('button', { name: 'Play Monkey Wrench' }))
+    expect(player.play).toHaveBeenLastCalledWith(results[0], [results[2], results[1], results[0]])
+  })
+
+  it('keeps the chosen order when switching tabs, and sorts each tab only within itself', async () => {
+    const both = { spotify: ready(results), youtubeMusic: ready([track('youtubeMusic', 9, { title: 'Zebra' }), track('youtubeMusic', 8, { title: 'Apple' })]) }
+    const library = makeLibrary()
+    const player = makePlayer()
+    const page = (tab: ProviderId) => <SearchPage library={library} player={player} search={makeSearch({ query: 'foo', tab, results: both })} onOpenConnections={vi.fn()} />
+    const { rerender } = render(page('spotify'))
+    await userEvent.selectOptions(sortBy(), 'Title')
+
+    rerender(page('youtubeMusic'))
+
+    expect(sortBy().value).toBe('title')
+    expect(titles()).toEqual(['Apple', 'Zebra'])
+  })
+
+  it('has no sort menu before anything is searched', () => {
+    show(makeSearch())
+    expect(screen.queryByRole('combobox', { name: 'Sort by' })).toBeNull()
+  })
+})
+
 describe('SearchPage local files', () => {
   const library = (): Library =>
     makeLibrary(

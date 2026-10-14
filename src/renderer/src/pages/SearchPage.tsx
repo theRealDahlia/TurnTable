@@ -6,7 +6,7 @@ import { SpotifyFullLogo } from '../components/SpotifyFullLogo'
 import { QobuzNotice } from '../components/QobuzNotice'
 import { TrackRow } from '../components/TrackRow'
 import { TrackSkeleton } from '../components/TrackSkeleton'
-import { filterTracks } from '../library/query'
+import { filterTracks, sortResults, type ResultSortKey } from '../library/query'
 import type { Library } from '../library/useLibrary'
 import type { Player } from '../player/usePlayer'
 import { trackKey, type ProviderResults, type SearchState } from '../search/useSearch'
@@ -26,6 +26,8 @@ const LOCAL: ProviderId = 'local'
 
 export function SearchPage({ library, player, search, onOpenConnections }: Props): React.JSX.Element {
   const [draft, setDraft] = useState(search.query)
+  // One order for every tab. "Best match" is the order each service returned.
+  const [sort, setSort] = useState<ResultSortKey>('relevance')
   const tabList = useRef<HTMLDivElement>(null)
 
   const connected = library.providers.filter((provider) => provider.connected)
@@ -59,6 +61,7 @@ export function SearchPage({ library, player, search, onOpenConnections }: Props
   }
 
   const results = active ? resultsFor(active.id) : undefined
+  const sorted = results ? sortResults(results.tracks, sort) : []
 
   // More results load by themselves as the end of the list nears the screen, unless that has been paused
   // (repeated empty pages, or a failure), in which case a button takes over.
@@ -142,30 +145,43 @@ export function SearchPage({ library, player, search, onOpenConnections }: Props
 
       {tabs.length > 0 && search.query && active && (
         <>
-          <div className="search-tabs" role="tablist" aria-label="Search results by service" ref={tabList}>
-            {tabs.map((tab, index) => {
-              const own = resultsFor(tab.id)
-              const selected = tab.id === active.id
-              return (
-                <button
-                  type="button"
-                  role="tab"
-                  key={tab.id}
-                  id={`search-tab-${tab.id}`}
-                  data-tab={tab.id}
-                  className="filter"
-                  aria-selected={selected}
-                  aria-controls="search-panel"
-                  tabIndex={selected ? 0 : -1}
-                  onClick={() => search.selectTab(tab.id)}
-                  onKeyDown={(event) => moveTab(event, index)}
-                >
-                  <ProviderLogo id={tab.id} name={tab.name} size="sm" />
-                  {tab.name}
-                  {own?.status === 'ready' && <span className="filter-count">{own.tracks.length}</span>}
-                </button>
-              )
-            })}
+          <div className="search-controls">
+            <div className="search-tabs" role="tablist" aria-label="Search results by service" ref={tabList}>
+              {tabs.map((tab, index) => {
+                const own = resultsFor(tab.id)
+                const selected = tab.id === active.id
+                return (
+                  <button
+                    type="button"
+                    role="tab"
+                    key={tab.id}
+                    id={`search-tab-${tab.id}`}
+                    data-tab={tab.id}
+                    className="filter"
+                    aria-selected={selected}
+                    aria-controls="search-panel"
+                    tabIndex={selected ? 0 : -1}
+                    onClick={() => search.selectTab(tab.id)}
+                    onKeyDown={(event) => moveTab(event, index)}
+                  >
+                    <ProviderLogo id={tab.id} name={tab.name} size="sm" />
+                    {tab.name}
+                    {own?.status === 'ready' && <span className="filter-count">{own.tracks.length}</span>}
+                  </button>
+                )
+              })}
+            </div>
+            <label className="sort">
+              <span>Sort by</span>
+              <select value={sort} onChange={(event) => setSort(event.target.value as ResultSortKey)}>
+                <option value="relevance">Best match</option>
+                <option value="title">Title</option>
+                <option value="artist">Artist</option>
+                <option value="album">Album</option>
+                <option value="shortest">Shortest first</option>
+                <option value="longest">Longest first</option>
+              </select>
+            </label>
           </div>
 
           <div id="search-panel" role="tabpanel" aria-labelledby={`search-tab-${active.id}`} className="search-results" data-service={active.id}>
@@ -225,7 +241,7 @@ export function SearchPage({ library, player, search, onOpenConnections }: Props
                     <ClockIcon />
                   </span>
                 </div>
-                {rowsFor(results.tracks, providersById.get(active.id) ?? active)}
+                {rowsFor(sorted, providersById.get(active.id) ?? active)}
               </>
             )}
 

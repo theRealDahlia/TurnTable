@@ -44,6 +44,38 @@ export function sortTracks(tracks: Track[], sort: SortKey): Track[] {
   }
 }
 
+/** How search results can be ordered. "relevance" keeps the order the service returned them in. */
+export type ResultSortKey = 'relevance' | 'title' | 'artist' | 'album' | 'shortest' | 'longest'
+
+/** Puts tracks that lack the value being sorted on last, so they don't crowd the top of the list. */
+const missingLast = <T>(a: T | undefined, b: T | undefined, compare: (a: T, b: T) => number): number => {
+  if (a === undefined) return b === undefined ? 0 : 1
+  if (b === undefined) return -1
+  return compare(a, b)
+}
+
+const knownDuration = (track: Track): number | undefined => (track.durationMs > 0 ? track.durationMs : undefined)
+
+/**
+ * Orders search results. "relevance" returns the same array untouched; every other order returns a sorted copy,
+ * and ties keep the service's order.
+ */
+export function sortResults(tracks: Track[], sort: ResultSortKey): Track[] {
+  switch (sort) {
+    case 'relevance':
+      return tracks
+    case 'title':
+    case 'artist':
+      return sortTracks(tracks, sort)
+    case 'album':
+      return [...tracks].sort((a, b) => missingLast(a.album || undefined, b.album || undefined, compareText))
+    case 'shortest':
+      return [...tracks].sort((a, b) => missingLast(knownDuration(a), knownDuration(b), (x, y) => x - y))
+    case 'longest':
+      return [...tracks].sort((a, b) => missingLast(knownDuration(a), knownDuration(b), (x, y) => y - x))
+  }
+}
+
 /** 185_000 -> "3:05", 3_725_000 -> "1:02:05". */
 export function formatDuration(ms: number): string {
   const totalSeconds = Math.max(0, Math.round(ms / 1000))

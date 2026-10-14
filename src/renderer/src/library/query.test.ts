@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Track } from '@shared/types'
-import { filterTracks, formatDuration, sortTracks } from './query'
+import { filterTracks, formatDuration, sortResults, sortTracks } from './query'
 
 const track = (overrides: Partial<Track>): Track => ({
   id: 'id',
@@ -76,6 +76,39 @@ describe('sortTracks', () => {
   it('copes with tracks that have no artists', () => {
     const result = sortTracks([track({ id: 'a', artists: [] }), track({ id: 'b', artists: ['A'] })], 'artist')
     expect(ids(result)).toEqual(['a', 'b'])
+  })
+})
+
+describe('sortResults', () => {
+  const results: Track[] = [
+    track({ id: 'a', title: 'Night Ferry', artists: ['North Pier'], album: 'Undertow', durationMs: 240_000 }),
+    track({ id: 'b', title: 'Blue Hour', artists: ['Ana Veliz'], durationMs: 0 }),
+    track({ id: 'c', title: 'Álbum 2', artists: ['kofi'], album: 'afterglow', durationMs: 180_000 }),
+    track({ id: 'd', title: 'Álbum 10', artists: ['Kofi'], album: '', durationMs: 300_000 })
+  ]
+
+  it('keeps the order the service returned for "best match", without copying', () => {
+    expect(sortResults(results, 'relevance')).toBe(results)
+  })
+
+  it('sorts by title and by artist like the library does', () => {
+    expect(ids(sortResults(results, 'title'))).toEqual(['c', 'd', 'b', 'a'])
+    expect(ids(sortResults(results, 'artist'))).toEqual(['b', 'c', 'd', 'a'])
+  })
+
+  it('sorts by album, ignoring case, with tracks that have none last in their original order', () => {
+    expect(ids(sortResults(results, 'album'))).toEqual(['c', 'a', 'b', 'd'])
+  })
+
+  it('sorts by length either way, with unknown lengths last', () => {
+    expect(ids(sortResults(results, 'shortest'))).toEqual(['c', 'a', 'd', 'b'])
+    expect(ids(sortResults(results, 'longest'))).toEqual(['d', 'a', 'c', 'b'])
+  })
+
+  it('never changes the list it was given', () => {
+    const before = ids(results)
+    for (const key of ['title', 'artist', 'album', 'shortest', 'longest'] as const) sortResults(results, key)
+    expect(ids(results)).toEqual(before)
   })
 })
 

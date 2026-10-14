@@ -909,6 +909,25 @@ button {
   margin-top: 18px;
 }
 
+/* The service tabs, with the order of the results beside them. */
+.search-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-top: 18px;
+}
+
+.search-controls .search-tabs {
+  margin-top: 0;
+}
+
+.search-controls .sort select {
+  height: 32px;
+  border-radius: 10px;
+}
+
 .filter[aria-selected='true'] {
   color: var(--accent-text);
   background: var(--accent-gradient);
